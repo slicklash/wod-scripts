@@ -23,6 +23,8 @@
     <call target="include_selector" />
     <call target="include_prototypes" />
     <call target="include_functions" />
+    <loadfile file="${project.dir}/world.js" property="tmp" />
+    <echo message="${tmp}" file="${target.file}" append="true" />
     <loadfile file="${project.dir}/hero.attribute.js" property="tmp" />
     <echo message="${tmp}" file="${target.file}" append="true" />
     <loadfile file="${project.dir}/hero.skill.js" property="tmp" />

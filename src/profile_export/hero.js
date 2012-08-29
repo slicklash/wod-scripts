@@ -1,7 +1,8 @@
 
 // --- Hero
 
-function Hero() {
+function Hero(world) {
+    this.world = world;
     this.name = '';
     this.level = 1;
     this.race = '';
@@ -135,11 +136,14 @@ var mp = skill.mp_cost != 0 ? skill.mp_cost : ""; var color_affect = (skill.type
 
 Hero.prototype.parse = function(html) {
     try {
+
         var title = $('h1', html),
             content_rows = $('.row0', html).concat($('.row1', html)),
             re_attr  = /Strength|Constitution|Intelligence|Dexterity|Charisma|Agility|Perception|Willpower/,
-            re_race  = /(Borderlander|Dinturan|Gnome|Halfling|Hill Dwarf|Kerasi|Mag-Mor Elf|Mountain Dwarf|Rashani|Tiram-Ag Elf|Woodlander) \(/,
-            re_class = /(Alchemist|Archer|Barbarian|Bard|Drifter|Gladiator|Hunter|Juggler|Knight|Mage|Paladin|Priest|Scholar|Shaman) \(/;
+            re_race  = new RegExp('(' + this.world.races.join('|') + ') \\('),
+            re_class = new RegExp('(' + this.world.classes.join('|') + ') \\(');
+
+        console.log(re_class);
 
         this.name = innerText(title).replace('- Attributes and Characteristics', '').trim();
 
