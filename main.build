@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<project name="Wod-Scripts" default="build">
+
+  <property name="build.dir" value="build" />
+  <property name="release.dir" value="release" />
+  <property name="lib.dir" value="lib" />
+  <property name="src.dir" value="src" />
+  <property name="comnons" value="${src.dir}/common" />
+  <property name="newline" value="${environment::newline()}" />
+  <property name="newline2x" value="${newline}${newline}" />
+
+  <target name="build" depends="libs, profile, herolist, favmenu, tidytrade, storemngr" description="Build all scripts">
+  </target>
+
+  <target name="libs" description="Prepare libs">
+    <copy file="${lib.dir}/aagmfunctions.js" todir="${build.dir}" />
+  </target>
+
+  <target name="profile">
+    <property name="project.dir" value="${src.dir}/profile_export" />
+    <property name="target.file" value="${build.dir}/profile_export.user.js" />
+    <call target="beginscript" />
+    <call target="include_selector" />
+    <call target="include_prototypes" />
+    <call target="include_functions" />
+    <loadfile file="${project.dir}/hero.attribute.js" property="tmp" />
+    <echo message="${tmp}" file="${target.file}" append="true" />
+    <loadfile file="${project.dir}/hero.skill.js" property="tmp" />
+    <echo message="${tmp}" file="${target.file}" append="true" />
+    <loadfile file="${project.dir}/hero.js" property="tmp" />
+    <echo message="${tmp}" file="${target.file}" append="true" />
+    <call target="include_main" />
+    <call target="endscript" />
+  </target>
+
+  <target name="storemngr">
+    <property name="project.dir" value="${src.dir}/storage_management" />
+    <property name="target.file" value="${build.dir}/storage_management.user.js" />
+    <call target="beginscript" />
+    <call target="include_selector" />
+    <call target="include_prototypes" />
+    <call target="include_functions" />
+    <call target="include_main" />
+    <call target="endscript" />
+  </target>  
+
+  <target name="tidytrade">
+    <property name="project.dir" value="${src.dir}/tidy_trade" />
+    <property name="target.file" value="${build.dir}/tidy_trade.user.js" />
+    <call target="beginscript" />
+    <call target="include_selector" />
+    <call target="include_prototypes" />
+    <call target="include_functions" />
+    <call target="include_main" />
+    <call target="endscript" />
+  </target>
+
+  <target name="favmenu">
+    <property name="project.dir" value="${src.dir}/favorite_menu" />
+    <property name="target.file" value="${build.dir}/favorite_menu.user.js" />
+    <call target="beginscript" />
+    <call target="include_selector" />
+    <call target="include_prototypes" />
+    <call target="include_functions" />
+    <call target="include_main" />
+    <call target="endscript" />
+  </target>
+
+  <target name="herolist">
+    <property name="project.dir" value="${src.dir}/hero_list" />
+    <property name="target.file" value="${build.dir}/hero_list.user.js" />
+    <call target="beginscript" />
+    <call target="include_selector" />
+    <call target="include_prototypes" />
+    <call target="include_functions" />
+    <call target="include_main" />
+    <call target="endscript" />
+  </target>
+
+  <target name="include_main">
+    <loadfile file="${project.dir}/main.js" property="main_code" />
+    <echo message="${main_code}" file="${target.file}" append="true" />
+  </target>
+
+  <target name="include_selector">
+    <loadfile file="${comnons}/selector-min.js" property="selector_code" unless="${property::exists('selector_code')}" />
+    <echo message="${selector_code}" file="${target.file}" append="true" />
+  </target>
+
+  <target name="include_prototypes">
+    <loadfile file="${comnons}/prototypes-min.js" property="prototypes_code" unless="${property::exists('prototypes_code')}" />
+    <echo message="${prototypes_code}" file="${target.file}" append="true" />
+  </target>
+
+  <target name="include_functions">
+    <loadfile file="${comnons}/functions-min.js" property="functions_code" unless="${property::exists('functions_code')}" />
+    <echo message="${functions_code}" file="${target.file}" append="true" />
+  </target>
+
+  <target name="beginscript">
+    <copy file="${project.dir}/header.js" tofile="${target.file}" overwrite="true" />
+    <echo message="${newline}(function() {${newline}" file="${target.file}" append="true" />
+  </target>
+
+  <target name="endscript">
+    <echo message="${newline2x}})();" file="${target.file}" append="true" />
+  </target>
+
+</project>
+
