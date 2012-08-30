@@ -46,7 +46,7 @@ Hero.prototype.parse = function(formHtml) {
 
         this.name = title.substring(0, title.lastIndexOf('-')).trim();
         this.parseAttributes(attrTable);
-        this.parseCharacteristics(charTable);
+        this.parseCharacter(charTable);
         this.parseArmor(armorTable);
 
         if (g_check_gear.checked) {
@@ -110,24 +110,26 @@ Hero.prototype.parseAttributes = function(attrTable) {
     }
 };
 
-Hero.prototype.parseCharacteristics = function (charTable) {
+Hero.prototype.parseCharacter = function (charTable) {
 
-    var content_rows = $('.row0', charTable).concat($('.row1', charTable));
+    var content_rows = charTable.rows;
+        index = content_rows.length == 10 ? ['lvl', '-', 'fame', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'] : ['lvl', '-', 'fame', '-', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'];
 
-    for (var i = 0, cnt = content_rows.length; i < cnt; i++) {
+    for (var rowIndex = 0, cnt = content_rows.length; rowIndex < cnt; rowIndex++) {
 
-        var row = content_rows[i],
+        var row = content_rows[rowIndex],
             cell1 = row.cells[0],
-            property = innerText(cell1).trim().toLowerCase();
+            name = innerText(cell1).trim(),
+            property = index[rowIndex];
 
         switch(property) {
-            case "hero's level":
+            case 'lvl':
                 this.level = Number(innerText(row.cells[1]));
                 break;
             case 'fame':
                 this.attributes.fame.value = Number(innerText(row.cells[1]));
                 break;
-            case 'hit points':
+            case 'hp':
                 var hp = innerText(row.cells[1]).parseEffectiveValue(),
                     hhp = innerText(row.cells[2]).parseEffectiveValue(),
                     hpa = this.attributes.hp,
@@ -137,7 +139,7 @@ Hero.prototype.parseCharacteristics = function (charTable) {
                 hhpa.value = hhp[0];
                 hhpa.effective_value = hhp[1];
                 break;
-            case 'mana points':
+            case 'mp':
                 var mp = innerText(row.cells[1]).parseEffectiveValue(),
                     rmp = innerText(row.cells[2]).parseEffectiveValue(),
                     mpa = this.attributes.mp,
@@ -147,26 +149,26 @@ Hero.prototype.parseCharacteristics = function (charTable) {
                 rmpa.value = rmp[0];
                 rmpa.effective_value = rmp[1];
                 break;
-            case 'actions per round':
+            case 'act':
                 var act = innerText(row.cells[1]).parseEffectiveValue(),
                     acta = this.attributes.act;
                 acta.value = act[0];
                 acta.effective_value = act[1];
                 break;
-            case 'reset points':
-                this.attributes.rstpt.value = Number(innerText(row.cells[1]));
-                break;
-            case 'title':
-                this.title = innerText($('a', row.cells[1])).trim();
-                break;
-            case 'initiative':
+            case 'ini':
                 var ini = innerText(row.cells[1]).parseEffectiveValue(),
                     inia = this.attributes.ini;
                 inia.value = ini[0];
                 inia.effective_value = ini[1];
                 break;
+            case 'rstpt':
+                this.attributes.rstpt.value = Number(innerText(row.cells[1]));
+                break;
             case 'gender':
                 this.attributes.gender.value = innerText(row.cells[1]).trim().toUpperCase()[0];
+                break;
+            case 'title':
+                this.title = innerText($('a', row.cells[1])).trim();
                 break;
         }
     }
@@ -174,32 +176,21 @@ Hero.prototype.parseCharacteristics = function (charTable) {
 
 Hero.prototype.parseArmor = function (armorTable) {
 
-    var content_rows = $('.row0', armorTable).concat($('.row1', armorTable));
+    var content_rows = armorTable.rows;
 
-    for (var i = 0, cnt = content_rows.length; i < cnt; i++) {
+    for (var i = 1, cnt = content_rows.length; i < cnt; i++) {
 
         var row = content_rows[i],
             cell1 = row.cells[0],
-            property = innerText(cell1).trim().toLowerCase();
+            type = innerText(cell1).trim().toLowerCase(),
+            attack_type = innerText(row.cells[1]).replace('(z)', '').trim(),
+            value = innerText(row.cells[2]).replace(/(\s|&nbsp;)/g, '').trim();
 
-        switch (property) {
-            case 'crushing damage':
-            case 'lightning damage':
-            case 'ice damage':
-            case 'fire damage':
-            case 'poison damage':
-            case 'mana damage':
-            case 'psychological damage':
-            case 'acid damage':
-            case 'cutting damage':
-            case 'piercing damage':
-                var attack_type = innerText(row.cells[1]).replace('(z)', '').trim(),
-                    value = innerText(row.cells[2]).replace(/(\s|&nbsp;)/g, '').trim();
-                if (!this.armor[property]) this.armor[property] = {};
-                var a = this.armor[property];
-                a[attack_type] = value;
-                break;
-        }
+        if (!this.armor[type]) 
+            this.armor[type] = {};
+
+        var a = this.armor[type];
+        a[attack_type] = value;
     }
 };
 
@@ -230,7 +221,7 @@ Hero.prototype.parseGear = function (gearHtml) {
             this.gear = gear;
         }
     }
-}
+};
 
 Hero.prototype.generateBBCode = function() {
     return parseTemplate(Hero.getProfileTemplate(), {"hero": this});

@@ -163,7 +163,7 @@ var dev = function () {
             tmp.innerHTML = html;
 
             var tables = $('form .content_table', tmp),
-                table = tables[1];
+                table = tables[2];
 
             console.log(table);
             //hero.parseCharacteristics(table);
@@ -172,7 +172,7 @@ var dev = function () {
         });
     };
 
-    btn_dev.addEventListener('click', test1, false);
+    btn_dev.addEventListener('click', test3, false);
 };
 
 if (g_match_location) {
