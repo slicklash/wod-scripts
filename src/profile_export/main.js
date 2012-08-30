@@ -1,6 +1,6 @@
 // --- Main
 
-var VERSION = '1.0.8';
+var VERSION = '1.0.9';
 
 /***
  * TODO:
@@ -89,7 +89,7 @@ var main = function () {
 
    var button = g_buttons[g_buttons.length - 1];
 
-    if (button.value === 'Show Details') {
+   if (button) {
         g_button_export = add('input');
         g_check_gear = add('input');
         label_gear = add('label');
@@ -105,8 +105,7 @@ var main = function () {
 
         g_img_wait = attr(add('img', add('div')), {'src': location.protocol + '//' + location.host + '/wod/css/img/ajax-loader.gif', 'style': 'display: none'});
         button.parentNode.insertBefore(g_img_wait, button.parentNode.firstChild);
-    }
-
+   }
 };
 
 var dev = function () {
@@ -130,7 +129,49 @@ var dev = function () {
             alert('done');
         });
     };
-    
+   
+    var test2 = function () {
+        
+        var loc = location.href.replace('skills.php', 'attributes.php');
+
+        get(loc, function(html) {
+
+            var world = Mockery.mockWorldCaledonii();
+            var hero = new Hero(world);
+
+            var tmp = add('div');
+            tmp.innerHTML = html;
+
+            var tables = $('form .content_table', tmp);
+
+            hero.parseAttributes(tables[0]);
+
+            alert('done');
+        });
+    };
+
+    var test3 = function () {
+        
+        var loc = location.href.replace('skills.php', 'attributes.php');
+
+        get(loc, function(html) {
+
+            var world = Mockery.mockWorldCaledonii();
+            var hero = new Hero(world);
+
+            var tmp = add('div');
+            tmp.innerHTML = html;
+
+            var tables = $('form .content_table', tmp),
+                table = tables[1];
+
+            console.log(table);
+            //hero.parseCharacteristics(table);
+
+            alert('done');
+        });
+    };
+
     btn_dev.addEventListener('click', test1, false);
 };
 

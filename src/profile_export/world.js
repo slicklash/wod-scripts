@@ -19,7 +19,7 @@ World.prototype.parse = function (classRaceHtml) {
     for (var i = 1, cnt = rows.length; i < cnt; i++) {
         var cells     = rows[i].cells,
             name      = innerText(cells[1]).trim(),
-            isRace    = attr($('img', cells[2]), 'title') === 'Yes';
+            isRace    = attr($('img', cells[2]), 'src').indexOf('yes.png') > -1;
 
         if (isRace) {
             this.races.push(name);
