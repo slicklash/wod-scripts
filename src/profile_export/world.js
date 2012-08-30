@@ -4,6 +4,11 @@
 function World() {
     this.classes = [];
     this.races = [];
+    this.lexicon = {};
+    this.locale = location.hostname.substr(location.hostname.lastIndexOf('.') + 1);
+
+    if (this.locale === 'net') 
+        this.locale = 'en';
 }
 
 World.prototype.parse = function (classRaceHtml) {
@@ -27,5 +32,66 @@ World.prototype.parse = function (classRaceHtml) {
         else {
             this.classes.push(name);
         }
+    }
+
+    this.initLexicon();
+};
+
+World.prototype.initLexicon = function () {
+
+    switch(this.locale) 
+    {
+        default:
+            this.lexicon = {
+                'Type'                  : 'type',
+                'Target'                : 'target',
+                'Item'                  : 'item',
+                'SkillClass'            : 'skill class',
+                'Attack'                : 'attack',
+                'AttackType'            : 'attack type',
+                'Damage'                : 'damage',
+                'Defence'               : 'defense',
+                'Initiative'            : 'initiative',
+                'Degradation'           : 'degradation',
+                'Improvement'           : 'improvement',
+                'Healing'               : 'healing',
+                'InRound'               : 'in round',
+                'InPreRound'            : 'in pre round',
+                'MayBeUsed'             : 'may be used',
+                'OnePosition'           : 'one position',
+                'MaxCharactersAffected' : 'Max. characters affected',
+                'MaxOpponentsAffected'  : 'Max. opponents affected',
+                'ManaCost'              : 'Mana points cost',
+                'OfHeroesLevel'         : '% of your hero`s level',
+                'OneEnemy'              : 'one enemy',
+                'OneTeam'               : 'one team'
+            };
+            break;
+        case 'es':
+            this.lexicon = {
+                'Type'                  : 'Tipo',
+                'Target'                : 'Objetivo',
+                'Item'                  : 'Objeto',
+                'SkillClass'            : 'Clase de habilidades',
+                'Attack'                : 'Ataque',
+                'AttackType'            : 'tipo de ataque',
+                'Damage'                : 'Daño',
+                'Defence'               : 'Parada',
+                'Initiative'            : 'Iniciativa',
+                'Degradation'           : 'Empeoramiento',
+                'Improvement'           : 'Mejora',
+                'Healing'               : 'Curación',
+                'InRound'               : 'in Ronda',
+                'InPreRound'            : 'in Ronda preliminar',
+                'MayBeUsed'             : 'may be used',
+                'OnePosition'           : 'una posición',
+                'MaxCharactersAffected' : 'Max. characters affected',
+                'MaxOpponentsAffected'  : 'Max. opponents affected',
+                'ManaCost'              : 'Costes de Puntos de mana',
+                'OfHeroesLevel'         : '% del nivel del héroe',
+                'OneEnemy'              : 'Un enemigo',
+                'OneTeam'               : 'one team'
+            };
+            break;
     }
 };

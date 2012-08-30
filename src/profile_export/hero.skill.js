@@ -19,6 +19,7 @@ function HeroSkill() {
     this.mp_cost = 0;
     this.item = '';
     this.skill_class = '';
+    this.isOffensive = false;
     this.initiative_attr = '';
     this.attack_type = '';
     this.attack_attr = '';
@@ -32,107 +33,16 @@ function HeroSkill() {
     this.onDone = null;
 }
 
-HeroSkill.prototype.roll = function() {
-    var res = { 'attack': '', 'defence' : '', 'effect' : '' },
-        re_tmp = /([a-z]{2}){1},([a-z]{2}){1}(\s*\(([+\-][0-9]+)%?\))?/i;
-
-    return res;
-
-    if (this.attack_attr) {
-        var m = this.attack_attr.match(re_tmp),
-            attr1 = m[1],
-            attr2 = m[2],
-            mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
-        res.attack = Math.floor(mod * (this.hero.attributes[attr1].effective_value * 2 + this.hero.attributes[attr2].effective_value + this.effective_rank * 2));
-    }
-
-    if (this.defence_attr) {
-        var m = this.defence_attr.match(re_tmp),
-            attr1 = m[1],
-            attr2 = m[2],
-            mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
-        res.defence = Math.floor(mod * (this.hero.attributes[attr1].effective_value * 2 + this.hero.attributes[attr2].effective_value + this.effective_rank * 2));
-    }
-
-    if (this.effect_attr) {
-        var m = this.effect_attr.match(re_tmp),
-            attr1 = m[1],
-            attr2 = m[2],
-            mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
-        res.effect = Math.floor(mod * (this.hero.attributes[attr1].effective_value / 2 + this.hero.attributes[attr2].effective_value / 3 + this.effective_rank / 2));
-    }
-
-    return res;
-};
-
-HeroSkill.prototype.fetchInfo = function(data) {
-    try {
-        var skill_info = add('div');
-        skill_info.innerHTML = data;
-        var table_rows = $('.content_table table tr', $('form', skill_info));
-
-        for (var i = 0, cnt = table_rows.length; i < cnt; i++) {
-            var property = innerText(table_rows[i].cells[0]).trim(),
-                value = innerText(table_rows[i].cells[1]).replace(/(\s|&nbsp;)/g, ' ').trim();
-
-            switch(property) {
-                case 'type'                     : this.type = value;  break;
-                case 'may be used'              : this.in_round = value.indexOf("in round") > -1;  this.pre_round = value.indexOf("in pre round") > -1;  break;
-                case 'target'                   : this.target = value; this.one_pos = value.indexOf('one position') > -1; break;
-                case 'Max. characters affected' :
-                case 'Max. opponents affected'  : this.max_affected = value; break;
-                case 'Mana points cost'         : if (value !== '-') {
-                                                      var mp = value.match(/([0-9])+ \(([0-9]+)\)/);
-                                                      this.mp_base = Number(mp[2]); this.mp_cost = Math.floor(this.mp_base * (0.8 + 0.1 * this.effective_rank)); 
-                                                  }
-                                                  break;
-                case 'item'                     : this.item = value; break;
-                case 'skill class'              : this.skill_class = value; break;
-                case 'attack type'              : this.attack_type = value; break;
-                case 'attack'                   : this.attack_attr = value; break;
-                case 'damage'                   : this.effect_attr = value; break;
-                case 'initiative'               : this.initiative_attr = value; break;
-                case 'defense'                  : this.defence_attr = value; break;
-                case 'healing'                  : this.effect_attr = value; break;
-                default: break;
-            }
-        }
-
-        if (this.max_affected.indexOf('% of your hero`s level') > -1) {
-            var tmp = this.max_affected.replace('% of your hero`s level', '*' + this.hero.level +'/100').replace(' ', '');
-            this.max_affected = Math.floor(eval(tmp));
-        }
-
-        switch(this.type) {
-            case 'attack':
-            case 'degradation':
-                if (this.target.indexOf('one enemy') > -1) this.max_affected = 1;
-                break;
-            case 'improvement':
-            case 'healing':
-                if (this.target.indexOf('one team') > -1) this.max_affected = 1;
-                break;
-            default:
-                break;
-        }
-    }
-    catch (ex) {
-        GM_log('HeroSkill.fetchInfo: ' + ex);
-    }
-
-    if (typeof this.onDone === 'function') this.onDone(this);
-};
-
 HeroSkill.prototype.parse = function(row_html) {
     try {
         var link = $('a', row_html.cells[1]),
             rank_row = $('tr', row_html.cells[2]),
             rank = rank_row ? innerText(rank_row.cells[1]).parseEffectiveValue() : [0,0],
-            title = unescape(link.href).match(/name=([a-z\- :\(\)'!\+]+)/i);
+            title = innerText(link).trim();
 
         if (title !== null && rank[0] !== 0)
         {
-            this.name = title[1].replace(/\+/g, ' ');
+            this.name = title.replace(/\+/g, ' ');
             this.talent = this.name.indexOf('Talent:') > -1;
             this.rank = rank[0];
             this.effective_rank = rank[1];
@@ -157,6 +67,100 @@ HeroSkill.prototype.parse = function(row_html) {
     return this;
 };
 
+HeroSkill.prototype.fetchInfo = function(data) {
+    try {
+        var skill_info = add('div');
+        skill_info.innerHTML = data;
+        var table_rows = $('.content_table table tr', $('form', skill_info));
+
+        var lex = this.hero.world.lexicon;
+
+        for (var i = 0, cnt = table_rows.length; i < cnt; i++) {
+            var property = innerText(table_rows[i].cells[0]).trim(),
+                value = innerText(table_rows[i].cells[1]).replace(/(\s|&nbsp;)/g, ' ').trim();
+
+            switch(property) {
+                case lex.Type                   : this.type = value;  break;
+                case lex.MayBeUsed              : this.pre_round = value.indexOf(lex.InPreRound) > -1; this.in_round = !this.pre_round && value.indexOf(lex.InRound) > -1;  break;
+                case lex.Target                 : this.target = value; this.one_pos = value.indexOf(lex.OnePosition) > -1; break;
+                case lex.MaxCharactersAffected  :
+                case lex.MaxOpponentsAffected   : this.max_affected = value; break;
+                case lex.ManaCost               : if (value !== '-') {
+                                                      var mp = value.match(/([0-9])+ \(([0-9]+)\)/);
+                                                      this.mp_base = Number(mp[2]); this.mp_cost = Math.floor(this.mp_base * (0.8 + 0.1 * this.effective_rank)); 
+                                                  }
+                                                  break;
+                case lex.Item                   : this.item = value; break;
+                case lex.SkillClass             : this.skill_class = value; break;
+                case lex.AttackType             : this.attack_type = value; break;
+                case lex.Attack                 : this.attack_attr = value; break;
+                case lex.Damage                 : this.effect_attr = value; break;
+                case lex.Initiative             : this.initiative_attr = value; break;
+                case lex.Defence                : this.defence_attr = value; break;
+                case lex.Healing                : this.effect_attr = value; break;
+                default: break;
+            }
+        }
+
+        if (this.max_affected.indexOf(lex.OfHeroesLevel) > -1) {
+            var tmp = this.max_affected.replace(lex.OfHeroesLevel, '*' + this.hero.level +'/100').replace(' ', '');
+            this.max_affected = Math.floor(eval(tmp));
+        }
+
+        switch(this.type) {
+            case lex.Attack:
+            case lex.Degradation:
+                if (this.target.indexOf(lex.OneEnemy) > -1) this.max_affected = 1;
+                this.isOffensive = true;
+                break;
+            case lex.Improvement:
+            case lex.Healing:
+                if (this.target.indexOf(lex.OneTeam) > -1) this.max_affected = 1;
+                break;
+            default:
+                break;
+        }
+
+        console.log(this.name);
+        console.log(this.target)
+    }
+    catch (ex) {
+        GM_log('HeroSkill.fetchInfo: ' + ex);
+    }
+
+    if (typeof this.onDone === 'function') this.onDone(this);
+};
+
+HeroSkill.prototype.roll = function() {
+    var res = { 'attack': '', 'defence' : '', 'effect' : '' },
+        re_tmp = /([a-z]{2}){1},([a-z]{2}){1}(\s*\(([+\-][0-9]+)%?\))?/i;
+
+    return res;
+
+    // if (this.attack_attr) {
+    //     var m = this.attack_attr.match(re_tmp),
+    //         attr1 = m[1],
+    //         attr2 = m[2],
+    //         mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
+    //     res.attack = Math.floor(mod * (this.hero.attributes[attr1].effective_value * 2 + this.hero.attributes[attr2].effective_value + this.effective_rank * 2));
+    // }
+
+    // if (this.defence_attr) {
+    //     var m = this.defence_attr.match(re_tmp),
+    //         attr1 = m[1],
+    //         attr2 = m[2],
+    //         mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
+    //     res.defence = Math.floor(mod * (this.hero.attributes[attr1].effective_value * 2 + this.hero.attributes[attr2].effective_value + this.effective_rank * 2));
+    // }
+
+    // if (this.effect_attr) {
+    //     var m = this.effect_attr.match(re_tmp),
+    //         attr1 = m[1],
+    //         attr2 = m[2],
+    //         mod = m[4] ? 1 + Number(m[4]) / 100 : 1;
+    //     res.effect = Math.floor(mod * (this.hero.attributes[attr1].effective_value / 2 + this.hero.attributes[attr2].effective_value / 3 + this.effective_rank / 2));
+    // }
+};
 
 var _secCosts = '0,40,120,400,960,1880,3320,5360,8120,11720,16240,21840,28600,36680,46160,57160,\
 69840,84280,100640,119000,139520,162280,187440,215120,245480,278600,314600,353640,\

@@ -34,10 +34,14 @@ function Hero(world) {
     this.modifiers = {};
 }
 
-Hero.prototype.parse = function(formHtml) {
+Hero.prototype.parse = function(attrHtml) {
     try {
 
-        var title = innerText($('h1', formHtml)),
+        var attr_html = add('div');
+            attr_html.innerHTML = attrHtml;
+
+        var formHtml = $('form', attr_html)[1],
+            title = innerText($('h1', formHtml)),
             tables = $('.content_table', formHtml),
             attrTable = tables[0],
             charTable = tables[1],
@@ -293,7 +297,7 @@ if (skill.type === "initiative"){ var m = skill.initiative_attr.match(/[a-z]{2}/
 var erank = skill.effective_rank !== skill.rank ? ("[" + skill.effective_rank + "]") : "";\
 var pos_mark = skill.max_affected && skill.one_pos ? "&sup1;" : "";\
 var r = skill.roll();\
-var mp = skill.mp_cost != 0 ? skill.mp_cost : ""; var color_affect = (skill.type.match(/attack|degradation/) ? "tomato" : "mediumseagreen");#>\
+var mp = skill.mp_cost != 0 ? skill.mp_cost : ""; var color_affect = skill.isOffensive ? "tomato" : "mediumseagreen";#>\
 [tr][td][skill:"<#=skill.name#>" <#if(skill.color)#>color=<#=skill.color#><#;#> size=12][/td]\
 [td align=center][size=12]<#=skill.rank#> [url=" "]<#=erank#>[/url][/size][/td]\
 [td align=center][size=12][color=dodgerblue]<#=mp#>[/color][/size][/td]\

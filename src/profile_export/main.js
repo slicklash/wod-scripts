@@ -14,11 +14,7 @@ var VERSION = '1.0.9';
 var g_form_skills = $('#main_content form'),
     g_match_location = g_form_skills && g_form_skills.action && /hero\/skills\.php/i.test(g_form_skills.action),
     g_buttons = $('tbody .button', g_form_skills),
-    g_button_export,
-    g_check_gear,
-    g_img_wait,
-    g_hero,
-    g_jobs;
+    g_button_export, g_check_gear, g_img_wait, g_hero, g_jobs;
 
 var exportSkills = function() {
 
@@ -37,16 +33,13 @@ var exportSkills = function() {
             
         get(urlAttributes, function(attrHtml) {
 
-            var skill_rows = $('.row0', g_form_skills, true).concat($('.row1', g_form_skills)),
-                attr_html = add('div');
-
-            attr_html.innerHTML = attrHtml;
-
-            g_hero = new Hero(world);
             g_jobs = 0;
-            g_hero.parse($('form', attr_html)[1]);
+            g_hero = new Hero(world);
+            g_hero.parse(attrHtml);
 
-            var skills = [];
+            var skillTable = $('.content_table', g_form_skills),
+                skill_rows = skillTable.rows,
+                skills = [];
 
             for (var i = 0, cnt = skill_rows.length; i < cnt; i++) {
                 var skill = new HeroSkill().parse(skill_rows[i]);
