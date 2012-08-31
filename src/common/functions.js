@@ -56,10 +56,9 @@ var get = function(url, callback, obj, async) {
   });
 };
 
-var supportsInnerText = typeof Element.prototype !== 'undefined',
-    innerText = function(elem) {
+var innerText = function(elem) {
     if (!elem) return '';
-    return supportsInnerText ? elem.innerText : elem.textContent;
+    return elem.innerText ? elem.innerText : elem.textContent;
 };
 
 var parseTemplate = function(tpl, data) {

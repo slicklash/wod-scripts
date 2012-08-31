@@ -20,7 +20,7 @@ String.prototype.trim=function(){return this.replace(/^\s+|\s+$/g,"")};
 
 var attr=function(d,b,e,a){if(a){d.removeAttribute(b)}else{if(typeof b==="object"){for(var c in b){d.setAttribute(c,b[c])}}else{if(e){d.setAttribute(b,e)}else{return d.getAttribute(b)}}}return d};
 var add=function(c,a){var b=typeof c!=="object"?document.createElement(c):c;if(a&&a.nodeType){a.appendChild(b)}return b};
-var supportsInnerText=typeof Element.prototype!=="undefined",innerText=function(a){if(!a){return""}return supportsInnerText?a.innerText:a.textContent};
+var innerText=function(a){if(!a){return""}return a.innerText?a.innerText:a.textContent};
 
 // --- Translations ---
 
