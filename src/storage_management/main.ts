@@ -10,33 +10,33 @@ else {
 
 // --- Classes ---
 
-function StorageObject() {
-    this.name = '';
-    this.consumable = false;
-    this.usable = true;
-    this.group = true;
-    this.ctrlSelect = null;
-    this.ctrlLocation = null;
-    this.ctrlSell = null;
+class StorageObject {
+    public name = '';
+    public consumable = false;
+    public usable = true;
+    public group = true;
+    public ctrlSelect = null;
+    public ctrlLocation = null;
+    public ctrlSell = null;
+
+    private static specialConsumables = {
+        'ruby shard': 1,
+        'small carnelian': 1,
+        'small citrine fragment': 1,
+        'small emerald fragment': 1,
+        'small lapis lazuli fragment': 1,
+        'small malachite fragment': 1,
+        'small turquoise': 1
+    };
+
+    isConsumablen(): boolean {
+        if (this.consumable) return true;
+        if (/^reagent:/.test(this.name)) return true;
+        if (/^(lesser|greater) emblem of/i.test(this.name)) return true;
+        if (StorageObject.specialConsumables[this.name]) return true;
+        return false;
+    }
 }
-
-StorageObject.specialConsumables = {
-    'ruby shard': 1,
-    'small carnelian': 1,
-    'small citrine fragment': 1,
-    'small emerald fragment': 1,
-    'small lapis lazuli fragment': 1,
-    'small malachite fragment': 1,
-    'small turquoise': 1
-};
-
-StorageObject.prototype.isConsumable = function() {
-    if (this.consumable) return true;
-    if (/^reagent:/.test(this.name)) return true;
-    if (/^(lesser|greater) emblem of/i.test(this.name)) return true;
-    if (StorageObject.specialConsumables[this.name]) return true;
-    return false;
-};
 
 // --- Main ---
 
@@ -59,7 +59,10 @@ if (buttons_commit.length > 0) {
     var objects = [],
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
-    for (var i = 0, cnt = rows.length; i < cnt; i++) {
+    var size, i, cnt;
+    var name: string;
+
+    for (i = 0, cnt = rows.length; i < cnt; i++) {
         var cells       = rows[i].cells,
             link        = $('a', cells[1]),
             tooltip     = link ? attr(link, 'onmouseover') : false,
@@ -68,9 +71,10 @@ if (buttons_commit.length > 0) {
             ctrl_move   = cells.length > 2 ? $('select', cells[2]) : null,
             ctrl_sell   = cells.length > 3 ? $('input[type="checkbox"][name^="Sell"]', cells[3]) : null,
             ctrl_sell   = ctrl_sell === null ? (cells.length > 4 ? $('input[type="checkbox"]', cells[4]) : null) : ctrl_sell,
-            name        = innerText(link).replace(/!$/,''),
-            size        = innerText(cells[1]).replace(name, '').trim(),
             obj         = new StorageObject();
+
+        name = innerText(link).replace(/!$/,'');
+        size = innerText(cells[1]).replace(name, '').trim();
 
         obj.name = name;
         obj.consumable = re_uses.test(size);
@@ -125,10 +129,10 @@ if (buttons_commit.length > 0) {
                        'itm_nouse', 'unusable'],
         op_group = null;
 
-    for (var i = 0, cnt = moveOptions.length; i < cnt; i = i + 2) {
-        if (moveOptions[i] === '---') { 
+    for (i = 0, cnt = moveOptions.length; i < cnt; i = i + 2) {
+        if (moveOptions[i] === '---') {
             op_group = add('optgroup');
-            attr(op_group, 'label', moveOptions[i + 1]); 
+            attr(op_group, 'label', moveOptions[i + 1]);
             selectMove.appendChild(op_group); continue;
         }
         var op = add('option');
@@ -138,10 +142,10 @@ if (buttons_commit.length > 0) {
 
     op_group = null;
 
-    for (var i = 0, cnt = sellOptions.length; i < cnt; i = i + 2) {
-        if (sellOptions[i] === '---') { 
+    for (i = 0, cnt = sellOptions.length; i < cnt; i = i + 2) {
+        if (sellOptions[i] === '---') {
             op_group = add('optgroup');
-            attr(op_group, 'label', sellOptions[i + 1]); 
+            attr(op_group, 'label', sellOptions[i + 1]);
             selectSell.appendChild(op_group); continue;
         }
         var op = add('option');
@@ -150,7 +154,7 @@ if (buttons_commit.length > 0) {
     }
 
     var onSelectionChange = function(eventArgs) {
-        
+
         var i, cnt, obj;
 
         switch(eventArgs.target.value) {
@@ -234,7 +238,7 @@ if (buttons_commit.length > 0) {
    };
 
    var onSellChange = function(eventArgs) {
-        
+
         var i, cnt, obj;
 
         switch(eventArgs.target.value) {
@@ -286,7 +290,7 @@ if (buttons_commit.length > 0) {
 
     if (objects.length > 0 && objects[0].ctrlLocation) {
         var ops = objects[0].ctrlLocation.options;
-        for (var i = 0, cnt = ops.length; i < cnt; i++) {
+        for (i = 0, cnt = ops.length; i < cnt; i++) {
             var op = ops[i].value;
             if (op === '-go_group_2') { go_gs = '-go_group_2'; break; }
             if (op === '-go_group')   { go_tv = '-go_group'; break; }
@@ -294,7 +298,7 @@ if (buttons_commit.length > 0) {
     }
 
     var onSplit = function() {
-        var ok = false, 
+        var ok = false,
             tmp = [], i, cnt, obj;
         for (i = 0, cnt = objects.length; i < cnt; i++) {
             obj = objects[i];
@@ -317,7 +321,7 @@ if (buttons_commit.length > 0) {
     };
 
     var onEquip = function() {
-        var ok = false, 
+        var ok = false,
             tmp = [], i, cnt, obj;
         for (i = 0, cnt = objects.length; i < cnt; i++) {
             obj = objects[i];
@@ -370,5 +374,3 @@ if (buttons_commit.length > 0) {
     holder.insertBefore(buttonEquip2, buttonSplit2.nextSibling);
     holder.insertBefore(labelSell2, buttonEquip2.nextSibling);
     holder.insertBefore(selectSell2, labelSell2.nextSibling);}
-
-

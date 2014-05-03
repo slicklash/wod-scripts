@@ -156,13 +156,15 @@ if (verticalMenu) {
    attr(menu0, {'class': 'menu-1-body', 'style' : 'display: block'});
    attr(menu_body, 'class', 'menu-2');
 
+   var match_name;
+
    for (var i = 0, cnt = menu1.length; i < cnt; i++) {
        var open_menu = menu1[i];
        if (cssClass(open_menu, 'open')) {
            var tmp = $('a', open_menu);
            for (var j = 0, c2 = tmp.length; j < c2; j++) {
-               var name = attr(tmp[j], 'onclick').match(/'([a-z_ ]+)',''\);$/i);
-               if (name) open_links[name[1]] = open_menu;
+               match_name = attr(tmp[j], 'onclick').match(/'([a-z_ ]+)',''\);$/i);
+               if (match_name) open_links[match_name[1]] = open_menu;
            }
        }
    }
@@ -170,11 +172,11 @@ if (verticalMenu) {
    // var keys = '';
 
    for (var i = 0, cnt = links.length; i < cnt; i++) {
-       var link = links[i],
-           name = attr(link, 'onclick').match(/'([a-z_ ]+)',''\);$/i);
-       if (name) {
-           menu_items[name[1]] = link.cloneNode(true);
-           // keys += "'" + name[1] + "' : '" + link.innerText.replace(/^\s+|\s+$/g,"") + "',\n";
+       var link = links[i];
+       match_name = attr(link, 'onclick').match(/'([a-z_ ]+)',''\);$/i);
+       if (match_name) {
+           menu_items[match_name[1]] = link.cloneNode(true);
+           // keys += "'" + match_name[1] + "' : '" + link.innerText.replace(/^\s+|\s+$/g,"") + "',\n";
        }
    }
 

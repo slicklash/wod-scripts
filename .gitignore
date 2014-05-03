@@ -3,3 +3,6 @@
 92775.user.js
 
 build/
+node_modules/
+lib/def/
+.tscache/

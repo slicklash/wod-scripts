@@ -14,24 +14,29 @@ var tidyTrade = function (table) {
         sums     = {},
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
-    for (var i = 0, cnt = rows.length; i < cnt; i++) {
+    var i, cnt, item, size;
+
+    for (i = 0, cnt = rows.length; i < cnt; i++) {
         var cells     = rows[i].cells,
             condition = $('img', cells[1]),
             link      = $('a', cells[2]),
             control   = cells.length > 3 ? $('input', cells[3]) : null,
-            name      = innerText(link),
-            size      = innerText(cells[2]).replace(name, '').trim(),
-            m_uses    = size.match(re_uses),
+            name      = innerText(link);
+
+        size = innerText(cells[2]).replace(name, '').trim();
+
+        var m_uses    = size.match(re_uses),
             uses      = m_uses ? Number(m_uses[1]) : 1,
-            sum       = sums[name],
-            item      = {
-                'name'      : name,
-                'condition' : condition,
-                'size'      : size,
-                'uses'      : uses,
-                'link'      : link,
-                'control'   : control
-            };
+            sum       = sums[name];
+
+        item = {
+            'name'      : name,
+            'condition' : condition,
+            'size'      : size,
+            'uses'      : uses,
+            'link'      : link,
+            'control'   : control
+        };
 
         items.push(item);
 
@@ -40,10 +45,10 @@ var tidyTrade = function (table) {
 
     items.sort(function(x,y) { var diff = x.name.toLowerCase().localeCompare(y.name.toLowerCase()); return diff === 0 ? x.uses - y.uses : diff; });
 
-    for (var i = 0, cnt = items.length; i < cnt; i++) {
-        var item   = items[i],
-            size   = '&nbsp;' + item.size,
-            row    = add('tr', newTable),
+    for (i = 0, cnt = items.length; i < cnt; i++) {
+        item = items[i];
+        size = '&nbsp;' + item.size;
+        var row    = add('tr', newTable),
             no     = attr(add('td', row), 'align', 'right').innerHTML = i + 1,
             c_cond = add(item.condition, attr(add('td', row), 'valign', 'top')),
             c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});

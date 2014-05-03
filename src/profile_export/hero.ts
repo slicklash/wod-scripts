@@ -1,15 +1,16 @@
+/// <reference path="./_references.ts" />
 
 // --- Hero
 
-function Hero(world) {
-    this.world = world;
-    this.name = '';
-    this.title = '';
-    this.level = 1;
-    this.race = '';
-    this.char_class = '';
-    this.subclass = '';
-    this.attributes = {
+class Hero {
+    world;
+    name = '';
+    title = '';
+    level = 1;
+    race = '';
+    char_class = '';
+    subclass = '';
+    attributes = {
         'st'     : null,
         'co'     : null,
         'in'     : null,
@@ -28,212 +29,213 @@ function Hero(world) {
         'fame'   : new HeroAttribute('Fame'),
         'gender' : new HeroAttribute('Gender')
     };
-    this.skills = [];
-    this.armor = {};
-    this.gear = {};
-    this.modifiers = {};
-}
+    skills = [];
+    armor = {};
+    gear = {};
+    modifiers = {};
 
-Hero.prototype.parse = function(attrHtml) {
-    try {
+    constructor(world) {
+        this.world = world;
+    }
 
-        var attr_html = add('div');
+    parse(attrHtml) {
+        try {
+
+            var attr_html = add('div');
             attr_html.innerHTML = attrHtml;
 
-        var formHtml = $('form', attr_html)[1],
-            title = innerText($('h1', formHtml)),
-            tables = $('.content_table', formHtml),
-            attrTable = tables[0],
-            charTable = tables[1],
-            armorTable = tables[2],
-            content_rows = $('.row0', charTable).concat($('.row1', charTable));
+            var formHtml = $('form', attr_html)[1],
+                title = innerText($('h1', formHtml)),
+                tables = $('.content_table', formHtml),
+                attrTable = tables[0],
+                charTable = tables[1],
+                armorTable = tables[2],
+                content_rows = $('.row0', charTable).concat($('.row1', charTable));
 
-        this.name = title.substring(0, title.lastIndexOf('-')).trim();
-        this.parseAttributes(attrTable);
-        this.parseCharacter(charTable);
-        this.parseArmor(armorTable);
+            this.name = title.substring(0, title.lastIndexOf('-')).trim();
+            this.parseAttributes(attrTable);
+            this.parseCharacter(charTable);
+            this.parseArmor(armorTable);
 
-        if (g_check_gear.checked) {
+            if (g_check_gear.checked) {
 
-            g_jobs++;
+                g_jobs++;
 
-            var eq_url = location.href.replace('skills.php', 'items.php').replace('menukey=hero_skills', 'menukey=hero_gear'),
-                hero = this;
+                var eq_url = location.href.replace('skills.php', 'items.php').replace('menukey=hero_skills', 'menukey=hero_gear'),
+                    hero = this;
 
-            if (eq_url.indexOf('view=gear') < 0)  {
-                eq_url += '&view=gear';
+                if (eq_url.indexOf('view=gear') < 0)  {
+                    eq_url += '&view=gear';
+                }
+
+                get(eq_url, function(gearHtml) {
+                    hero.parseGear(gearHtml);
+                    g_jobs--;
+                }, this);
             }
+            else {
+                delete this.gear;
+            }
+        }
+        catch (ex) {
+            GM_log('Hero.parse: ' + ex);
+        }
+        return this;
+    }
 
-            get(eq_url, function(gearHtml) {
-                hero.parseGear(gearHtml);
-                g_jobs--;
-            }, this);
+    parseAttributes(attrTable) {
 
-        } 
+        var content_rows = attrTable.rows,
+            index = ['st', 'co', 'in', 'dx', 'ch', 'ag', 'pe', 'wi'],
+            re_race  = new RegExp('(' + this.world.races.join('|') + ') \\('),
+            re_class = new RegExp('(' + this.world.classes.join('|') + ') \\('),
+            i, cnt, row, breed, value, attr, m_race, m_class, origin;
+
+        for (i = 1, cnt = content_rows.length; i < cnt; i++) {
+            row = content_rows[i];
+            origin = row.cells[0].innerHTML;
+            name = innerText(row.cells[0]).trim();
+            value = $('tr', row.cells[1]);
+            m_race = origin.match(re_race);
+            m_class = origin.match(re_class);
+
+            if (m_race)
+                this.race = m_race[1];
+
+            if (m_class)
+                this.char_class = m_class[1];
+
+            if (value.cells) {
+                attr = new HeroAttribute(name);
+                value = innerText(value.cells[1]).parseEffectiveValue();
+                attr.value = value[0];
+                attr.effective_value = value[1];
+                attr.training_cost = HeroAttribute.getCost(attr.value);
+                this.attributes[index[i - 1]] = attr;
+            }
+        }
+    }
+
+    parseCharacter(charTable) {
+
+        var content_rows = charTable.rows,
+            index = content_rows.length == 10 ? ['lvl', '-', 'fame', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'] : ['lvl', '-', 'fame', '-', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'];
+
+        for (var rowIndex = 0, cnt = content_rows.length; rowIndex < cnt; rowIndex++) {
+
+            var row = content_rows[rowIndex],
+                cell1 = row.cells[0],
+                name = innerText(cell1).trim(),
+                property = index[rowIndex];
+
+            switch(property) {
+                case 'lvl':
+                    this.level = Number(innerText(row.cells[1]));
+                    break;
+                case 'fame':
+                    this.attributes.fame.value = Number(innerText(row.cells[1]));
+                    break;
+                case 'hp':
+                    var hp = innerText(row.cells[1]).parseEffectiveValue(),
+                        hhp = innerText(row.cells[2]).parseEffectiveValue(),
+                        hpa = this.attributes.hp,
+                        hhpa = this.attributes.hhp;
+                    hpa.value = hp[0];
+                    hpa.effective_value = hp[1];
+                    hhpa.value = hhp[0];
+                    hhpa.effective_value = hhp[1];
+                    break;
+                case 'mp':
+                    var mp = innerText(row.cells[1]).parseEffectiveValue(),
+                        rmp = innerText(row.cells[2]).parseEffectiveValue(),
+                        mpa = this.attributes.mp,
+                        rmpa = this.attributes.rmp;
+                    mpa.value = mp[0];
+                    mpa.effective_value = mp[1];
+                    rmpa.value = rmp[0];
+                    rmpa.effective_value = rmp[1];
+                    break;
+                case 'act':
+                    var act = innerText(row.cells[1]).parseEffectiveValue(),
+                        acta = this.attributes.act;
+                    acta.value = act[0];
+                    acta.effective_value = act[1];
+                    break;
+                case 'ini':
+                    var ini = innerText(row.cells[1]).parseEffectiveValue(),
+                        inia = this.attributes.ini;
+                    inia.value = ini[0];
+                    inia.effective_value = ini[1];
+                    break;
+                case 'rstpt':
+                    this.attributes.rstpt.value = Number(innerText(row.cells[1]));
+                    break;
+                case 'gender':
+                    this.attributes.gender.value = innerText(row.cells[1]).trim().toUpperCase()[0];
+                    break;
+                case 'title':
+                    this.title = innerText($('a', row.cells[1])).trim();
+                    break;
+            }
+        }
+    }
+
+    parseArmor(armorTable) {
+
+        var content_rows = armorTable.rows;
+
+        for (var i = 1, cnt = content_rows.length; i < cnt; i++) {
+
+            var row = content_rows[i],
+                cell1 = row.cells[0],
+                type = innerText(cell1).trim().toLowerCase(),
+                attack_type = innerText(row.cells[1]).replace('(z)', '').trim(),
+                value = innerText(row.cells[2]).replace(/(\s|&nbsp;)/g, '').trim();
+
+            if (!this.armor[type]) 
+                this.armor[type] = {};
+
+            var a = this.armor[type];
+            a[attack_type] = value;
+        }
+    }
+
+    parseGear(gearHtml) {
+
+        var gear_html = add('div'),
+            gear = {};
+
+        if(/\d+ items were found in the dungeon. You may carry up to/.test(gearHtml)) {
+            alert('You have too much items in your backpack, your current gear won\'t be shown.');
+        }
         else {
-            delete this.gear;
-        }
-        
-    }
-    catch (ex) {
-        GM_log('Hero.parse: ' + ex);
-    }
-    return this;
-};
+            gear_html.innerHTML = gearHtml;
 
-Hero.prototype.parseAttributes = function(attrTable) {
+            var items = $('div[id="main_content"] form td[class="texttoken"]', gear_html, true),
+                re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
-    var content_rows = attrTable.rows,
-        index = ['st', 'co', 'in', 'dx', 'ch', 'ag', 'pe', 'wi'],
-        re_race  = new RegExp('(' + this.world.races.join('|') + ') \\('),
-        re_class = new RegExp('(' + this.world.classes.join('|') + ') \\('),
-        i, cnt, row, breed, value, attr, m_race, m_class;
+            if (items) {
+                for (var i = 0, cnt = items.length; i < cnt; i++) {
+                    var slot = items[i],
+                        slot_name = slot.innerHTML,
+                                  row = slot.parentNode,
+                                  ctrl = $('select', row),
+                                  itm = ctrl ? ctrl.options[ctrl.selectedIndex].text.replace(/!$/,'') : '';
 
-    for (i = 1, cnt = content_rows.length; i < cnt; i++) {
-        row = content_rows[i];
-        origin = row.cells[0].innerHTML;
-        name = innerText(row.cells[0]).trim();
-        value = $('tr', row.cells[1]);
-        m_race = origin.match(re_race);
-        m_class = origin.match(re_class);
-
-        if (m_race) 
-            this.race = m_race[1];
-
-        if (m_class) 
-            this.char_class = m_class[1];
-
-        if (value.cells) {
-            attr = new HeroAttribute(name);
-            value = innerText(value.cells[1]).parseEffectiveValue();
-            attr.value = value[0];
-            attr.effective_value = value[1];
-            attr.training_cost = HeroAttribute.getCost(attr.value);
-            this.attributes[index[i - 1]] = attr;
-        }
-    }
-};
-
-Hero.prototype.parseCharacter = function (charTable) {
-
-    var content_rows = charTable.rows;
-        index = content_rows.length == 10 ? ['lvl', '-', 'fame', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'] : ['lvl', '-', 'fame', '-', 'hp', 'mp', 'act', 'ini', 'rstpt', 'gender', 'title'];
-
-    for (var rowIndex = 0, cnt = content_rows.length; rowIndex < cnt; rowIndex++) {
-
-        var row = content_rows[rowIndex],
-            cell1 = row.cells[0],
-            name = innerText(cell1).trim(),
-            property = index[rowIndex];
-
-        switch(property) {
-            case 'lvl':
-                this.level = Number(innerText(row.cells[1]));
-                break;
-            case 'fame':
-                this.attributes.fame.value = Number(innerText(row.cells[1]));
-                break;
-            case 'hp':
-                var hp = innerText(row.cells[1]).parseEffectiveValue(),
-                    hhp = innerText(row.cells[2]).parseEffectiveValue(),
-                    hpa = this.attributes.hp,
-                    hhpa = this.attributes.hhp;
-                hpa.value = hp[0];
-                hpa.effective_value = hp[1];
-                hhpa.value = hhp[0];
-                hhpa.effective_value = hhp[1];
-                break;
-            case 'mp':
-                var mp = innerText(row.cells[1]).parseEffectiveValue(),
-                    rmp = innerText(row.cells[2]).parseEffectiveValue(),
-                    mpa = this.attributes.mp,
-                    rmpa = this.attributes.rmp;
-                mpa.value = mp[0];
-                mpa.effective_value = mp[1];
-                rmpa.value = rmp[0];
-                rmpa.effective_value = rmp[1];
-                break;
-            case 'act':
-                var act = innerText(row.cells[1]).parseEffectiveValue(),
-                    acta = this.attributes.act;
-                acta.value = act[0];
-                acta.effective_value = act[1];
-                break;
-            case 'ini':
-                var ini = innerText(row.cells[1]).parseEffectiveValue(),
-                    inia = this.attributes.ini;
-                inia.value = ini[0];
-                inia.effective_value = ini[1];
-                break;
-            case 'rstpt':
-                this.attributes.rstpt.value = Number(innerText(row.cells[1]));
-                break;
-            case 'gender':
-                this.attributes.gender.value = innerText(row.cells[1]).trim().toUpperCase()[0];
-                break;
-            case 'title':
-                this.title = innerText($('a', row.cells[1])).trim();
-                break;
-        }
-    }
-};
-
-Hero.prototype.parseArmor = function (armorTable) {
-
-    var content_rows = armorTable.rows;
-
-    for (var i = 1, cnt = content_rows.length; i < cnt; i++) {
-
-        var row = content_rows[i],
-            cell1 = row.cells[0],
-            type = innerText(cell1).trim().toLowerCase(),
-            attack_type = innerText(row.cells[1]).replace('(z)', '').trim(),
-            value = innerText(row.cells[2]).replace(/(\s|&nbsp;)/g, '').trim();
-
-        if (!this.armor[type]) 
-            this.armor[type] = {};
-
-        var a = this.armor[type];
-        a[attack_type] = value;
-    }
-};
-
-Hero.prototype.parseGear = function (gearHtml) {
-
-    var gear_html = add('div'),
-        gear = {};
-
-    if(/\d+ items were found in the dungeon. You may carry up to/.test(gearHtml)) {
-        alert('You have too much items in your backpack, your current gear won\'t be shown.');
-    }
-    else {
-        gear_html.innerHTML = gearHtml;
-
-        var items = $('div[id="main_content"] form td[class="texttoken"]', gear_html, true),
-            re_uses  = /\(([0-9]+)\/[0-9]+\)/;
-
-        if (items) {
-            for (var i = 0, cnt = items.length; i < cnt; i++) {
-                var slot = items[i],
-                    slot_name = slot.innerHTML,
-                              row = slot.parentNode,
-                              ctrl = $('select', row),
-                              itm = ctrl ? ctrl.options[ctrl.selectedIndex].text.replace(/!$/,'') : '';
-
-                gear[slot.innerHTML] = !re_uses.test(itm) ? itm : '';
+                    gear[slot.innerHTML] = !re_uses.test(itm) ? itm : '';
+                }
+                this.gear = gear;
             }
-            this.gear = gear;
         }
     }
-};
 
-Hero.prototype.generateBBCode = function() {
-    return parseTemplate(Hero.getProfileTemplate(), {"hero": this});
-};
+    generateBBCode = function() {
+        return parseTemplate(Hero.getProfileTemplate(), {"hero": this});
+    }
 
-Hero.getProfileTemplate = function() {
-    var template = '\
-                                                                                                                                            \
+static getProfileTemplate() {
+var template = '\
+\
 [size=12][hero:<#=hero.name#>]<#if(hero.title){#>, <#}#>[i]<#=hero.title#>[/i] - [class:<#=hero.race#>] [class:<#=hero.char_class#>] - Level <#=hero.level#>[/size]\
 [h1]Characteristics[/h1]\
 [table][tr]\
@@ -263,8 +265,8 @@ Hero.getProfileTemplate = function() {
 <# var armor = hero.armor; for (var dmg_type in armor) { var arm = armor[dmg_type]; for (var atk_type in arm) { var val = arm[atk_type].split("/"); if (val[0] == val[1] && val[1] == val[2] && val[2] == 0) continue; #>\
 [tr][td][size=12]<#=dmg_type#>[/size][/td][td align=center][size=12]<#=atk_type#>[/size][/td]\
 [td][size=12]<#if(val[0]>0){#>[color=mediumseagreen]<#}#><#=val[0]#><#if(val[0]>0){#>[/color]<#}#>\
- / <#if(val[1]>0){#>[color=mediumseagreen]<#}#><#=val[1]#><#if(val[1]>0){#>[/color]<#}#>\
- / <#if(val[2]>0){#>[color=mediumseagreen]<#}#><#=val[2]#><#if(val[2]>0){#>[/color]<#}#>[/size][/td]\
+/ <#if(val[1]>0){#>[color=mediumseagreen]<#}#><#=val[1]#><#if(val[1]>0){#>[/color]<#}#>\
+/ <#if(val[2]>0){#>[color=mediumseagreen]<#}#><#=val[2]#><#if(val[2]>0){#>[/color]<#}#>[/size][/td]\
 [/tr]<#}}#>\
 [/table]  [size=10]r - for normal / good / critical hits[/size]\
 [h1]Initiative[/h1]\
@@ -323,4 +325,6 @@ var mp = skill.mp_cost != 0 ? skill.mp_cost : ""; var color_affect = skill.isOff
 \
 ';
     return template;
-};
+}
+
+}

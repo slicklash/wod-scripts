@@ -1,3 +1,4 @@
+/// <reference path="_references.ts" />
 
 // --- Main
 
@@ -12,7 +13,7 @@ var saveWeights = function () {
 
     for (var i = 1, cnt = g_rows.length; i < cnt; i++) {
         var cells     = g_rows[i].cells,
-            hid       = Number($('input', cells[0]).value),
+            hid       = Number($('input', cells[0]).value).toString(),
             weight    = Number($('input', cells[5]).value);
 
         if (isNaN(weight)) weight = 0;
@@ -25,7 +26,7 @@ var saveWeights = function () {
     if (form) form.submit();
 }
 
-var orderHeroes = function (weights) {
+var orderHeroes = function () {
 
     if (!g_rows || g_rows.length < 1) return;
 
@@ -49,14 +50,18 @@ var orderHeroes = function (weights) {
 
     newTbody.appendChild(g_rows[0]);
 
-    for (var i = 1, cnt = g_rows.length; i < cnt; i++) {
+    var i, cnt, hero;
+
+    // get values
+    for (i = 1, cnt = g_rows.length; i < cnt; i++) {
         var cells     = g_rows[i].cells,
-            hid       = Number($('input', cells[0]).value),
-            level     = Number(innerText(cells[2])),
-            hero      = {
-                'weight'    : level == 0 ? 100 : level,
-                'row'       : g_rows[i]
-            };
+            hid       = Number($('input', cells[0]).value).toString(),
+            level     = Number(innerText(cells[2]));
+
+        hero      = {
+            'weight'    : level == 0 ? 100 : level,
+            'row'       : g_rows[i]
+        };
 
         var val = GM_getValue(hid);
 
@@ -67,9 +72,12 @@ var orderHeroes = function (weights) {
 
     heroes.sort(function(x, y) { return x.weight - y.weight; });
 
-    for (var i = 0, cnt = heroes.length; i < cnt; i++) {
-        var hero = heroes[i],
-            row = hero.row,
+    // update list
+    for (i = 0, cnt = heroes.length; i < cnt; i++) {
+
+        hero = heroes[i];
+
+        var row = hero.row,
             colWeight = add('td', row),
             txt = add('input');
 

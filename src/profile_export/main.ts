@@ -1,3 +1,5 @@
+/// <reference path="./_references.ts" />
+
 // --- Main
 
 var VERSION = '1.0.9';
@@ -30,7 +32,7 @@ var exportSkills = function() {
 
         var world = new World();
             world.parse(htmlClasses);
-            
+
         get(urlAttributes, function(attrHtml) {
 
             g_jobs = 0;
@@ -85,7 +87,7 @@ var main = function () {
    if (button) {
         g_button_export = add('input');
         g_check_gear = add('input');
-        label_gear = add('label');
+        var label_gear = add('label');
         label_gear.innerHTML = 'Equipment';
         attr(g_button_export, {'type': 'button', 'class': 'button clickable', 'value': 'Export', 'style': 'margin-left: 4px'});
         attr(g_check_gear, {'type': 'checkbox', 'id': 'export-gear', 'style': 'margin-left: 4px'});
@@ -108,7 +110,7 @@ var dev = function () {
     attr(btn_dev, {'type': 'button', 'class': 'button clickable', 'value': 'Dev', 'style': 'margin-left: 4px'});
 
     var test1 = function () {
-        
+
         var loc = location.href.replace('hero/skills.php', 'help/heroclasslist.php') + '&TABLE_PSNR[1]=30&TABLE_PSGO[1]=v';
 
         get(loc, function(html) {
@@ -122,50 +124,8 @@ var dev = function () {
             alert('done');
         });
     };
-   
-    var test2 = function () {
-        
-        var loc = location.href.replace('skills.php', 'attributes.php');
 
-        get(loc, function(html) {
-
-            var world = Mockery.mockWorldCaledonii();
-            var hero = new Hero(world);
-
-            var tmp = add('div');
-            tmp.innerHTML = html;
-
-            var tables = $('form .content_table', tmp);
-
-            hero.parseAttributes(tables[0]);
-
-            alert('done');
-        });
-    };
-
-    var test3 = function () {
-        
-        var loc = location.href.replace('skills.php', 'attributes.php');
-
-        get(loc, function(html) {
-
-            var world = Mockery.mockWorldCaledonii();
-            var hero = new Hero(world);
-
-            var tmp = add('div');
-            tmp.innerHTML = html;
-
-            var tables = $('form .content_table', tmp),
-                table = tables[2];
-
-            console.log(table);
-            //hero.parseCharacteristics(table);
-
-            alert('done');
-        });
-    };
-
-    btn_dev.addEventListener('click', test3, false);
+    btn_dev.addEventListener('click', test1, false);
 };
 
 if (g_match_location) {

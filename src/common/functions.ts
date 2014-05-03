@@ -1,7 +1,8 @@
+/// <reference path="../../lib/def/greasemonkey/greasemonkey.d.ts" />
 
 // --- Functions
 
-var attr = function(elem, name, value, remove) {
+var attr = function(elem, name, value?, remove?: boolean) {
     if (remove) {
         elem.removeAttribute(name);
     }
@@ -19,7 +20,7 @@ var attr = function(elem, name, value, remove) {
     return elem;
 };
 
-var cssClass = function(elem, name, toggle) {
+var cssClass = function(elem, name: string, toggle?: boolean) {
     var has = elem.className.indexOf(name) !== -1;
     if (typeof toggle !== 'boolean') return has;
     if (has && toggle) return elem;
@@ -27,13 +28,13 @@ var cssClass = function(elem, name, toggle) {
     return elem;
 };
 
-var add = function(value, parentNode) {
+var add = function(value, parentNode?) {
     var newElem = typeof value !== 'object' ? document.createElement(value) : value;
     if (parentNode && parentNode.nodeType) parentNode.appendChild(newElem);
     return newElem;
 };
 
-var get = function(url, callback, obj, async) {
+var get = function(url, callback, obj?, async?) {
   GM_xmlhttpRequest({
       method: 'GET',
       url: url,
@@ -67,7 +68,7 @@ var parseTemplate = function(tpl, data) {
                    tpl.replace(/[\r\t\n]/g, " ").replace(/'(?=[^#]*#>)/g, "\t").split("'").join("\\'")
                    .split("\t").join("'").replace(/<#=(.+?)#>/g, "',$1,'").split("<#").join("');")
                    .split("#>").join("p.push('") + "');}return p.join('');";
-            fn = new Function("obj", code);
+        var fn = new Function("obj", code);
         return fn(data);
     }
     catch (ex) {

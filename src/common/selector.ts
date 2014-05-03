@@ -1,23 +1,23 @@
 
 // --- Selector
 
-function $(selector, parentNode, resultAsArray) {
+function $(selector: string, parentNode?, resultAsArray?: boolean) {
     var context = parentNode || document;
 
     if (!selector || typeof selector !== 'string' || !(context.nodeType === 9 || context.nodeType === 1)) {
         return null;
     }
 
-    var selectors = selector.split(/\s+/), 
-        result = [context], 
+    var selectors = selector.split(/\s+/),
+        result = [context],
         returnArray = resultAsArray || false;
-    
+
     for (var i = 0, cnt = selectors.length; i < cnt; i++) {
-        
-        var new_result = [], 
+
+        var new_result = [],
             m_elem = selectors[i].match(/^([\.#]?[a-z0-9\-_]+\w*)/i), 
             sel = m_elem ? m_elem[1] : '',
-            s = selectors[i].replace(sel, ''), 
+            s = selectors[i].replace(sel, ''),
             re_attr = /(\[([a-z]+)([\*\^\$]?=)"(\w+)"\])/gi, 
             filters = [];
 
@@ -57,27 +57,27 @@ function $(selector, parentNode, resultAsArray) {
             result = [];
             for (var g = 0, cntg = new_result.length; g < cntg; g++) {
 
-                var elem = new_result[g], 
+                var elem = new_result[g],
                     ok = false;
 
                 for (var l = 0, cntl = filters.length; l < cntl; l++) {
-                    
-                    var filter = filters[l], 
+
+                    var filter = filters[l],
                         attr = elem.getAttribute(filter.attribute);
 
                     if (attr) {
-                        
+
                         switch(filter.condition) {
-                            case '*=': 
+                            case '*=':
                                 ok = attr.indexOf(filter.value) > -1;  
                                 break;
-                            case '^=': 
+                            case '^=':
                                 ok = attr.indexOf(filter.value) === 0; 
                                 break;
-                            case '$=': 
+                            case '$=':
                                 ok = attr.indexOf(filter.value, attr.length - filter.value.length) > -1; 
                                 break;
-                            default  : 
+                            default  :
                                 ok = attr === filter.value; 
                                 break;
                         }
@@ -88,7 +88,7 @@ function $(selector, parentNode, resultAsArray) {
                     }
                 }
 
-                if (ok === true) { 
+                if (ok === true) {
                     result.push(elem);
                 }
             }
