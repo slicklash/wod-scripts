@@ -29,6 +29,11 @@ module.exports = function (grunt) {
                 reference: 'src/favorite_menu/_references.ts',
                 out: 'build/favorite_menu.js'
             },
+            wardrobe: {
+                src: ['src/common/*.ts', 'src/wardrobe/*.ts'],
+                reference: 'src/wardrobe/_references.ts',
+                out: 'build/wardrobe.js'
+            },
             heroes: {
                 src: ['src/common/*.ts', 'src/hero_list/*.ts'],
                 reference: 'src/hero_list/_references.ts',
@@ -56,6 +61,22 @@ module.exports = function (grunt) {
             },
         },
 
+        concat: {
+            options: {
+                process: function(src, filepath) {
+                    if (filepath.indexOf('header.js') > -1) {
+                        return src + '\n' + '(function(window, undefined) {' + '\n';
+                    }
+                    return src;
+                },
+                footer: '})();'
+            },
+            wardrobe: {
+                src: ['src/wardrobe/header.js', 'build/wardrobe.js'],
+                dest: 'release/wardrobe.user.js'
+            }
+        },
+
         karma: {
             test1: {
                 configFile: 'tests/karma.conf.js'
@@ -63,6 +84,14 @@ module.exports = function (grunt) {
         },
 
         watch: {
+            wardrobe: {
+                files: [ 'src/wardrobe/*.ts' ],
+                tasks: ['re:wardrobe'],
+                options: {
+                    atBegin: false,
+                    spawn: false
+                }
+            },
             tests: {
                 files: [
                     'src/**/*.ts',
@@ -79,8 +108,10 @@ module.exports = function (grunt) {
 
     grunt.initConfig(config);
 
-    grunt.registerTask("init", ["tsd"]);
-    grunt.registerTask("compile", ["ts"]);
+    grunt.registerTask('init', ['tsd']);
+    grunt.registerTask('compile', ['ts']);
 
-    grunt.registerTask("default", ["compile"]);
+    grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);
+
+    grunt.registerTask('default', ['compile']);
 };
