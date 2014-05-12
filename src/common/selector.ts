@@ -19,7 +19,8 @@ function $(selector: string, parentNode?, resultAsArray?: boolean) {
             sel = m_elem ? m_elem[1] : '',
             s = selectors[i].replace(sel, ''),
             re_attr = /(\[([a-z]+)([\*\^\$]?=)"(\w+)"\])/gi, 
-            filters = [];
+            filters = [],
+            filter;
 
         while ((filter = re_attr.exec(s))) {
 
@@ -55,6 +56,7 @@ function $(selector: string, parentNode?, resultAsArray?: boolean) {
 
         if (filters.length > 0) {
             result = [];
+
             for (var g = 0, cntg = new_result.length; g < cntg; g++) {
 
                 var elem = new_result[g],
@@ -62,8 +64,8 @@ function $(selector: string, parentNode?, resultAsArray?: boolean) {
 
                 for (var l = 0, cntl = filters.length; l < cntl; l++) {
 
-                    var filter = filters[l],
-                        attr = elem.getAttribute(filter.attribute);
+                    filter = filters[l];
+                    var attr = elem.getAttribute(filter.attribute);
 
                     if (attr) {
 

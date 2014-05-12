@@ -25,7 +25,11 @@ module.exports = function (grunt) {
                 comments: false,
             },
             favmenu: {
-                src: ['src/common/*.ts', 'src/favorite_menu/*.ts'],
+                src: [
+                    'src/common/selector.ts',
+                    'src/common/functions/functions.dom.ts',
+                    'src/favorite_menu/*.ts'
+                ],
                 reference: 'src/favorite_menu/_references.ts',
                 out: 'build/favorite_menu.js'
             },
@@ -71,6 +75,10 @@ module.exports = function (grunt) {
                 },
                 footer: '})();'
             },
+            favmenu: {
+                src: ['src/favorite_menu/header.js', 'build/favorite_menu.js'],
+                dest: 'release/favorite_menu.user.js'
+            },
             wardrobe: {
                 src: ['src/wardrobe/header.js', 'build/wardrobe.js'],
                 dest: 'release/wardrobe.user.js'
@@ -112,6 +120,7 @@ module.exports = function (grunt) {
     grunt.registerTask('compile', ['ts']);
 
     grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);
+    grunt.registerTask('re:favmenu', ['ts:favmenu', 'concat:favmenu']);
 
     grunt.registerTask('default', ['compile']);
 };

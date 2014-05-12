@@ -1,4 +1,3 @@
-
 // --- Prototypes
 
 interface String {

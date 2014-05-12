@@ -125,7 +125,7 @@ if (verticalMenu) {
         font_render_url = 'http://fonts.neise-games.de/java_font_renderer/render?skin=' + skin,
         my_menu = add('div'),
         caption = add('a', my_menu),
-        supports_img = skin && skin != 'skin-1';
+        supports_img = skin && skin !== 'skin-1';
 
     attr(my_menu, {'class': 'menu-1', id: 'menu_my_menu'});
     attr(caption, {'class': 'menu-1-caption alink selected', 'onclick': "return menuOnClick(this,'','','');"});
@@ -136,12 +136,7 @@ if (verticalMenu) {
         attr(add('img', caption), {'class': 'font_menu-1-selected', 'alt': MY_MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-selected&text=' + MY_MENU_NAME});
     }
     else {
-        if (caption.innerText) {
-           caption.innerText = MY_MENU_NAME;
-        }
-        else {
-           caption.textContent = MY_MENU_NAME;
-        }
+        innerText(caption, MY_MENU_NAME);
     }
 
    attr(add('span', caption), 'class', 'menu-1-arrow open');
@@ -181,62 +176,61 @@ if (verticalMenu) {
    }
 
    for(var key in MY_MENU_LAYOUT) {
-       var link = menu_items[key],
-           submenu = false;
-       if (!link) {
-           link = add('a');
-           attr(link, {'href':'#', 'class': 'menu-2-caption'});
-       }
-       attr(link, 'onclick', null, true);
-       var menu_item = MY_MENU_LAYOUT[key];
-       if (typeof menu_item === 'string') {
-           link.innerHTML = menu_item;
-           var open_menu = open_links[key];
-           if (open_menu) {
-               var arrow = $('.menu-1-arrow', open_menu);
-               cssClass(open_menu, 'open', false);
-               if (arrow) {
-                   cssClass(arrow, 'open', false);
-                   cssClass(arrow, 'closed', true);
+       if (MY_MENU_LAYOUT.hasOwnProperty(key)){
+           var link = menu_items[key],
+               submenu = false;
+           if (!link) {
+               link = add('a');
+               attr(link, {'href':'#', 'class': 'menu-2-caption'});
+           }
+           attr(link, 'onclick', null, true);
+           var menu_item = MY_MENU_LAYOUT[key];
+           if (typeof menu_item === 'string') {
+               link.innerHTML = menu_item;
+               var open_menu = open_links[key];
+               if (open_menu) {
+                   var arrow = $('.menu-1-arrow', open_menu);
+                   cssClass(open_menu, 'open', false);
+                   if (arrow) {
+                       cssClass(arrow, 'open', false);
+                       cssClass(arrow, 'closed', true);
+                   }
                }
            }
-       }
-       else {
-           if (link.innerText) {
-               link.innerText = menu_item[0];
-           }
            else {
-               link.textContent = menu_item[0];
-           }
-           var submenu_items = menu_item[1];
-           submenu = add('div');
-           attr(submenu, {'class': 'menu-2-body', 'style': 'padding-top: 0px'});
-           for (var subkey in submenu_items) {
-               var sublink = menu_items[subkey];
-               if (sublink) {
-                   attr(sublink, 'onclick', null, true);
-                   var menu3 = add('div', submenu),
-                       menu3_cap = add(sublink, menu3);
-                   attr(menu3, 'class', 'menu-3');
-                   cssClass(menu3_cap, 'menu-2-caption', false);
-                   cssClass(menu3_cap, 'menu-3-caption', true);
-                   menu3_cap.innerHTML = submenu_items[subkey];
-                   var open_menu = open_links[subkey];
-                   if (open_menu) {
-                       var arrow = $('.menu-1-arrow', open_menu);
-                       cssClass(open_menu, 'open', false);
-                       if (arrow) {
-                           cssClass(arrow, 'open', false);
-                           cssClass(arrow, 'closed', true);
+               innerText(link, menu_item[0]);
+               var submenu_items = menu_item[1];
+               submenu = add('div');
+               attr(submenu, {'class': 'menu-2-body', 'style': 'padding-top: 0px'});
+               for (var subkey in submenu_items) {
+                   if (submenu_items.hasOwnProperty(subkey)) {
+                       var sublink = menu_items[subkey];
+                       if (sublink) {
+                           attr(sublink, 'onclick', null, true);
+                           var menu3 = add('div', submenu),
+                               menu3_cap = add(sublink, menu3);
+                           attr(menu3, 'class', 'menu-3');
+                           cssClass(menu3_cap, 'menu-2-caption', false);
+                           cssClass(menu3_cap, 'menu-3-caption', true);
+                           menu3_cap.innerHTML = submenu_items[subkey];
+                           var open_menu = open_links[subkey];
+                           if (open_menu) {
+                               var arrow = $('.menu-1-arrow', open_menu);
+                               cssClass(open_menu, 'open', false);
+                               if (arrow) {
+                                   cssClass(arrow, 'open', false);
+                                   cssClass(arrow, 'closed', true);
+                               }
+                           }
                        }
                    }
                }
            }
+           var new_menu = add('div', menu_body);
+           attr(new_menu, 'class', 'menu-2 open');
+           add(link, new_menu);
+           if (submenu) add(submenu, new_menu);
        }
-       var new_menu = add('div', menu_body);
-       attr(new_menu, 'class', 'menu-2 open');
-       add(link, new_menu);
-       if (submenu) add(submenu, new_menu);
    }
 
    var menu_between = add('div');
