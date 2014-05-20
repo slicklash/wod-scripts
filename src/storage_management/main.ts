@@ -1,11 +1,13 @@
 
 // --- Translations ---
 
+var _t;
+
 if (location.href.indexOf('.net') > 0) {
-    var _t = function(text) { return text; };
+    _t = function(text) { return text; };
 }
 else {
-    var _t = function(text) { return text === 'Commit' ? 'nderungen' : text; };
+    _t = function(text) { return text === 'Commit' ? 'nderungen' : text; };
 }
 
 // --- Classes ---
@@ -29,7 +31,7 @@ class StorageObject {
         'small turquoise': 1
     };
 
-    isConsumablen(): boolean {
+    isConsumable(): boolean {
         if (this.consumable) return true;
         if (/^reagent:/.test(this.name)) return true;
         if (/^(lesser|greater) emblem of/i.test(this.name)) return true;
@@ -52,14 +54,14 @@ if (buttons_commit.length > 0) {
     try { scope = scope[0].parentNode.parentNode.parentNode.parentNode; } catch (ex) { scope = null; }
     if (!scope) return;
 
-    var rows = $('tbody tr[class="row0"]', scope, true),
-        rows = rows ? rows.concat($('tbody tr[class="row1"]', scope, true)) : null;
+    var rows = $('tbody tr[class="row0"]', scope, true);
+    rows = rows ? rows.concat($('tbody tr[class="row1"]', scope, true)) : null;
     if (!rows) return;
 
     var objects = [],
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
-    var size, i, cnt;
+    var size, i, cnt, op;
     var name: string;
 
     for (i = 0, cnt = rows.length; i < cnt; i++) {
@@ -70,9 +72,9 @@ if (buttons_commit.length > 0) {
             ctrl_select = cells.length > 2 ? $('input[type="checkbox"][name^="doEquip]', cells[2]) : null,
             ctrl_move   = cells.length > 2 ? $('select', cells[2]) : null,
             ctrl_sell   = cells.length > 3 ? $('input[type="checkbox"][name^="Sell"]', cells[3]) : null,
-            ctrl_sell   = ctrl_sell === null ? (cells.length > 4 ? $('input[type="checkbox"]', cells[4]) : null) : ctrl_sell,
             obj         = new StorageObject();
 
+        ctrl_sell   = ctrl_sell === null ? (cells.length > 4 ? $('input[type="checkbox"]', cells[4]) : null) : ctrl_sell;
         name = innerText(link).replace(/!$/,'');
         size = innerText(cells[1]).replace(name, '').trim();
 
@@ -135,7 +137,7 @@ if (buttons_commit.length > 0) {
             attr(op_group, 'label', moveOptions[i + 1]);
             selectMove.appendChild(op_group); continue;
         }
-        var op = add('option');
+        op = add('option');
         attr(op, 'value', moveOptions[i]).innerHTML = moveOptions[i + 1];
         if (op_group) op_group.appendChild(op); else selectMove.appendChild(op);
     }
@@ -148,7 +150,7 @@ if (buttons_commit.length > 0) {
             attr(op_group, 'label', sellOptions[i + 1]);
             selectSell.appendChild(op_group); continue;
         }
-        var op = add('option');
+        op = add('option');
         attr(op, 'value', sellOptions[i]).innerHTML = sellOptions[i + 1];
         if (op_group) op_group.appendChild(op); else selectSell.appendChild(op);
     }
@@ -291,7 +293,7 @@ if (buttons_commit.length > 0) {
     if (objects.length > 0 && objects[0].ctrlLocation) {
         var ops = objects[0].ctrlLocation.options;
         for (i = 0, cnt = ops.length; i < cnt; i++) {
-            var op = ops[i].value;
+            op = ops[i].value;
             if (op === '-go_group_2') { go_gs = '-go_group_2'; break; }
             if (op === '-go_group')   { go_tv = '-go_group'; break; }
         }

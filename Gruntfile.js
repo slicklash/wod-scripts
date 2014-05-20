@@ -33,13 +33,13 @@ module.exports = function (grunt) {
                 reference: 'src/favorite_menu/_references.ts',
                 out: 'build/favorite_menu.js'
             },
-            wardrobe: {
-                src: ['src/common/*.ts', 'src/wardrobe/*.ts'],
-                reference: 'src/wardrobe/_references.ts',
-                out: 'build/wardrobe.js'
-            },
             heroes: {
-                src: ['src/common/*.ts', 'src/hero_list/*.ts'],
+                src: [
+                    'lib/def/greasemonkey/greasemonkey.d.ts',
+                    'src/common/selector.ts',
+                    'src/common/functions/functions.dom.ts',
+                    'src/hero_list/*.ts'
+                ],
                 reference: 'src/hero_list/_references.ts',
                 out: 'build/hero_list.js'
             },
@@ -54,14 +54,27 @@ module.exports = function (grunt) {
                 out: 'build/profile_export.js'
             },
             storage: {
-                src: ['src/common/*.ts', 'src/storage_management/*.ts'],
+                src: [
+                    'src/common/selector.ts',
+                    'src/common/functions/functions.dom.ts',
+                    'src/storage_management/*.ts'
+                ],
                 reference: 'src/storage_management/_references.ts',
                 out: 'build/storage_management.js'
             },
             trade: {
-                src: ['src/common/*.ts', 'src/tidy_trade/*.ts'],
+                src: [
+                    'src/common/selector.ts',
+                    'src/common/functions/functions.dom.ts',
+                    'src/tidy_trade/*.ts'
+                ],
                 reference: 'src/tidy_trade/_references.ts',
                 out: 'build/tidy_trade.js'
+            },
+            wardrobe: {
+                src: ['src/common/*.ts', 'src/wardrobe/*.ts'],
+                reference: 'src/wardrobe/_references.ts',
+                out: 'build/wardrobe.js'
             },
         },
 
@@ -78,6 +91,18 @@ module.exports = function (grunt) {
             favmenu: {
                 src: ['src/favorite_menu/header.js', 'build/favorite_menu.js'],
                 dest: 'release/favorite_menu.user.js'
+            },
+            heroes: {
+                src: ['src/hero_list/header.js', 'build/hero_list.js'],
+                dest: 'release/hero_list.user.js'
+            },
+            storage: {
+                src: ['src/storage_management/header.js', 'build/storage_management.js'],
+                dest: 'release/storage_management.user.js'
+            },
+            trade: {
+                src: ['src/tidy_trade/header.js', 'build/tidy_trade.js'],
+                dest: 'release/tidy_trade.user.js'
             },
             wardrobe: {
                 src: ['src/wardrobe/header.js', 'build/wardrobe.js'],
@@ -119,8 +144,11 @@ module.exports = function (grunt) {
     grunt.registerTask('init', ['tsd']);
     grunt.registerTask('compile', ['ts']);
 
-    grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);
     grunt.registerTask('re:favmenu', ['ts:favmenu', 'concat:favmenu']);
+    grunt.registerTask('re:heroes', ['ts:heroes', 'concat:heroes']);
+    grunt.registerTask('re:storage', ['ts:storage', 'concat:storage']);
+    grunt.registerTask('re:trade', ['ts:trade', 'concat:trade']);
+    grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);
 
     grunt.registerTask('default', ['compile']);
 };

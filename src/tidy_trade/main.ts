@@ -4,7 +4,7 @@
 var tidyTrade = function (table) {
     var rows = $('tr', table.cloneNode(true));
 
-    if (rows && rows.constructor != Array) rows = [rows];
+    if (rows && rows.constructor !== Array) rows = [rows];
     if (!rows || rows.length < 1) return;
 
     var holder   = table.parentNode,
@@ -45,13 +45,16 @@ var tidyTrade = function (table) {
 
     items.sort(function(x,y) { var diff = x.name.toLowerCase().localeCompare(y.name.toLowerCase()); return diff === 0 ? x.uses - y.uses : diff; });
 
+    var row;
+
     for (i = 0, cnt = items.length; i < cnt; i++) {
         item = items[i];
         size = '&nbsp;' + item.size;
-        var row    = add('tr', newTable),
-            no     = attr(add('td', row), 'align', 'right').innerHTML = i + 1,
-            c_cond = add(item.condition, attr(add('td', row), 'valign', 'top')),
-            c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});
+        row    = add('tr', newTable);
+        attr(add('td', row), 'align', 'right').innerHTML = i + 1;
+        add(item.condition, attr(add('td', row), 'valign', 'top'));
+
+        var c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});
 
         if (item.control) add(item.control, add('td', row));
 

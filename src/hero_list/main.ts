@@ -5,7 +5,7 @@
 var g_heroes = $('#main_content form table'),
     g_rows = g_heroes ? $('tr', g_heroes) : null;
 
-    if (g_rows && g_rows.constructor != Array) g_rows = [g_rows];
+    if (g_rows && g_rows.constructor !== Array) g_rows = [g_rows];
 
 var saveWeights = function () {
 
@@ -59,13 +59,13 @@ var orderHeroes = function () {
             level     = Number(innerText(cells[2]));
 
         hero      = {
-            'weight'    : level == 0 ? 100 : level,
+            'weight'    : level === 0 ? 100 : level,
             'row'       : g_rows[i]
         };
 
         var val = GM_getValue(hid);
 
-        if (typeof(val) != 'undefined') hero.weight = Number(val);
+        if (typeof(val) !== 'undefined') hero.weight = Number(val);
 
         heroes.push(hero);
     }
