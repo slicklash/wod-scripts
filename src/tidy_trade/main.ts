@@ -17,8 +17,12 @@ var tidyTrade = function (table) {
     var i, cnt, item, size;
 
     for (i = 0, cnt = rows.length; i < cnt; i++) {
+
         var cells     = rows[i].cells,
-            condition = $('img', cells[1]),
+            icons = $('img', cells[2]);
+
+        var rarity = icons[0],
+            condition = icons[1],
             link      = $('a', cells[2]),
             control   = cells.length > 3 ? $('input', cells[3]) : null,
             name      = innerText(link);
@@ -32,11 +36,14 @@ var tidyTrade = function (table) {
         item = {
             'name'      : name,
             'condition' : condition,
+            'rarity'    : rarity,
             'size'      : size,
             'uses'      : uses,
             'link'      : link,
             'control'   : control
         };
+
+        item.cells = cells;
 
         items.push(item);
 
@@ -50,8 +57,9 @@ var tidyTrade = function (table) {
     for (i = 0, cnt = items.length; i < cnt; i++) {
         item = items[i];
         size = '&nbsp;' + item.size;
-        row    = add('tr', newTable);
+        row  = add('tr', newTable);
         attr(add('td', row), 'align', 'right').innerHTML = i + 1;
+        add(item.rarity, attr(add('td', row), 'valign', 'top'));
         add(item.condition, attr(add('td', row), 'valign', 'top'));
 
         var c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});
