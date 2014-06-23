@@ -2,7 +2,7 @@
 // @name           Favorite Menu
 // @description    Script allows to alter main menu by injecting customizable entries
 // @version        1.0
-// @namespace      Never
+// @author         Never
 // @include        http*://*.world-of-dungeons.*
 // ==/UserScript==
 
@@ -158,7 +158,8 @@ var MY_MENU_LAYOUT = {
             'hero_cellar': 'Cellar',
             'hero_skillconf': 'Settings',
             'arena': 'Arena',
-            'hero_profiles': 'Profile'
+            'hero_profiles': 'Profile',
+            'hero_events': 'Adventures'
         }
     ],
     'group': [

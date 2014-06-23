@@ -49,7 +49,14 @@ module.exports = function (grunt) {
                 out: 'build/hero_list.tests.js'
             },*/
             profile: {
-                src: ['src/common/*.ts', 'src/profile_export/*.ts'],
+                src: [
+                    'src/common/prototypes/prototypes.string.ts',
+                    'src/common/selector.ts',
+                    'src/common/functions/functions.ajax.ts',
+                    'src/common/functions/functions.dom.ts',
+                    'src/common/parsing/template.parser.ts',
+                    'src/profile_export/**/*.ts'
+                ],
                 reference: 'src/profile_export/_references.ts',
                 out: 'build/profile_export.js'
             },
@@ -96,6 +103,10 @@ module.exports = function (grunt) {
                 src: ['src/hero_list/header.js', 'build/hero_list.js'],
                 dest: 'release/hero_list.user.js'
             },
+            profile: {
+                src: ['src/profile_export/header.js', 'build/profile_export.js'],
+                dest: 'release/profile_export.user.js'
+            },
             storage: {
                 src: ['src/storage_management/header.js', 'build/storage_management.js'],
                 dest: 'release/storage_management.user.js'
@@ -117,6 +128,22 @@ module.exports = function (grunt) {
         },
 
         watch: {
+            profile: {
+                files: [ 'src/profile_export/**/*.ts' ],
+                tasks: ['re:profile'],
+                options: {
+                    atBegin: false,
+                    spawn: false
+                }
+            },
+            storage: {
+                files: [ 'src/storage_management/**/*.ts' ],
+                tasks: ['re:storage'],
+                options: {
+                    atBegin: false,
+                    spawn: false
+                }
+            },
             wardrobe: {
                 files: [ 'src/wardrobe/*.ts' ],
                 tasks: ['re:wardrobe'],
@@ -146,6 +173,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('re:favmenu', ['ts:favmenu', 'concat:favmenu']);
     grunt.registerTask('re:heroes', ['ts:heroes', 'concat:heroes']);
+    grunt.registerTask('re:profile', ['ts:profile', 'concat:profile']);
     grunt.registerTask('re:storage', ['ts:storage', 'concat:storage']);
     grunt.registerTask('re:trade', ['ts:trade', 'concat:trade']);
     grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);

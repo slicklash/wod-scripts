@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.1
+// @version        1.1.1
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // ==/UserScript==
@@ -186,7 +186,25 @@ var StorageObject = (function () {
         'small emerald fragment': 1,
         'small lapis lazuli fragment': 1,
         'small malachite fragment': 1,
-        'small turquoise': 1
+        'small turquoise': 1,
+        'certified acorn': 1,
+        'certified cotton seed': 1,
+        'certified stingweed seed': 1,
+        'glass ring': 1,
+        'pouch of sand': 1,
+        'oak gall': 1,
+        'raw leather': 1,
+        'rice paper': 1,
+        'raw garnet': 1,
+        'raw tourmaline': 1,
+        'steel hilt': 1,
+        'steel bar': 1,
+        'wooden pole': 1,
+        'wooden handle': 1,
+        'wooden log': 1,
+        'lump of coal': 1,
+        'iron ingot': 1,
+        'goose feather': 1
     };
     return StorageObject;
 })();
@@ -221,7 +239,11 @@ if (buttons_commit.length > 0) {
     var name;
 
     for (i = 0, cnt = rows.length; i < cnt; i++) {
-        var cells = rows[i].cells, link = $('a', cells[1]), tooltip = link ? attr(link, 'onmouseover') : false, classes = link ? attr(link, 'class') : '', ctrl_select = cells.length > 2 ? $('input[type="checkbox"][name^="doEquip]', cells[2]) : null, ctrl_move = cells.length > 2 ? $('select', cells[2]) : null, ctrl_sell = cells.length > 3 ? $('input[type="checkbox"][name^="Sell"]', cells[3]) : null, obj = new StorageObject();
+        var row = rows[i];
+        if (!row || !row.cells)
+            continue;
+
+        var cells = row.cells, link = $('a', cells[1]), tooltip = link ? attr(link, 'onmouseover') : false, classes = link ? attr(link, 'class') : '', ctrl_select = cells.length > 2 ? $('input[type="checkbox"][name^="doEquip]', cells[2]) : null, ctrl_move = cells.length > 2 ? $('select', cells[2]) : null, ctrl_sell = cells.length > 3 ? $('input[type="checkbox"][name^="Sell"]', cells[3]) : null, obj = new StorageObject();
 
         ctrl_sell = ctrl_sell === null ? (cells.length > 4 ? $('input[type="checkbox"]', cells[4]) : null) : ctrl_sell;
         name = innerText(link).replace(/!$/, '');

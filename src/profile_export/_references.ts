@@ -1,10 +1,12 @@
 //grunt-start
-/// <reference path="../common/functions.ts" />
-/// <reference path="../common/prototypes.ts" />
+/// <reference path="../common/prototypes/prototypes.string.ts" />
 /// <reference path="../common/selector.ts" />
-/// <reference path="hero.attribute.ts" />
-/// <reference path="hero.skill.ts" />
+/// <reference path="../common/functions/functions.ajax.ts" />
+/// <reference path="../common/functions/functions.dom.ts" />
+/// <reference path="../common/parsing/template.parser.ts" />
 /// <reference path="hero.ts" />
 /// <reference path="main.ts" />
+/// <reference path="models/hero.attribute.ts" />
+/// <reference path="models/hero.skill.ts" />
 /// <reference path="world.ts" />
 //grunt-end

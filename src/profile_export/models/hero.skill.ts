@@ -1,4 +1,4 @@
-/// <reference path="./_references.ts" />
+/// <reference path="../_references.ts" />
 
 // --- HeroSkill
 
@@ -12,25 +12,32 @@ _talCosts = '0,1440,3240,5440,8080,11200,14840,19040,23840,29280,35400,42240,498
 67480,77600,88640,100640,113640,127680,142800,159040,176440,195040,214880,236000,258440,282240,\
 307440,334080,362200,391840,423040,455840,490280,526400,564240,603840,645240,688480,733600'.split(',');
 
-class HeroSkill {
-    name = '';
-    type = '';
-    rank = 0;
-    effective_rank = 0;
-    primary = false;
-    secondary = false;
-    exceptional = false;
-    talent = false;
-    in_round = true;
-    pre_round = false;
-    target = '';
-    max_affected = '';
-    one_pos = false;
-    mp_base = 0;
-    mp_cost = 0;
-    item = '';
-    skill_class = '';
-    isOffensive = false;
+enum SkillNature {
+    primary,
+    secondary,
+    foreign,
+    talent
+}
+
+interface IHeroSkill {
+    name: string;
+    level: number;
+    effectiveLevel: number;
+    type: string; //TODO: enum
+    nature: SkillNature;
+    skillClass: string;
+    inRound: boolean;
+    preRound: boolean;
+    target: string;
+    maxAffected: string;
+    crossPosition: boolean;
+    manaBase: number;
+    manaCost: number;
+    requiredItem: string;
+    isOffensive: boolean;
+}
+
+class HeroSkill implements IHeroSkill {
     initiative_attr = '';
     attack_type = '';
     attack_attr = '';

@@ -28,7 +28,25 @@ class StorageObject {
         'small emerald fragment': 1,
         'small lapis lazuli fragment': 1,
         'small malachite fragment': 1,
-        'small turquoise': 1
+        'small turquoise': 1,
+        'certified acorn': 1,
+        'certified cotton seed': 1,
+        'certified stingweed seed': 1,
+        'glass ring': 1,
+        'pouch of sand': 1,
+        'oak gall': 1,
+        'raw leather': 1,
+        'rice paper': 1,
+        'raw garnet': 1,
+        'raw tourmaline': 1,
+        'steel hilt': 1,
+        'steel bar': 1,
+        'wooden pole': 1,
+        'wooden handle': 1,
+        'wooden log': 1,
+        'lump of coal': 1,
+        'iron ingot': 1,
+        'goose feather': 1,
     };
 
     isConsumable(): boolean {
@@ -65,7 +83,10 @@ if (buttons_commit.length > 0) {
     var name: string;
 
     for (i = 0, cnt = rows.length; i < cnt; i++) {
-        var cells       = rows[i].cells,
+        var row         = rows[i];
+        if (!row || !row.cells) continue;
+
+        var cells       = row.cells,
             link        = $('a', cells[1]),
             tooltip     = link ? attr(link, 'onmouseover') : false,
             classes     = link ? attr(link, 'class') : '',
