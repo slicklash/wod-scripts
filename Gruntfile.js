@@ -24,6 +24,13 @@ module.exports = function (grunt) {
                 declaration: false,
                 comments: false,
             },
+            adventure: {
+                src: [
+                    'src/adventure_assistant/*.ts'
+                ],
+                reference: 'src/adventure_assistant/_references.ts',
+                out: 'build/adventure_assistant.js'
+            },
             favmenu: {
                 src: [
                     'src/common/selector.ts',
@@ -95,6 +102,10 @@ module.exports = function (grunt) {
                 },
                 footer: '})();'
             },
+            adventure: {
+                src: ['src/adventure_assistant/header.js', 'build/adventure_assistant.js'],
+                dest: 'release/adventure_assistant.user.js'
+            },
             favmenu: {
                 src: ['src/favorite_menu/header.js', 'build/favorite_menu.js'],
                 dest: 'release/favorite_menu.user.js'
@@ -128,6 +139,14 @@ module.exports = function (grunt) {
         },
 
         watch: {
+            adventure: {
+                files: [ 'src/adventure_assistant/**/*.ts' ],
+                tasks: ['re:adventure'],
+                options: {
+                    atBegin: false,
+                    spawn: false
+                }
+            },
             profile: {
                 files: [ 'src/profile_export/**/*.ts' ],
                 tasks: ['re:profile'],
@@ -171,6 +190,7 @@ module.exports = function (grunt) {
     grunt.registerTask('init', ['tsd']);
     grunt.registerTask('compile', ['ts']);
 
+    grunt.registerTask('re:adventure', ['ts:adventure', 'concat:adventure']);
     grunt.registerTask('re:favmenu', ['ts:favmenu', 'concat:favmenu']);
     grunt.registerTask('re:heroes', ['ts:heroes', 'concat:heroes']);
     grunt.registerTask('re:profile', ['ts:profile', 'concat:profile']);
