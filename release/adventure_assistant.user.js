@@ -9,33 +9,70 @@
 
 (function(window, undefined) {
 
-var buttons = document.querySelectorAll('a.button, input[type="submit"]'), choices = document.querySelectorAll('input[type="radio"]'), choice, button, label, choiceMap = {}, key, i;
+var buttons = document.querySelectorAll('a, input[type="submit"]'), choices = document.querySelectorAll('input[type="radio"]'), buttonNext, buttonMore, choice, button, label, focusDone = false, choiceMap = {}, key, i, clue;
 
 for (i = 0; i < buttons.length; i++) {
     button = buttons[i];
     if (button.innerHTML === "Next" || (button.value && button.value.trim() === 'Ok')) {
-        button.focus();
-        break;
+        buttonNext = button;
+    } else if (button.innerHTML === "More adventures") {
+        buttonMore = button;
     }
 }
+
+if (buttonMore) {
+    addClue(buttonMore.parentNode, 'm');
+    buttonMore.focus();
+}
+
+if (buttonNext) {
+    addClue(buttonNext.parentNode, 'n');
+    buttonNext.focus();
+}
+
+var letters = 'qwertyui';
 
 for (i = 0; i < choices.length; i++) {
     choice = choices[i];
     label = choice.parentNode;
     key = i + 49;
-    choiceMap[key] = i;
-    if (label) {
-        label.innerHTML += '<span><sup style="color: #55f">' + (i + 1) + '</sup></span>';
-    }
+    choiceMap[key] = choice;
+    clue = i < 9 ? i + 1 : letters[i - 9];
+    addClue(label, clue);
 }
 
 document.onkeydown = function (e) {
     key = e.which;
-    if (choiceMap.hasOwnProperty(key)) {
-        choice = document.querySelectorAll('input[type="radio"]')[choiceMap[key]];
+    if (key >= 96 && key <= 105) {
+        key -= 48;
+    }
+    if (key === 77) {
+        buttonMore.focus();
+    } else if ((key === 78 || key === 79 || key === 48) && buttonNext) {
+        buttonNext.focus();
+    } else if (choiceMap.hasOwnProperty(key)) {
+        choice = choiceMap[key];
         choice.checked = true;
         choice.focus();
         return false;
     }
 };
+
+function addClue(node, clue) {
+    if (node) {
+        var span = document.createElement('span');
+        span.innerHTML = '<sup style="color: #55f">' + clue + '</sup>';
+        node.appendChild(span);
+    }
+}
+
+function getButton(text) {
+    for (i = 0; i < buttons.length; i++) {
+        button = buttons[i];
+        if (button.innerHTML === text || (button.value && button.value.trim() === text)) {
+            return button;
+        }
+    }
+    return null;
+}
 })();
