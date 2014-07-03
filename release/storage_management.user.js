@@ -171,6 +171,10 @@ var StorageObject = (function () {
     StorageObject.prototype.isConsumable = function () {
         if (this.consumable)
             return true;
+        if (/^raw /.test(this.name))
+            return true;
+        if (/ seed$/.test(this.name))
+            return true;
         if (/^reagent:/.test(this.name))
             return true;
         if (/^(lesser|greater) emblem of/i.test(this.name))
@@ -188,15 +192,10 @@ var StorageObject = (function () {
         'small malachite fragment': 1,
         'small turquoise': 1,
         'certified acorn': 1,
-        'certified cotton seed': 1,
-        'certified stingweed seed': 1,
         'glass ring': 1,
         'pouch of sand': 1,
         'oak gall': 1,
-        'raw leather': 1,
         'rice paper': 1,
-        'raw garnet': 1,
-        'raw tourmaline': 1,
         'steel hilt': 1,
         'steel bar': 1,
         'wooden pole': 1,
@@ -204,7 +203,8 @@ var StorageObject = (function () {
         'wooden log': 1,
         'lump of coal': 1,
         'iron ingot': 1,
-        'goose feather': 1
+        'goose feather': 1,
+        'aloe plant': 1
     };
     return StorageObject;
 })();
