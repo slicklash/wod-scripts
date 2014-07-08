@@ -26,7 +26,7 @@ if (buttonNext) {
 }
 
 var letters = 'qwertyuiop',
-    upper = 9;
+    upper = 8;
 
 for(i = 0; i < choices.length; i++) {
     choice = choices[i];

@@ -30,7 +30,7 @@ if (buttonNext) {
     buttonNext.focus();
 }
 
-var letters = 'qwertyuiop', upper = 9;
+var letters = 'qwertyuiop', upper = 8;
 
 for (i = 0; i < choices.length; i++) {
     choice = choices[i];
