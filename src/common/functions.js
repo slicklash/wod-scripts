@@ -37,6 +37,7 @@ var get = function(url, callback, obj, async) {
   GM_xmlhttpRequest({
       method: 'GET',
       url: url,
+      headers: { 'Cookie': document.cookie },
       onload: function(request) {
           if (request.readyState === 4) {
               if (request.status !== 200) {
