@@ -592,7 +592,7 @@ var showResult = function(skill) {
                 if (!g_hero.armor[dmg_type]) g_hero.armor[dmg_type] = {};
                 if (!g_hero.armor[dmg_type].all) g_hero.armor[dmg_type].all = '0/0/0';
                 var value = g_hero.armor[dmg_type].all.split('/');
-                g_hero.armor[dmg_type].all = '+' + (Number(value[0]) + 6) + ' / +' + (Number(value[1]) + 6) + ' / +' + (Number(value[2]) + 2);
+                g_hero.armor[dmg_type].all = '+' + (Number(value[0]) + 6) + ' / +' + (Number(value[1]) + 4) + ' / +' + (Number(value[2]) + 2);
             }
         }
 
