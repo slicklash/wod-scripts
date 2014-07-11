@@ -3,6 +3,7 @@
 // @description    Script allows to export hero profile information to BBCode
 // @version        1.0.9
 // @author         Never
+// @grant          GM_xmlhttpRequest
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
 // ==/UserScript==
 
