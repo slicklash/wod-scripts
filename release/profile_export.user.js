@@ -8,6 +8,8 @@
 
 (function() {
 
+var VERSION = '1.0.9';
+
 // --- Selector
 
 function $(y,c,H){var a=c||document;if(!y||typeof y!=="string"||!(a.nodeType===9||a.nodeType===1)){return null}var b=y.split(/\s+/),f=[a],o=H||false;for(var A=0,z=b.length;A<z;A++){var F=[],E=b[A].match(/^([\.#]?[a-z0-9\-_]+\w*)/i),u=E?E[1]:"",n=b[A].replace(u,""),C=/(\[([a-z]+)([\*\^\$]?=)"(\w+)"\])/gi,d=[];while((e=C.exec(n))){if(e.index===C.lastIndex){C.lastIndex++}d.push({attribute:e[2],condition:e[3],value:e[4]})}var x,q,p,w,h;switch(u[0]){case"#":F=[document.getElementById(u.substring(1))];if(!F[0]){return null}break;case".":for(x=0,q=f.length;x<q;x++){h=f[x].getElementsByClassName(u.substring(1));for(w=0,p=h.length;w<p;F.push(h[w++])){}}break;default:for(x=0,q=f.length;x<q;x++){h=f[x].getElementsByTagName(u);for(w=0,p=h.length;w<p;F.push(h[w++])){}}break}if(d.length>0){f=[];for(var D=0,I=F.length;D<I;D++){var G=F[D],m=false;for(var t=0,B=d.length;t<B;t++){var e=d[t],r=G.getAttribute(e.attribute);if(r){switch(e.condition){case"*=":m=r.indexOf(e.value)>-1;break;case"^=":m=r.indexOf(e.value)===0;break;case"$=":m=r.indexOf(e.value,r.length-e.value.length)>-1;break;default:m=r===e.value;break}}if(m===false){break}}if(m===true){f.push(G)}}}else{f=F}}if(f.length===0||f[0]===a){return null}return !o&&f.length===1?f[0]:f};
@@ -378,44 +380,55 @@ Hero.prototype.parse = function(html) {
 
         this.name = innerText(title).replace('- Attributes and Characteristics', '').trim();
 
-        if (g_check_gear.checked) {
+        g_jobs++;
+        var eq_url = location.href.replace('skills.php', 'items.php').replace('menukey=hero_skills', 'menukey=hero_gear');
+        if (eq_url.indexOf('view=gear') < 0) eq_url += '&view=gear';
 
-            g_jobs++;
-            var eq_url = location.href.replace('skills.php', 'items.php').replace('menukey=hero_skills', 'menukey=hero_gear');
-            if (eq_url.indexOf('view=gear') < 0) eq_url += '&view=gear';
+        get(eq_url, function(gearHtml) {
+            var gear_html = add('div'),
+                gear = {};
 
-            get(eq_url, function(gearHtml) {
-                var gear_html = add('div'),
-                    gear = {};
+            if(/\d+ items were found in the dungeon. You may carry up to/.test(gearHtml)) {
+                alert('You have too much items in your backpack, your current gear won\'t be shown.');
+            }
 
-                if(/\d+ items were found in the dungeon. You may carry up to/.test(gearHtml)) {
-                    alert('You have too much items in your backpack, your current gear won\'t be shown.');
-                }
+            gear_html.innerHTML = gearHtml;
 
-                gear_html.innerHTML = gearHtml;
+            var items = $('div[id="main_content"] form td[class="texttoken"]', gear_html, true),
+                re_uses  = /\(([0-9]+)\/[0-9]+\)/,
+                re_upper_coin = /(Six of coins|Seven of coins|Eight of coins|Nine of coins|Ten of coins)/,
+                upperCoins = 0;
 
-                var items = $('div[id="main_content"] form td[class="texttoken"]', gear_html, true),
-                    re_uses  = /\(([0-9]+)\/[0-9]+\)/;
+            if (items) {
+                for (var i = 0, cnt = items.length; i < cnt; i++) {
+                    var slot = items[i],
+                        slot_name = slot.innerHTML,
+                        row = slot.parentNode,
+                        ctrl = $('select', row),
+                        itm = ctrl ? ctrl.options[ctrl.selectedIndex].text.replace(/!$/,'') : '';
 
-                if (items) {
-                    for (var i = 0, cnt = items.length; i < cnt; i++) {
-                        var slot = items[i],
-                            slot_name = slot.innerHTML,
-                            row = slot.parentNode,
-                            ctrl = $('select', row),
-                            itm = ctrl ? ctrl.options[ctrl.selectedIndex].text.replace(/!$/,'') : '';
-
-                        gear[slot.innerHTML] = !re_uses.test(itm) ? itm : '';
+                    if (re_upper_coin.test(itm)) {
+                        upperCoins += 1;
                     }
-                    this.gear = gear;
+
+                    gear[slot.innerHTML] = !re_uses.test(itm) ? itm : '';
                 }
 
-                g_jobs--;
+                if (upperCoins === 5) {
+                    this.hasUpperCoins = true;
+                }
+            }
 
-            }, this);
-        } else {
-            delete this.gear;
-        }
+            if (g_check_gear.checked) {
+                this.gear = gear;
+            }
+            else {
+                delete this.gear;
+            }
+
+            g_jobs--;
+
+        }, this);
 
         for (var i = 0, cnt = content_rows.length; i < cnt; i++) {
             var row = content_rows[i];
@@ -515,7 +528,6 @@ Hero.prototype.parse = function(html) {
 };
 // --- Main
 
-var VERSION = '1.0.8';
 
 /***
  * TODO:
@@ -572,6 +584,16 @@ var exportSkills = function() {
 var showResult = function(skill) {
     if (skill) g_jobs--;
     if (g_jobs <= 0) {
+        if (g_hero.hasUpperCoins) {
+            var damage_types = ['crushing damage', 'cutting damage', 'piercing damage'];
+            for(var m = 0; m < damage_types.length; m++) {
+                var dmg_type = damage_types[m];
+                if (!g_hero.armor[dmg_type]) g_hero.armor[dmg_type] = {};
+                if (!g_hero.armor[dmg_type].all) g_hero.armor[dmg_type].all = '0/0/0';
+                var value = g_hero.armor[dmg_type].all.split('/');
+                g_hero.armor[dmg_type].all = '+' + (Number(value[0]) + 6) + ' / +' + (Number(value[1]) + 6) + ' / +' + (Number(value[2]) + 2);
+            }
+        }
 
         var h1 = $('h1', g_form_skills),
             txt_export = $('#profile-export-result', h1),
