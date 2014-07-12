@@ -67,6 +67,13 @@ module.exports = function (grunt) {
                 reference: 'src/profile_export/_references.ts',
                 out: 'build/profile_export.js'
             },
+            report: {
+                src: [
+                    'src/report_exporter/*.ts'
+                ],
+                reference: 'src/report_exporter/_references.ts',
+                out: 'build/report_exporter.js'
+            },
             storage: {
                 src: [
                     'src/common/selector.ts',
@@ -118,6 +125,10 @@ module.exports = function (grunt) {
                 src: ['src/profile_export/header.js', 'build/profile_export.js'],
                 dest: 'release/profile_export.user.js'
             },
+            report: {
+                src: ['src/report_exporter/header.js', 'build/report_exporter.js'],
+                dest: 'release/report_exporter.user.js'
+            },
             storage: {
                 src: ['src/storage_management/header.js', 'build/storage_management.js'],
                 dest: 'release/storage_management.user.js'
@@ -150,6 +161,14 @@ module.exports = function (grunt) {
             profile: {
                 files: [ 'src/profile_export/**/*.ts' ],
                 tasks: ['re:profile'],
+                options: {
+                    atBegin: false,
+                    spawn: false
+                }
+            },
+            report: {
+                files: [ 'src/report_exporter/*.ts' ],
+                tasks: ['re:report'],
                 options: {
                     atBegin: false,
                     spawn: false
@@ -194,6 +213,7 @@ module.exports = function (grunt) {
     grunt.registerTask('re:favmenu', ['ts:favmenu', 'concat:favmenu']);
     grunt.registerTask('re:heroes', ['ts:heroes', 'concat:heroes']);
     grunt.registerTask('re:profile', ['ts:profile', 'concat:profile']);
+    grunt.registerTask('re:report', ['ts:report', 'concat:report']);
     grunt.registerTask('re:storage', ['ts:storage', 'concat:storage']);
     grunt.registerTask('re:trade', ['ts:trade', 'concat:trade']);
     grunt.registerTask('re:wardrobe', ['ts:wardrobe', 'concat:wardrobe']);

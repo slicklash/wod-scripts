@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReportExporterServer", "ReportExporterServer\ReportExporterServer.csproj", "{C60AA1F2-BC8A-41EB-B414-79C36BFB9DA6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C60AA1F2-BC8A-41EB-B414-79C36BFB9DA6}.Debug|x86.ActiveCfg = Debug|x86
+		{C60AA1F2-BC8A-41EB-B414-79C36BFB9DA6}.Debug|x86.Build.0 = Debug|x86
+		{C60AA1F2-BC8A-41EB-B414-79C36BFB9DA6}.Release|x86.ActiveCfg = Release|x86
+		{C60AA1F2-BC8A-41EB-B414-79C36BFB9DA6}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = ReportExporterServer\ReportExporterServer.csproj
+	EndGlobalSection
+EndGlobal

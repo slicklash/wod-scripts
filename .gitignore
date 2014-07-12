@@ -1,7 +1,11 @@
 *.swp
 65056.user.js
 92775.user.js
+*.userprefs
 
+bin/
+obj/
+packages/
 build/
 node_modules/
 lib/def/
