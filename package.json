@@ -3,13 +3,13 @@
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
   "devDependencies": {
-    "grunt": "^0.4.4",
+    "grunt": "^0.4.5",
     "grunt-contrib-concat": "^0.4.0",
     "grunt-contrib-watch": "^0.6.1",
     "grunt-karma": "^0.8.3",
-    "grunt-ts": "^1.11.1",
+    "grunt-ts": "^1.11.4",
     "grunt-tsd": "^0.1.0",
-    "karma": "^0.12.14",
+    "karma": "^0.12.17",
     "karma-jasmine": "^0.1.5",
     "karma-phantomjs-launcher": "^0.1.4"
   },
