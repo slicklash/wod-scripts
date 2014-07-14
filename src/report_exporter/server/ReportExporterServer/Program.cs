@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.IO;
+using System.Text;
 
 namespace ReportExporterServer
 {
@@ -56,9 +57,12 @@ namespace ReportExporterServer
 		private static void PerformExport(string name, string id)
 		{
 			var data = string.Format("stats{0}=statistics&report_id{0}={1}&wod_post_id={2}", name, id, _postId);
-			var html = FetchHtml(BaseUrl, data);
-			File.WriteAllText ("stats.html", html);
+			var raw = FetchHtml(BaseUrl, data);
+			var htmlPage = HtmlPage.FromRaw (raw);
+
+			File.WriteAllText ("stats.html", htmlPage.Source);
 		}
+
 
 		private static string FetchHtml(string url, string data) 
 		{
