@@ -9,13 +9,14 @@
 
 (function(window, undefined) {
 
-var buttons = document.querySelectorAll('a, input[type="submit"]'), choices = document.querySelectorAll('input[type="radio"]'), buttonNext, buttonMore, choice, button, label, focusDone = false, choiceMap = {}, key, i, clue;
+'use strict';
+var buttons = document.querySelectorAll('a, input[type="submit"]'), choices = document.querySelectorAll('input[type="radio"]'), buttonNext, buttonMore, choice, button, label, choiceMap = {}, key, i, clue;
 
 for (i = 0; i < buttons.length; i++) {
     button = buttons[i];
-    if (button.innerHTML === "Next" || (button.value && button.value.trim() === 'Ok')) {
+    if (button.innerHTML === 'Next' || (button.value && button.value.trim() === 'Ok')) {
         buttonNext = button;
-    } else if (button.innerHTML === "More adventures") {
+    } else if (button.innerHTML === 'More adventures') {
         buttonMore = button;
     }
 }
@@ -36,8 +37,8 @@ for (i = 0; i < choices.length; i++) {
     choice = choices[i];
     label = choice.parentNode;
     if (i <= upper) {
-        clue = i + 1;
-        key = clue + 48;
+        clue = i + 1 + '';
+        key = i + 1 + 48;
     } else {
         clue = letters[i - upper - 1];
         key = clue.toUpperCase().charCodeAt(0);
@@ -48,11 +49,13 @@ for (i = 0; i < choices.length; i++) {
 
 document.onkeyup = function (e) {
     var active = document.activeElement;
+
     if (active && active.tagName.toLowerCase() === 'input' && active.getAttribute('type') === 'text') {
         return;
     }
 
     key = e.which;
+
     if (key >= 96 && key <= 105) {
         key -= 48;
     }
@@ -61,11 +64,13 @@ document.onkeyup = function (e) {
         buttonMore.focus();
     } else if ((key === 78 || key === 79 || key === 48) && buttonNext) {
         buttonNext.focus();
-    } else if (choiceMap.hasOwnProperty(key)) {
+    } else {
         choice = choiceMap[key];
-        choice.checked = true;
-        choice.focus();
-        return false;
+        if (choice) {
+            choice.checked = true;
+            choice.focus();
+            return false;
+        }
     }
 };
 
@@ -81,11 +86,12 @@ if (document.querySelector('.paginator_row')) {
     var adventures = document.querySelectorAll('.row0, .row1'), crafting = [], appointments = [], crafClass, appClass;
 
     for (i = 0; i < adventures.length; i++) {
-        var adventure = adventures[i];
-        var className = adventure.className;
-        var title = adventure.querySelector('h3');
-        if (!title)
+        var adventure = adventures[i], className = adventure.className, title = adventure.querySelector('h3');
+
+        if (!title) {
             continue;
+        }
+
         if (isAppointment(title.innerHTML)) {
             if (appClass === className) {
                 appClass = invertClass(appClass);
@@ -106,8 +112,7 @@ if (document.querySelector('.paginator_row')) {
         }
     }
 
-    var tabCrafting = makeTab('Crafting', true);
-    var tabAppointments = makeTab('Appointments', false);
+    var tabCrafting = makeTab('Crafting', true), tabAppointments = makeTab('Appointments', false);
 
     var menu = document.createElement('ul');
     menu.innerHTML = '<li class="label">Adventures</li>';
@@ -145,7 +150,6 @@ function makeTab(title, selected) {
     action.setAttribute('href', '#');
     action.innerHTML = title;
     action.addEventListener('click', selectTab);
-
     var tab = document.createElement('li');
     tab.className = selected ? 'selected' : 'not_selected';
     tab.appendChild(action);
@@ -153,23 +157,28 @@ function makeTab(title, selected) {
 }
 
 function selectTab(e) {
-    var max = Math.max(crafting.length, appointments.length);
-    e.target.parentNode.className = 'selected';
+    var max = Math.max(crafting.length, appointments.length), parentNode = e.target.parentNode;
+
+    parentNode.className = 'selected';
     if (e.target.innerHTML === 'Appointments') {
-        e.target.parentNode.previousSibling.className = 'not_selected';
+        parentNode.previousSibling.className = 'not_selected';
         for (i = 0; i < max; i++) {
-            if (i < crafting.length)
+            if (i < crafting.length) {
                 crafting[i].style.display = 'none';
-            if (i < appointments.length)
+            }
+            if (i < appointments.length) {
                 appointments[i].style.display = '';
+            }
         }
     } else {
-        e.target.parentNode.nextSibling.className = 'not_selected';
+        parentNode.nextSibling.className = 'not_selected';
         for (i = 0; i < max; i++) {
-            if (i < crafting.length)
+            if (i < crafting.length) {
                 crafting[i].style.display = '';
-            if (i < appointments.length)
+            }
+            if (i < appointments.length) {
                 appointments[i].style.display = 'none';
+            }
         }
     }
 }
