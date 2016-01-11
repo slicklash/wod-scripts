@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.1.0
+// @version        1.1.1
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
@@ -9,65 +9,80 @@
 
 (function(window, undefined) {
 
-var buttons = document.querySelectorAll('a, input[type="submit"]'), choices = document.querySelectorAll('input[type="radio"]'), buttonNext, buttonMore, choice, button, label, focusDone = false, choiceMap = {}, key, i, clue;
+// --- Action buttons
 
-for (i = 0; i < buttons.length; i++) {
-    button = buttons[i];
+var buttonNext, buttonMore;
+
+Array.from(document.querySelectorAll('a, input[type="submit"]')).forEach(function(button){
     if (button.innerHTML === "Next" || (button.value && button.value.trim() === 'Ok')) {
         buttonNext = button;
-    } else if (button.innerHTML === "More adventures") {
-        buttonMore = button;
+        addClue(buttonNext.parentNode, 'n');
     }
-}
+    else if (button.innerHTML === "More adventures") {
+        buttonMore = button;
+        addClue(buttonMore.parentNode, 'm');
+    }
+});
 
-if (buttonMore) {
-    addClue(buttonMore.parentNode, 'm');
+if (buttonNext) {
+    buttonNext.focus();
+}
+else if (buttonMore) {
     buttonMore.focus();
 }
 
-if (buttonNext) {
-    addClue(buttonNext.parentNode, 'n');
-    buttonNext.focus();
+// --- Choices
+
+var choices = document.querySelectorAll('input[type="radio"]'), letters = 'qwertyuiop', upper = 9, key, choice, label, choiceMap = {}, clue, i;
+
+if (choices.length) {
+
+    for (i = 0; i < choices.length; i++) {
+
+        choice = choices[i];
+        label = choice.parentNode;
+
+        if (i <= upper) {
+            clue = i + 1;
+            key = clue + 48;
+        }
+        else {
+            clue = letters[i - upper - 1];
+            key = clue.toUpperCase().charCodeAt(0);
+        }
+
+        choiceMap[key] = choice;
+        addClue(label, clue);
+    }
+
+    document.onkeyup = function (e) {
+
+        var active = document.activeElement;
+
+        if (active && active.tagName.toLowerCase() === 'input' && active.getAttribute('type') === 'text') {
+            return;
+        }
+
+        key = e.which;
+        if (key >= 96 && key <= 105) {
+            key -= 48;
+        }
+
+        if (key === 77) {
+            buttonMore.focus();
+        }
+        else if ((key === 78 || key === 79 || key === 48) && buttonNext) {
+            buttonNext.focus();
+        }
+        else if (choiceMap.hasOwnProperty(key)) {
+            choice = choiceMap[key];
+            choice.checked = true;
+            choice.focus();
+            return false;
+        }
+    };
 }
 
-var letters = 'qwertyuiop', upper = 9;
-
-for (i = 0; i < choices.length; i++) {
-    choice = choices[i];
-    label = choice.parentNode;
-    if (i <= upper) {
-        clue = i + 1;
-        key = clue + 48;
-    } else {
-        clue = letters[i - upper - 1];
-        key = clue.toUpperCase().charCodeAt(0);
-    }
-    choiceMap[key] = choice;
-    addClue(label, clue);
-}
-
-document.onkeyup = function (e) {
-    var active = document.activeElement;
-    if (active && active.tagName.toLowerCase() === 'input' && active.getAttribute('type') === 'text') {
-        return;
-    }
-
-    key = e.which;
-    if (key >= 96 && key <= 105) {
-        key -= 48;
-    }
-
-    if (key === 77) {
-        buttonMore.focus();
-    } else if ((key === 78 || key === 79 || key === 48) && buttonNext) {
-        buttonNext.focus();
-    } else if (choiceMap.hasOwnProperty(key)) {
-        choice = choiceMap[key];
-        choice.checked = true;
-        choice.focus();
-        return false;
-    }
-};
 
 function addClue(node, clue) {
     if (node) {
@@ -77,31 +92,56 @@ function addClue(node, clue) {
     }
 }
 
+// --- Adventures
+
+var appList = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
+
 if (document.querySelector('.paginator_row')) {
-    var adventures = document.querySelectorAll('.row0, .row1'), crafting = [], appointments = [], crafClass, appClass;
+
+    var adventures = Array.from(document.querySelectorAll('.row0, .row1')), crafting = [], appointments = [], crafClass = 'row1', appClass = 'row1';
+
+    var guild = adventures.filter(function(x){ return titleOf(x) === appList[0]; }).pop();
+    if (guild) {
+        guild.parentNode.insertBefore(guild, guild.parentNode.childNodes[0]);
+        adventures.splice(adventures.indexOf(guild), 1);
+        adventures.splice(0, 0, guild);
+    }
 
     for (i = 0; i < adventures.length; i++) {
+
         var adventure = adventures[i];
         var className = adventure.className;
-        var title = adventure.querySelector('h3');
+        var title = titleOf(adventure);
+
         if (!title)
             continue;
-        if (isAppointment(title.innerHTML)) {
+
+        if (isAppointment(title)) {
+
             if (appClass === className) {
                 appClass = invertClass(appClass);
                 adventure.className = appClass;
-            } else {
+            }
+            else {
                 appClass = className;
             }
+
             appointments.push(adventure);
             adventure.style.display = 'none';
-        } else {
+
+        }
+        else {
+
             if (crafClass === className) {
+
                 crafClass = invertClass(crafClass);
                 adventure.className = crafClass;
-            } else {
+
+            }
+            else {
                 crafClass = className;
             }
+
             crafting.push(adventure);
         }
     }
@@ -132,8 +172,13 @@ if (document.querySelector('.paginator_row')) {
     p.replaceChild(div, h1);
 }
 
+function titleOf(node) {
+    var title = node.querySelector('h3');
+    return title ? title.innerHTML : '';
+}
+
 function isAppointment(title) {
-    return (title.indexOf('Passingtime') > -1 || title.indexOf('Rescuing Father Wuel') > -1 || title.indexOf('The Adventurers\' Guild') > -1 || title.indexOf('The Fortunes of Madame Du Coeur Brise') > -1);
+    return appList.some(function(x) { return title.indexOf(x) > -1 });
 }
 
 function invertClass(className) {
@@ -153,18 +198,25 @@ function makeTab(title, selected) {
 }
 
 function selectTab(e) {
+
     var max = Math.max(crafting.length, appointments.length);
     e.target.parentNode.className = 'selected';
+
     if (e.target.innerHTML === 'Appointments') {
+
         e.target.parentNode.previousSibling.className = 'not_selected';
+
         for (i = 0; i < max; i++) {
             if (i < crafting.length)
                 crafting[i].style.display = 'none';
             if (i < appointments.length)
                 appointments[i].style.display = '';
         }
-    } else {
+    }
+    else {
+
         e.target.parentNode.nextSibling.className = 'not_selected';
+
         for (i = 0; i < max; i++) {
             if (i < crafting.length)
                 crafting[i].style.display = '';
