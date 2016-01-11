@@ -1,4 +1,3 @@
-//grunt-start
 /// <reference path="../common/prototypes/prototypes.string.ts" />
 /// <reference path="../common/selector.ts" />
 /// <reference path="../common/functions/functions.ajax.ts" />
@@ -9,4 +8,3 @@
 /// <reference path="models/hero.attribute.ts" />
 /// <reference path="models/hero.skill.ts" />
 /// <reference path="world.ts" />
-//grunt-end

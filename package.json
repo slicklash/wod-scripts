@@ -3,16 +3,13 @@
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-contrib-concat": "^0.4.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-karma": "^0.8.3",
-    "grunt-ts": "^1.11.4",
-    "grunt-tsd": "^0.1.0",
-    "karma": "^0.12.17",
-    "karma-jasmine": "^0.1.5",
-    "karma-phantomjs-launcher": "^0.1.4"
+    "gulp-concat-util": "^0.5.4",
+    "gulp-tsd": "0.0.4",
+    "gulp-typescript": "^2.10.0",
+    "merge2": "^0.3.6",
+    "run-sequence": "^1.1.5",
+    "typescript": "^1.7.5"
   },
   "author": "slicklash@gmail.com",
-  "license": "BSD"
+  "license": "BSD-2-Clause"
 }

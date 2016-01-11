@@ -1,3 +1,5 @@
+/// <reference path="../common/selector.ts" />
+/// <reference path="../common/functions/functions.dom.ts" />
 
 // --- Translations ---
 
@@ -60,6 +62,8 @@ class StorageObject {
 
 var g_main = $('#main_content'),
     buttons_commit = $('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]', g_main) || [];
+
+function main() {
 
 if (buttons_commit.length > 0) {
     var scope = null;
@@ -395,3 +399,7 @@ if (buttons_commit.length > 0) {
     holder.insertBefore(buttonEquip2, buttonSplit2.nextSibling);
     holder.insertBefore(labelSell2, buttonEquip2.nextSibling);
     holder.insertBefore(selectSell2, labelSell2.nextSibling);}
+
+}
+
+main();
