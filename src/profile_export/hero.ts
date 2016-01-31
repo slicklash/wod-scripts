@@ -1,6 +1,8 @@
 /// <reference path="./_references.ts" />
 
+
 // --- Hero
+
 
 class Hero {
     world;
@@ -110,7 +112,7 @@ class Hero {
                 value = innerText(value.cells[1]).parseEffectiveValue();
                 attr.value = value[0];
                 attr.effective_value = value[1];
-                attr.training_cost = HeroAttribute.getCost(attr.value);
+                attr.training_cost = HeroAttribute.getTrainingCost(attr.value);
                 this.attributes[index[i - 1]] = attr;
             }
         }
@@ -141,9 +143,9 @@ class Hero {
                         hpa = this.attributes.hp,
                         hhpa = this.attributes.hhp;
                     hpa.value = hp[0];
-                    hpa.effective_value = hp[1];
+                    hpa.effectiveValue = hp[1];
                     hhpa.value = hhp[0];
-                    hhpa.effective_value = hhp[1];
+                    hhpa.effectiveValue = hhp[1];
                     break;
                 case 'mp':
                     var mp = innerText(row.cells[1]).parseEffectiveValue(),
@@ -151,21 +153,21 @@ class Hero {
                         mpa = this.attributes.mp,
                         rmpa = this.attributes.rmp;
                     mpa.value = mp[0];
-                    mpa.effective_value = mp[1];
+                    mpa.effectiveValue = mp[1];
                     rmpa.value = rmp[0];
-                    rmpa.effective_value = rmp[1];
+                    rmpa.effectiveValue = rmp[1];
                     break;
                 case 'act':
                     var act = innerText(row.cells[1]).parseEffectiveValue(),
                         acta = this.attributes.act;
                     acta.value = act[0];
-                    acta.effective_value = act[1];
+                    acta.effectiveValue = act[1];
                     break;
                 case 'ini':
                     var ini = innerText(row.cells[1]).parseEffectiveValue(),
                         inia = this.attributes.ini;
                     inia.value = ini[0];
-                    inia.effective_value = ini[1];
+                    inia.effectiveValue = ini[1];
                     break;
                 case 'rstpt':
                     this.attributes.rstpt.value = Number(innerText(row.cells[1]));

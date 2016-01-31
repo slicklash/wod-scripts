@@ -19,25 +19,31 @@ enum SkillNature {
     talent
 }
 
-interface IHeroSkill {
+// interface IHeroSkill {
+//     name: string;
+//     level: number;
+//     effectiveLevel: number;
+//     type: string; //TODO: enum
+//     talent: string;
+//     rank: number;
+//     effective_value: number;
+//     nature: SkillNature;
+//     skillClass: string;
+//     inRound: boolean;
+//     preRound: boolean;
+//     target: string;
+//     maxAffected: string;
+//     crossPosition: boolean;
+//     manaBase: number;
+//     manaCost: number;
+//     requiredItem: string;
+//     isOffensive: boolean;
+// }
+
+class HeroSkill {
+
     name: string;
     level: number;
-    effectiveLevel: number;
-    type: string; //TODO: enum
-    nature: SkillNature;
-    skillClass: string;
-    inRound: boolean;
-    preRound: boolean;
-    target: string;
-    maxAffected: string;
-    crossPosition: boolean;
-    manaBase: number;
-    manaCost: number;
-    requiredItem: string;
-    isOffensive: boolean;
-}
-
-class HeroSkill implements IHeroSkill {
     initiative_attr = '';
     attack_type = '';
     attack_attr = '';
@@ -49,6 +55,26 @@ class HeroSkill implements IHeroSkill {
     color = '';
     hero = null;
     onDone = null;
+    talent: boolean;
+    rank: number;
+    effectiveLevel: number;
+    primary: boolean;
+    secondary: boolean;
+    exceptional: boolean;
+    type: string;
+    pre_round: boolean;
+    in_round: boolean;
+    target: string;
+    one_pos: boolean;
+    max_affected: string;
+    mp_base: number;
+    mp_cost: number;
+    item: string;
+    skill_class: string;
+    isOffensive: boolean;
+    effective_rank: number;
+
+
 
     parse(row_html) {
         try {

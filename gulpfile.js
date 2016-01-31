@@ -3,11 +3,13 @@ var gulp = require('gulp'),
     merge = require('merge2'),
     tsd = require('gulp-tsd'),
     ts = require('gulp-typescript'),
-    run = require('run-sequence');
+    run = require('run-sequence'),
+    Server = require('karma').Server;
 
 var build_dir = 'build/',
     re_dir = 'release/',
     scripts = [
+        { key: 'common', name: 'common' },
         { key: 'adventure', name: 'adventure_assistant' },
         { key: 'favmenu', name: 'favorite_menu' },
         { key: 'heroes', name: 'hero_list' },
@@ -39,6 +41,13 @@ scripts.forEach(function (x) {
                        .pipe(concat.footer('\n})(window, document);\n')))
                 .pipe(concat(x.name + '.user.js'))
                 .pipe(gulp.dest(re_dir));
+    });
+
+    gulp.task('test:' + x.key, function (done) {
+        new Server({
+            configFile: __dirname + '/tests/karma.conf.js',
+            basePath: __dirname + '/tests/' + x.name,
+        }, done).start();
     });
 
     gulp.task('re:' + x.key, function() {
