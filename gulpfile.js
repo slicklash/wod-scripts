@@ -22,7 +22,7 @@ var build_dir = 'build/',
 
 scripts.forEach(function (x) {
 
-    gulp.task('ts:' + x.key, function () {
+    gulp.task('compile:' + x.key, function () {
         return gulp
                 .src('src/' + x.name + '/*.ts')
                 .pipe(ts({
@@ -33,7 +33,7 @@ scripts.forEach(function (x) {
                 .pipe(gulp.dest(build_dir));
     });
 
-    gulp.task('concat:' + x.key, function() {
+    gulp.task('_concat:' + x.key, function() {
         return merge(gulp.src('src/' + x.name + '/header.js'),
                      gulp
                        .src(build_dir + x.name + '.js')
@@ -50,8 +50,8 @@ scripts.forEach(function (x) {
         }, done).start();
     });
 
-    gulp.task('re:' + x.key, function() {
-        run('ts:' + x.key, 'concat:' + x.key);
+    gulp.task('release:' + x.key, function() {
+        run('compile:' + x.key, '_concat:' + x.key);
     });
 
 });
