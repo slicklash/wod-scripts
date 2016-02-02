@@ -57,7 +57,7 @@ if (choices.length || buttonNext || buttonMore) {
 
     const normalizeKey = key => key >= 96 && key <= 105 ? key - 48 : key;
 
-    function onKeyUp (e: KeyboardEvent) {
+    document.onkeyup = (e: KeyboardEvent) => {
 
         let activeElem = document.activeElement;
 
@@ -80,8 +80,6 @@ if (choices.length || buttonNext || buttonMore) {
             return false;
         }
     }
-
-    document.onkeyup = onKeyUp;
 }
 
 function addHotkeyFor(elem: Node, text: string) {

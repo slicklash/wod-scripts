@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.1.0
+// @version        1.1.1
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
+// @grant          none
 // ==/UserScript==
 
-(function(window, document, undefined) {
+(function() {
 'use strict';
 var buttons = Array.from(document.querySelectorAll('a, input[type="submit"]')), buttonNext, buttonMore;
 if (buttons.length) {
@@ -39,7 +40,7 @@ if (choices.length) {
 }
 if (choices.length || buttonNext || buttonMore) {
     var normalizeKey = function (key) { return key >= 96 && key <= 105 ? key - 48 : key; };
-    function onKeyUp(e) {
+    document.onkeyup = function (e) {
         var activeElem = document.activeElement;
         if (activeElem && activeElem.tagName.toLowerCase() === 'input' && activeElem.getAttribute('type') === 'text') {
             return;
@@ -57,8 +58,7 @@ if (choices.length || buttonNext || buttonMore) {
             choice.focus();
             return false;
         }
-    }
-    document.onkeyup = onKeyUp;
+    };
 }
 function addHotkeyFor(elem, text) {
     if (elem) {
@@ -147,4 +147,4 @@ function selectTab(e) {
     }
 }
 
-})(window, document);
+})();

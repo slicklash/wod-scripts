@@ -37,8 +37,8 @@ scripts.forEach(function (x) {
         return merge(gulp.src('src/' + x.name + '/header.js'),
                      gulp
                        .src(build_dir + x.name + '.js')
-                       .pipe(concat.header('(function(window, document, undefined) {\n'))
-                       .pipe(concat.footer('\n})(window, document);\n')))
+                       .pipe(concat.header('(function() {\n'))
+                       .pipe(concat.footer('\n})();\n')))
                 .pipe(concat(x.name + '.user.js'))
                 .pipe(gulp.dest(re_dir));
     });
