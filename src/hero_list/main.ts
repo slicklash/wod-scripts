@@ -1,13 +1,15 @@
 /// <reference path="../../lib/def/greasemonkey/greasemonkey.d.ts" />
-/// <reference path="../common/selector.ts" />
 /// <reference path="../common/functions/functions.dom.ts" />
+/// <reference path="../common/prototypes/array.ts" />
 
 // --- Main
 
-var g_heroes = $('#main_content form table'),
-    g_rows = g_heroes ? $('tr', g_heroes) : null;
+var g_heroes = document.querySelector('#main_content form table'),
+    g_rows: any = g_heroes ? Array.from(g_heroes.querySelectorAll('tr')) : null;
 
-    if (g_rows && g_rows.constructor !== Array) g_rows = [g_rows];
+if (g_rows && !Array.isArray(g_rows)) {
+    g_rows = [g_rows];
+}
 
 var saveWeights = function () {
 
@@ -15,22 +17,22 @@ var saveWeights = function () {
 
     for (var i = 1, cnt = g_rows.length; i < cnt; i++) {
         var cells     = g_rows[i].cells,
-            hid       = Number($('input', cells[0]).value).toString(),
-            weight    = Number($('input', cells[5]).value);
+            hid       = Number(cells[0].querySelector('input').value).toString(),
+            weight    = Number(cells[5].querySelector('input').value);
 
         if (isNaN(weight)) weight = 0;
 
         GM_setValue(hid, weight);
     }
 
-    var form = document.forms['the_form'];
+    var form = (<any>document.forms).the_form;
 
     if (form) form.submit();
 }
 
 var orderHeroes = function () {
 
-    if (!g_rows || g_rows.length < 1) return;
+    if (!g_rows || !g_rows.length) return;
 
     var heroes = [],
         holder    = g_heroes.parentNode,
@@ -57,7 +59,7 @@ var orderHeroes = function () {
     // get values
     for (i = 1, cnt = g_rows.length; i < cnt; i++) {
         var cells     = g_rows[i].cells,
-            hid       = Number($('input', cells[0]).value).toString(),
+            hid       = Number(cells[0].querySelector('input').value).toString(),
             level     = Number(innerText(cells[2]));
 
         hero      = {
@@ -95,4 +97,4 @@ var orderHeroes = function () {
     holder.removeChild(g_heroes);
 }
 
-if (g_rows) orderHeroes();
+orderHeroes();

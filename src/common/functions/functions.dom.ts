@@ -1,9 +1,12 @@
 
-var innerText = function(elem, value?) {
+const innerText = (elem, value?) => {
+
     if (!elem) return '';
+
     if (typeof value === 'undefined') {
         return elem.innerText ? elem.innerText : elem.textContent;
     }
+
     if (elem.innerText) {
         elem.innerText = value;
     }

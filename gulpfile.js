@@ -4,6 +4,7 @@ var gulp = require('gulp'),
     tsd = require('gulp-tsd'),
     ts = require('gulp-typescript'),
     run = require('run-sequence'),
+    jshint = require('gulp-jshint'),
     Server = require('karma').Server;
 
 var build_dir = 'build/',
@@ -43,6 +44,12 @@ scripts.forEach(function (x) {
                 .pipe(gulp.dest(re_dir));
     });
 
+    gulp.task('_lint:' + x.key, function() {
+        return gulp.src(re_dir + x.name + '.user.js')
+                   .pipe(jshint())
+                   .pipe(jshint.reporter('default'));
+    });
+
     gulp.task('test:' + x.key, function (done) {
         new Server({
             configFile: __dirname + '/tests/karma.conf.js',
@@ -51,7 +58,7 @@ scripts.forEach(function (x) {
     });
 
     gulp.task('release:' + x.key, function() {
-        run('compile:' + x.key, '_concat:' + x.key);
+        run('compile:' + x.key, '_concat:' + x.key, '_lint:' + x.key);
     });
 
 });
