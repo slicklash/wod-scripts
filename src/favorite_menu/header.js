@@ -4,4 +4,5 @@
 // @version        1.0
 // @author         Never
 // @include        http*://*.world-of-dungeons.*
+// @grant          none
 // ==/UserScript==

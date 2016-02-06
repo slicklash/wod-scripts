@@ -1,100 +1,83 @@
 /// <reference path="../../lib/def/greasemonkey/greasemonkey.d.ts" />
-/// <reference path="../common/functions/functions.dom.ts" />
 /// <reference path="../common/prototypes/array.ts" />
+
+/// <reference path="../common/functions/dom/add.ts" />
+/// <reference path="../common/functions/dom/attr.ts" />
+/// <reference path="../common/functions/dom/textContent.ts" />
 
 // --- Main
 
-var g_heroes = document.querySelector('#main_content form table'),
-    g_rows: any = g_heroes ? Array.from(g_heroes.querySelectorAll('tr')) : null;
+let table_heroes = document.querySelector('#main_content form table'),
+    rows: any[] = table_heroes ? Array.from(table_heroes.querySelectorAll('tr')) : null;
 
-if (g_rows && !Array.isArray(g_rows)) {
-    g_rows = [g_rows];
-}
+if (rows) {
 
-var saveWeights = function () {
+    const saveWeights = () => {
 
-    if (!g_rows || g_rows.length < 1) return;
+        for (let i = 1; i < rows.length; i++) {
 
-    for (var i = 1, cnt = g_rows.length; i < cnt; i++) {
-        var cells     = g_rows[i].cells,
-            hid       = Number(cells[0].querySelector('input').value).toString(),
-            weight    = Number(cells[5].querySelector('input').value);
+            let row    = rows[i],
+                cells  = row.cells,
+                hid    = Number(cells[0].querySelector('input').value).toString(),
+                weight = Number(cells[5].querySelector('input').value);
 
-        if (isNaN(weight)) weight = 0;
+            if (isNaN(weight)) weight = 0;
 
-        GM_setValue(hid, weight);
+            GM_setValue(hid, weight);
+        }
+
+        var form = (<any>document.forms).the_form;
+
+        if (form) form.submit();
     }
 
-    var form = (<any>document.forms).the_form;
-
-    if (form) form.submit();
-}
-
-var orderHeroes = function () {
-
-    if (!g_rows || !g_rows.length) return;
-
-    var heroes = [],
-        holder    = g_heroes.parentNode,
-        position  = g_heroes.nextSibling,
-        newTable  = add('table'),
+    let newTable  = add('table'),
         newTbody  = add('tbody', newTable);
 
     attr(newTable, 'class', 'content_table');
 
-    var headerWeight = add('th'),
+    let headerWeight = add('th'),
         label = add('span', headerWeight),
         buttonSave = add('input', headerWeight);
 
     label.innerHTML = 'weight<br/>';
-    attr(buttonSave, {'type': 'button', 'value': 'Save', 'class': 'button clickable'});
+    attr(buttonSave, { 'type': 'button', 'value': 'Save', 'class': 'button clickable' });
     buttonSave.addEventListener('click', saveWeights, false);
+    rows[0].appendChild(headerWeight);
+    newTbody.appendChild(rows[0]);
 
-    g_rows[0].appendChild(headerWeight);
+    let heroes = [];
 
-    newTbody.appendChild(g_rows[0]);
+    for (let i = 1; i < rows.length; i++) {
 
-    var i, cnt, hero;
+        let row    = rows[i],
+            cells  = row.cells,
+            hid    = Number(cells[0].querySelector('input').value).toString(),
+            level  = Number(textContent(cells[2])),
+            weight = (GM_getValue(hid) || (level === 0 ? 100 : level));
 
-    // get values
-    for (i = 1, cnt = g_rows.length; i < cnt; i++) {
-        var cells     = g_rows[i].cells,
-            hid       = Number(cells[0].querySelector('input').value).toString(),
-            level     = Number(innerText(cells[2]));
-
-        hero      = {
-            'weight'    : level === 0 ? 100 : level,
-            'row'       : g_rows[i]
-        };
-
-        var val = GM_getValue(hid);
-
-        if (typeof(val) !== 'undefined') hero.weight = Number(val);
-
-        heroes.push(hero);
+        heroes.push({ 'weight': Number(weight), 'row': row });
     }
 
-    heroes.sort(function(x, y) { return x.weight - y.weight; });
+    heroes.sort((a, b) => a.weight - b.weight);
 
-    // update list
-    for (i = 0, cnt = heroes.length; i < cnt; i++) {
+    heroes.forEach((hero, i) => {
 
-        hero = heroes[i];
-
-        var row = hero.row,
+        let row = hero.row,
             colWeight = add('td', row),
             txt = add('input');
 
         attr(row, 'class', 'row' + i % 2);
         attr(colWeight, 'align', 'center');
-        attr(txt, {'type': 'text', 'style': 'width: 30px', 'value': hero.weight });
+        attr(txt, { 'type': 'text', 'style': 'width: 30px', 'value': hero.weight });
 
         add(txt, colWeight);
-        add(heroes[i].row, newTbody);
-    }
+        add(hero.row, newTbody);
+    });
 
-    holder.insertBefore(newTable, position);
-    holder.removeChild(g_heroes);
+    let parentNode = table_heroes.parentNode,
+        position   = table_heroes.nextSibling;
+
+    parentNode.insertBefore(newTable, position);
+    parentNode.removeChild(table_heroes);
 }
-
-orderHeroes();

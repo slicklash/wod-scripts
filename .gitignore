@@ -2,6 +2,7 @@
 65056.user.js
 92775.user.js
 *.userprefs
+npm-debug.log
 
 bin/
 obj/
