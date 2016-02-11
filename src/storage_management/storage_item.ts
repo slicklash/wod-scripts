@@ -14,6 +14,8 @@ class StorageItem {
     public ctrlLocation = null;
     public ctrlSell = null;
 
+    public value: number = 0;
+
     get isConsumable(): boolean {
         if (this._isConsumbale) return true;
         if (/^raw /.test(this.name)) return true;
