@@ -3,6 +3,7 @@
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
   "devDependencies": {
+    "gulp": "^3.9.1",
     "gulp-concat-util": "^0.5.4",
     "gulp-jshint": "^2.0.0",
     "gulp-tsd": "^0.1.0",
@@ -20,7 +21,7 @@
     "typescript": "^1.7.5"
   },
   "scripts": {
-    "serve": "http-server -c-1 -o -p 8000 ./release"
+    "re": "http-server -c-1 -o -p 8000 ./release"
   },
   "author": "slicklash@gmail.com",
   "license": "BSD-2-Clause"

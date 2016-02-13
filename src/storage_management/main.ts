@@ -7,8 +7,6 @@
 /// <reference path="./storage_item.ts" />
 /// <reference path="./nls.ts" />
 
-//TODO: mass sell feature
-
 function getRows(main_content): any[] {
 
     let scope: any = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]');
@@ -25,7 +23,17 @@ function getRows(main_content): any[] {
     return rows ? Array.from(rows).concat(Array.from(scope.querySelectorAll('tbody tr[class="row1"]'))) : [];
 }
 
-function getItems(rows: any[]): StorageItem[] {
+interface ISelectionOption {
+    key: string;
+    title: string;
+    pick?: boolean;
+    predicate?(item: StorageItem): boolean;
+    notForSell?: boolean;
+    count?: number;
+    countSell?: number;
+}
+
+function getItems(rows: any[], options: ISelectionOption[]): StorageItem[] {
 
     let items: StorageItem[] = [],
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
@@ -33,8 +41,6 @@ function getItems(rows: any[]): StorageItem[] {
     rows.forEach(row => {
 
         if (!row || !row.cells || row.cells.length < 2) return;
-
-        // debugger
 
         let cells         = row.cells,
             link          = cells[1].querySelector('a'),
@@ -66,15 +72,34 @@ function getItems(rows: any[]): StorageItem[] {
         item.value = value;
 
         items.push(item);
+
+        for (let option of options) {
+            if (option.predicate && option.predicate(item)) {
+                if (item.ctrlLocation) option.count = option.count ? option.count + 1 : 1;
+                if (item.ctrlSell) option.countSell = option.countSell ? option.countSell + 1 : 1;
+            }
+        }
+
     });
 
     return items;
 }
 
-function buildSelect(options) {
+function addOption(option: ISelectionOption, select, sellable?: boolean, option_group?) {
 
-    let select = add('select'),
-        option_group;
+    let op = add('option');
+    attr(op, 'value', option.key).innerHTML = option.key === 'none'? 'none' : sellable ? `${option.title} (${option.countSell})` : `${option.title} (${option.count})`;
+    if (option_group) {
+        option_group.appendChild(op);
+    }
+    else {
+        select.appendChild(op);
+    }
+}
+
+function addOptions(options, select, sellable?: boolean) {
+
+    let option_group;
 
     options.forEach(x => {
 
@@ -85,29 +110,33 @@ function buildSelect(options) {
             return
         }
 
-        let option = add('option');
-
-        attr(option, 'value', x.key).innerHTML = x.title;
-
-        if (option_group) {
-            option_group.appendChild(option);
-        }
-        else {
-            select.appendChild(option);
-        }
+        addOption(x, select, sellable, option_group);
 
     });
 
     return select;
 }
 
-interface ISelectionOption {
-    key: string;
-    title: string;
-    pick?: boolean;
-    predicate?(item: StorageItem): boolean;
-    count?: number;
-}
+let options: ISelectionOption[] = [
+    { key: '---', title: 'All' },
+    { key: 'all', title: 'all', pick: true, predicate: x => true, count: 0, countSell: 0 },
+    { key: 'all_use', title: 'usable', pick: true, predicate: x => x.isUsable, count: 0, countSell: 0 },
+    { key: 'all_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable, count: 0, countSell: 0 },
+    { key: 'all_group', title: 'group', pick: true, predicate: x => x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
+    { key: 'all_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
+    { key: '---', title: 'Consumables' },
+    { key: 'con', title: 'all', pick: true, predicate: x => x.isConsumable, count: 0, countSell: 0 },
+    { key: 'con_use', title: 'usable', pick: true, predicate: x => x.isUsable && x.isConsumable, count: 0, countSell: 0 },
+    { key: 'con_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && x.isConsumable, count: 0, countSell: 0 },
+    { key: 'con_group', title: 'group', pick: true, predicate: x => x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: 'con_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: '---', title: 'Items' },
+    { key: 'itm', title: 'all', pick: true, predicate: x => !x.isConsumable, count: 0, countSell: 0 },
+    { key: 'itm_use', title: 'usable', pick: true, predicate: x => x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
+    { key: 'itm_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
+    { key: 'itm_group', title: 'group', pick: true, predicate: x => x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: 'itm_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+];
 
 function main() {
 
@@ -116,49 +145,7 @@ function main() {
 
     if (!buttons_commit.length) return;
 
-    let selectOptions: ISelectionOption[] = [
-        { key: 'none', title: 'none', pick: false, predicate: x => true },
-        { key: '---', title: 'All' },
-        { key: 'all', title: 'all', pick: true, predicate: x => true },
-        { key: 'all_use', title: 'usable', pick: true, predicate: x => x.isUsable },
-        { key: 'all_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable },
-        { key: 'all_group', title: 'group', pick: true, predicate: x => x.isGroupItem },
-        { key: 'all_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem },
-        { key: '---', title: 'Consumables' },
-        { key: 'con', title: 'all', pick: true, predicate: x => x.isConsumable },
-        { key: 'con_use', title: 'usable', pick: true, predicate: x => x.isUsable && x.isConsumable },
-        { key: 'con_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && x.isConsumable },
-        { key: 'con_group', title: 'group', pick: true, predicate: x => x.isGroupItem && x.isConsumable },
-        { key: 'con_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && x.isConsumable },
-        { key: '---', title: 'Items' },
-        { key: 'itm', title: 'all', pick: true, predicate: x => !x.isConsumable },
-        { key: 'itm_use', title: 'usable', pick: true, predicate: x => x.isUsable && !x.isConsumable },
-        { key: 'itm_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && !x.isConsumable },
-        { key: 'itm_group', title: 'group', pick: true, predicate: x => x.isGroupItem && !x.isConsumable },
-        { key: 'itm_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && !x.isConsumable },
-    ];
-
-    let sellOptions: ISelectionOption[] = [
-        { key: 'none', title: 'none', pick: false, predicate: x => true },
-        { key: '---', title: 'All' },
-        { key: 'all', title: 'all', pick: true, predicate: x => true },
-        { key: 'all_use', title: 'usable', pick: true, predicate: x => x.isUsable },
-        { key: 'all_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable },
-        { key: '---', title: 'Consumables' },
-        { key: 'con', title: 'all', pick: true, predicate: x => x.isConsumable },
-        { key: 'con_use', title: 'usable', pick: true, predicate: x => x.isUsable && x.isConsumable },
-        { key: 'con_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && x.isConsumable },
-        { key: '---', title: 'Items' },
-        { key: 'itm', title: 'all', pick: true, predicate: x => !x.isConsumable },
-        { key: 'itm_use', title: 'usable', pick: true, predicate: x => x.isUsable && x.isConsumable },
-        { key: 'itm_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && !x.isConsumable },
-    ];
-
-    // TODO: include count info in options
-
-    let items: StorageItem[] = getItems(getRows(main_content));
-
-    if (!items.length) return;
+    let items: StorageItem[] = [];
 
     let labelSellInfo = add('span'),
         labelSellInfo2 = labelSellInfo.cloneNode(true),
@@ -166,19 +153,18 @@ function main() {
         sellCount: number = 0,
         sellSum: number = 0;
 
-    let onSelectChanged = function(e) {
-        let option = selectOptions.find(x => x.key === e.target.value);
+    let onSelectChanged = (e) => {
+        let option = options.find(x => x.key === e.target.value);
 
         for (let item of items) {
             if (item.ctrlSelect && option.predicate(item)) {
                 item.ctrlSelect.checked = option.pick;
             }
         }
-
     };
 
-    let onSellChanged = function(e) {
-        let option = sellOptions.find(x => x.key === e.target.value);
+    let onSellChanged = (e) => {
+        let option = options.find(x => x.key === e.target.value);
 
         if (option.key === 'none') {
             sellSum = 0;
@@ -195,67 +181,62 @@ function main() {
             }
         }
 
-        let sellInfo = sellCount > 1 ? `&nbsp;${sellCount} (${sellSum} <img alt="" border="0" src="/wod/css//skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
+        let sellInfo = sellCount > 0 ? `&nbsp;${sellCount} (${sellSum} <img alt="" border="0" src="/wod/css//skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
 
         labelSellInfo.innerHTML = sellInfo;
         labelSellInfo2.innerHTML = sellInfo;
     };
 
-    let go_gs = 'go_group_2',
-        go_tv = 'go_group';
+    let isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1,
+        isGroupTv = window.location.href.indexOf('groupcellar') > -1 && !isGroupStorage,
+        go_tv = isGroupTv ? '-go_group' : 'go_group',
+        go_gs = isGroupStorage ? '-go_group_2' : 'go_group_2';
 
-    if (items.length > 0 && items[0].ctrlLocation) {
-        let ops = items[0].ctrlLocation.options;
-        for (let i = 0, cnt = ops.length; i < cnt; i++) {
-            let op = ops[i].value;
-            if (op === '-go_group_2') { go_gs = '-go_group_2'; break; }
-            if (op === '-go_group')   { go_tv = '-go_group'; break; }
-        }
-    }
+    let onSplit = () => {
 
-    let onSplit = function() {
-        let ok = false,
-            tmp = [], i, cnt, obj;
-        for (i = 0, cnt = items.length; i < cnt; i++) {
-            obj = items[i];
-            if (obj.ctrlLocation && obj.ctrlSelect) {
-                if (obj.ctrlSelect.checked) {
-                    obj.ctrlLocation.value = !obj.isConsumable ? go_tv : go_gs;
-                    ok = true;
+        if (!items.length) return;
+
+        let onlySelected = false,
+            tmp = [];
+
+        for (let item of items) {
+            if (item.ctrlLocation && item.ctrlSelect) {
+                if (item.ctrlSelect.checked) {
+                    item.ctrlLocation.value = !item.isConsumable ? go_tv : go_gs;
+                    onlySelected = true;
                 }
                 else {
-                    tmp.push(obj);
+                    tmp.push(item);
                 }
             }
         }
-        if (!ok) {
-            for (i = 0, cnt = tmp.length; i < cnt; i++) {
-                obj = tmp[i];
-                obj.ctrlLocation.value = !obj.isConsumable ? go_tv : go_gs;
-            }
+
+        if (!onlySelected) {
+            tmp.forEach(x => { x.ctrlLocation.value = !x.isConsumable ? go_tv : go_gs });
         }
     };
 
-    let onEquip = function() {
-        let ok = false,
-            tmp = [], i, cnt, obj;
-        for (i = 0, cnt = items.length; i < cnt; i++) {
-            obj = items[i];
-            if (obj.usable && obj.ctrlLocation && obj.ctrlSelect) {
-                if (obj.ctrlSelect.checked) {
-                    obj.ctrlLocation.value = obj.ctrlLocation.options[0].value;
-                    ok = true;
+    let onEquip = () => {
+
+        if (!items.length) return;
+
+        let onlySelected = false,
+            tmp = [];
+
+        for (let item of items) {
+            if (item.isUsable && item.ctrlLocation && item.ctrlSelect) {
+                if (item.ctrlSelect.checked) {
+                    item.ctrlLocation.value = item.ctrlLocation.options[0].value;
+                    onlySelected = true;
                 }
                 else {
-                    tmp.push(obj);
+                    tmp.push(item);
                 }
             }
         }
-        if (!ok) {
-            for (i = 0, cnt = tmp.length; i < cnt; i++) {
-                obj = tmp[i];
-                obj.ctrlLocation.value = obj.ctrlLocation.options[0].value;
-            }
+
+        if (!onlySelected) {
+            tmp.forEach(x => { x.ctrlLocation.value = x.ctrlLocation.options[0].value });
         }
     };
 
@@ -263,8 +244,18 @@ function main() {
         labelSell = add('span'),
         buttonSplit = add('input'),
         buttonEquip = add('input'),
-        selectForLocation = buildSelect(selectOptions),
-        selectForSell = buildSelect(sellOptions);
+        selectForLocation = add('select'),
+        selectForSell = add('select'),
+        none: ISelectionOption = { key: 'none', title: 'none', pick: false, predicate: x => true };
+
+    addOption(none, selectForLocation);
+    addOption(none, selectForSell);
+
+    attr(selectForLocation, { 'style': 'min-width: 140px' });
+    attr(selectForSell, { 'style': 'min-width: 120px' });
+
+    selectForLocation.disabled = true;
+    selectForSell.disabled = true;
 
     labelMove.innerHTML = '&nbsp;Select:&nbsp;';
     labelSell.innerHTML = '&nbsp;Sell:&nbsp;';
@@ -307,6 +298,26 @@ function main() {
     holder.insertBefore(labelSell2, buttonEquip2.nextSibling);
     holder.insertBefore(selectForSell2, labelSell2.nextSibling);
     holder.insertBefore(labelSellInfo2, selectForSell2.nextSibling);
+
+    setTimeout(() => {
+
+        items = getItems(getRows(main_content), options);
+
+        addOptions(options, selectForLocation);
+        addOptions(options, selectForLocation2);
+
+        let optionsForSell = options.filter(x => !x.notForSell);
+        addOptions(optionsForSell, selectForSell, true);
+        addOptions(optionsForSell, selectForSell2, true);
+
+        options.splice(0, 0, none);
+
+        selectForLocation.disabled = false;
+        selectForLocation2.disabled = false;
+        selectForSell.disabled = false;
+        selectForSell2.disabled = false;
+
+    }, 0);
 }
 
-main();
+document.addEventListener('DOMContentLoaded', main);
