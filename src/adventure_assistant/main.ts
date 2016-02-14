@@ -140,6 +140,8 @@ function main() {
 
                 crafting.push(adventure);
             }
+
+            hideDescription(adventure);
         }
 
         let tabCrafting = makeTab('Crafting', true);
@@ -167,6 +169,42 @@ function main() {
         let p = h1.parentNode;
         p.replaceChild(div, h1);
     }
+}
+
+function hideDescription(row) {
+
+    let td = row.querySelector('td'),
+        descriptionNodes = Array.from(td.childNodes).filter(x => x.nodeName !== 'TABLE'),
+        div = document.createElement('div'),
+        header = td.children[0];
+
+    div.style.display = 'none';
+    td.insertBefore(div, header.nextSibling);
+    descriptionNodes.forEach(x => div.appendChild(x));
+
+    header.style.cursor = 'pointer';
+
+    let title = header.querySelector('h3');
+    title.style.display = 'inline';
+
+    let im = document.createElement('img');
+    im.src = '/wod/css/icons/common/more_text.png';
+    im.style.paddingLeft = '10px';
+
+    title.parentNode.appendChild(im);
+    title.parentElement.style.paddingBottom = '5px';
+    td.style.paddingBottom = '5px';
+
+    header.addEventListener('click', () => {
+        if (div.style.display) {
+            div.style.display = '';
+            im.src = im.src.replace('more', 'less');
+        }
+        else {
+            div.style.display = 'none';
+            im.src = im.src.replace('less', 'more');
+        }
+    });
 }
 
 function addHotkeyFor(elem: Node, text: string) {

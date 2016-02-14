@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.1.2
+// @version        1.2.0
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
@@ -101,6 +101,7 @@ function main() {
                 }
                 crafting.push(adventure);
             }
+            hideDescription(adventure);
         }
         var tabCrafting = makeTab('Crafting', true);
         var tabAppointments = makeTab('Appointments', false);
@@ -121,6 +122,31 @@ function main() {
         var p = h1.parentNode;
         p.replaceChild(div, h1);
     }
+}
+function hideDescription(row) {
+    var td = row.querySelector('td'), descriptionNodes = Array.from(td.childNodes).filter(function (x) { return x.nodeName !== 'TABLE'; }), div = document.createElement('div'), header = td.children[0];
+    div.style.display = 'none';
+    td.insertBefore(div, header.nextSibling);
+    descriptionNodes.forEach(function (x) { return div.appendChild(x); });
+    header.style.cursor = 'pointer';
+    var title = header.querySelector('h3');
+    title.style.display = 'inline';
+    var im = document.createElement('img');
+    im.src = '/wod/css/icons/common/more_text.png';
+    im.style.paddingLeft = '10px';
+    title.parentNode.appendChild(im);
+    title.parentElement.style.paddingBottom = '5px';
+    td.style.paddingBottom = '5px';
+    header.addEventListener('click', function () {
+        if (div.style.display) {
+            div.style.display = '';
+            im.src = im.src.replace('more', 'less');
+        }
+        else {
+            div.style.display = 'none';
+            im.src = im.src.replace('less', 'more');
+        }
+    });
 }
 function addHotkeyFor(elem, text) {
     if (elem) {
