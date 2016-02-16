@@ -10,6 +10,7 @@
 // ==/UserScript==
 
 (function() {
+'use strict';
 var add = function (tag, parentNode) {
     var elem = typeof tag === 'string' ? document.createElement(tag) : tag;
     if (parentNode && parentNode.nodeType) {

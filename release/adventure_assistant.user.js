@@ -11,8 +11,67 @@
 
 (function() {
 'use strict';
-var crafting = [], appointments = [];
-function main() {
+var _context;
+function getContext() {
+    if (!_context) {
+        var h1 = document.querySelector('h1'), title = h1 ? h1.textContent : '';
+        if (!title || title.indexOf('adventure') !== 0)
+            return;
+        _context = {
+            adventure: title.replace('adventure ', ''),
+            texts: Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION')),
+            place: (document.querySelector('#smarttabs__level_inner h3 > a') || { textContent: '*' }).textContent,
+            idHero: document.querySelector('[href*="session_hero_id"]').href.match(/session_hero_id=([\d]+)/)[1],
+        };
+    }
+    return _context;
+}
+var RescuingFatherWuel = 'Rescuing Father Wuel';
+var Passingtime = 'Passingtime';
+var IngenuityTest = 'Ingenuity Test';
+function initHighlights(context) {
+    var adventure = context.adventure, place = context.place, adventures = {};
+    adventures[RescuingFatherWuel] = getWuelHighlights;
+    adventures[Passingtime] = getPassingtimeHighlights;
+    adventures[IngenuityTest] = getIngenuityTestHighlights;
+    if (!(adventure in adventures))
+        return;
+    var highlights = adventures[adventure]()[place];
+    if (!highlights)
+        return;
+    var texts = context.texts.map(function (x) { return x.innerHTML; });
+    highlights.forEach(function (x) {
+        var start = x.indexOf('_'), end = x.indexOf('_', start + 1), search = new RegExp(start > -1 ? x.replace(/_/g, '') : x, 'g'), highlight = start > -1 ? x.substring(0, start) + "<span style=\"color:orchid\">" + x.substring(start + 1, end) + "</span>" + x.substring(end + 1) : "<span style=\"color:orchid\">" + x + "</span>";
+        texts.forEach(function (x, i) { texts[i] = x.replace(search, highlight); });
+    });
+    context.texts.forEach(function (x, i) { x.innerHTML = texts[i]; });
+}
+function getPassingtimeHighlights() {
+    return {
+        '*': ['bejeweled necklace'],
+        'Grandfather answers': ['stonemasonry', 'carpenters']
+    };
+}
+function getWuelHighlights() {
+    return {
+        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap',
+            'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
+            'fine _electric eel_', 'fine _octopus_', 'fine _lantern fish_', 'fine _puffer fish_', 'fine _mackerel_', 'fine _piranha_',
+            'other _gear for mages_', 'other _ranged weapons_', 'other _armors_', 'other _melee weapons_', 'herbs, incense and poisons', 'other enhanced _jewelry_', 'instruments and parchments', 'other _exotic items_'],
+        'Kotko: church': ['enchanted band'],
+        'Kotko: woman with red feather': ['peanuts', 'eggplant', 'banana', 'sandwich', 'orange', 'fried chicken']
+    };
+}
+function getIngenuityTestHighlights() {
+    return {
+        '*': ['bejeweled necklace', 'blue key', 'Large', 'Medium', 'Small', 'Tiny'],
+        'Middle of the River : Chatting': ['red key', 'crescent', 'rectangle', 'circle', 'heart', 'diamond', 'plus-sign', 'oval', 'star', 'triangle', 'square'],
+        'Freshwater Spring': ['under _the water_'],
+        'The Fairytale Princess': ['pink hair ribbons'],
+        'The Hut': ['Turquoise', 'Yellow', 'Green', 'Red', 'Magenta', 'Black', 'Blue', 'Purple', 'Orange', 'White']
+    };
+}
+function initHotKeys() {
     var buttons = Array.from(document.querySelectorAll('a, input[type="submit"]')), buttonNext, buttonMore;
     if (buttons.length) {
         buttons.forEach(function (button) {
@@ -63,8 +122,18 @@ function main() {
             }
         };
     }
-    var appList = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
+}
+function addHotkeyFor(elem, text) {
+    if (elem) {
+        var span = document.createElement('span');
+        span.innerHTML = "<sup style=\"padding: 1px 3px; border: 1px solid #666; font-size: 10px\">" + text + "</sup>";
+        elem.appendChild(span);
+    }
+}
+var crafting = [], appointments = [];
+function initTabs() {
     if (document.querySelector('.paginator_row')) {
+        var appList = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
         var isAppointment = function (title) { return appList.some(function (x) { return title.indexOf(x) > -1; }); };
         var invertClass = function (className) { return className === 'row0' ? 'row1' : 'row0'; };
         var titleOf = function (node) { return (node.querySelector('h3') || { innerHTML: '' }).innerHTML; };
@@ -148,13 +217,6 @@ function hideDescription(row) {
         }
     });
 }
-function addHotkeyFor(elem, text) {
-    if (elem) {
-        var span = document.createElement('span');
-        span.innerHTML = "<sup style=\"padding: 1px 3px; border: 1px solid #666; font-size: 10px\">" + text + "</sup>";
-        elem.appendChild(span);
-    }
-}
 function makeTab(title, selected) {
     var action = document.createElement('a');
     action.setAttribute('href', '#');
@@ -175,6 +237,12 @@ function selectTab(e) {
         if (i < appointments.length)
             appointments[i].style.display = options.displayApp;
     }
+}
+function main() {
+    initTabs();
+    var context = getContext();
+    initHighlights(context);
+    initHotKeys();
 }
 document.addEventListener('DOMContentLoaded', main);
 
