@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.2.0
+// @version        1.2.1
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @run-at         document-start
@@ -9,6 +9,7 @@
 // ==/UserScript==
 
 (function() {
+'use strict';
 var add = function (tag, parentNode) {
     var elem = typeof tag === 'string' ? document.createElement(tag) : tag;
     if (parentNode && parentNode.nodeType) {
@@ -214,7 +215,7 @@ var options = [
 ];
 function main() {
     var main_content = document.querySelector('#main_content'), buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
-    if (!buttons_commit.length)
+    if (buttons_commit.length < 2)
         return;
     var items = [];
     var labelSellInfo = add('span'), labelSellInfo2 = labelSellInfo.cloneNode(true), selectedCount = 0, sellCount = 0, sellSum = 0;
