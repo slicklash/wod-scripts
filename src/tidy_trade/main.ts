@@ -1,70 +1,59 @@
-/// <reference path="../common/selector.ts" />
-/// <reference path="../common/functions/functions.dom.ts" />
+/// <reference path="../common/prototypes/array.ts" />
+
+/// <reference path="../common/functions/dom/add.ts" />
+/// <reference path="../common/functions/dom/attr.ts" />
+/// <reference path="../common/functions/dom/textContent.ts" />
 
 // --- Main ---
 
-var tidyTrade = function (table) {
-    var rows = $('tr', table.cloneNode(true));
+function tidyTrade(table) {
 
-    if (rows && rows.constructor !== Array) rows = [rows];
-    if (!rows || rows.length < 1) return;
+    let rows = Array.from(table.cloneNode(true).querySelectorAll('tr'));
 
-    var holder   = table.parentNode,
+    if (rows.length < 1) return;
+
+    let holder   = table.parentNode,
         position = table.nextSibling,
         newTable = add('table'),
         items    = [],
         sums     = {},
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
-    var i, cnt, item, size;
+    rows.forEach(row => {
 
-    for (i = 0, cnt = rows.length; i < cnt; i++) {
-
-        var cells     = rows[i].cells,
-            icons = $('img', cells[2]);
-
-        var rarity = icons[0],
+        let cells     = row.cells,
+            icons     = Array.from(cells[2].querySelectorAll('img')),
+            rarity    = icons[0],
             condition = icons[1],
-            link      = $('a', cells[2]),
-            control   = cells.length > 3 ? $('input', cells[3]) : null,
-            name      = innerText(link);
-
-        size = innerText(cells[2]).replace(name, '').trim();
-
-        var m_uses    = size.match(re_uses),
+            link      = cells[2].querySelector('a'),
+            control   = cells.length > 3 ? cells[3].querySelector('input') : null,
+            name      = textContent(link),
+            size      = textContent(cells[2]).replace(name, '').trim(),
+            m_uses    = size.match(re_uses),
             uses      = m_uses ? Number(m_uses[1]) : 1,
-            sum       = sums[name];
-
-        item = {
-            'name'      : name,
-            'condition' : condition,
-            'rarity'    : rarity,
-            'size'      : size,
-            'uses'      : uses,
-            'link'      : link,
-            'control'   : control
-        };
-
-        item.cells = cells;
+            sum       = sums[name],
+            item      = { name, condition, rarity, size, uses, link, control, cells };
 
         items.push(item);
 
         sums[name] = sum ? sum + uses : uses;
-    }
+    });
 
-    items.sort(function(x,y) { var diff = x.name.toLowerCase().localeCompare(y.name.toLowerCase()); return diff === 0 ? x.uses - y.uses : diff; });
+    items.sort((x,y) => {
+        let diff = x.name.toLowerCase().localeCompare(y.name.toLowerCase());
+        return diff === 0 ? x.uses - y.uses : diff;
+    });
 
-    var row;
+    items.forEach((item, i) => {
 
-    for (i = 0, cnt = items.length; i < cnt; i++) {
-        item = items[i];
-        size = '&nbsp;' + item.size;
-        row  = add('tr', newTable);
+        let size = '&nbsp;' + item.size,
+            row  = add('tr', newTable);
+
         attr(add('td', row), 'align', 'right').innerHTML = i + 1;
         add(item.rarity, attr(add('td', row), 'valign', 'top'));
         add(item.condition, attr(add('td', row), 'valign', 'top'));
 
-        var c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});
+        let c_link = attr(add('td', row), {'valign': 'top', 'align': 'left'});
 
         if (item.control) add(item.control, add('td', row));
 
@@ -72,24 +61,31 @@ var tidyTrade = function (table) {
         add('span', c_link).innerHTML = size;
 
         if (sums[item.name] > 1) {
-            var summ = add('span', c_link);
+            let summ = add('span', c_link);
             attr(summ, 'style', 'color: #666').innerHTML = '&nbsp;<sup>&sum;=' + sums[item.name] + '</sup>';
             sums[item.name] = 0;
         }
-    }
+
+    });
 
     holder.removeChild(table);
     holder.insertBefore(newTable, position);
 }
 
-var g_main = $('#main_content'),
-    g_h1 = $('h1', g_main);
+function main() {
 
-if (innerText(g_h1).indexOf('Trade with') > -1) {
-    var tables = $('table', g_main),
-        tb_sell = tables[1],
-        tb_buy = tables[2];
+    let main = document.querySelector('#main_content'),
+        h1 = main.querySelector('h1');
 
-    if (tb_sell) tidyTrade(tb_sell);
-    if (tb_buy)  tidyTrade(tb_buy);
+    if (textContent(h1).indexOf('Trade with') > -1) {
+
+        let tables = main.querySelectorAll('table'),
+            tb_sell = tables[1],
+            tb_buy = tables[2];
+
+        if (tb_sell) tidyTrade(tb_sell);
+        if (tb_buy)  tidyTrade(tb_buy);
+    }
 }
+
+document.addEventListener('DOMContentLoaded', main);

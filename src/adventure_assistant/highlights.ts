@@ -58,6 +58,7 @@ function getIngenuityTestHighlights() {
         'Middle of the River : Chatting': ['red key', 'crescent', 'rectangle', 'circle', 'heart', 'diamond', 'plus-sign', 'oval', 'star', 'triangle', 'square'],
         'Freshwater Spring': ['under _the water_'],
         'The Fairytale Princess': ['pink hair ribbons'],
+        "Rialb's Ghost": ['purple key'],
         'The Hut': ['Turquoise', 'Yellow', 'Green', 'Red', 'Magenta', 'Black', 'Blue', 'Purple', 'Orange', 'White']
     };
 }
