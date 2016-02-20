@@ -1,4 +1,4 @@
-/// <reference path="../../../lib/def/greasemonkey/greasemonkey.d.ts" />
+/// <reference path="../../../../lib/def/greasemonkey/greasemonkey.d.ts" />
 
 var get = function(url, callback, obj?, async?) {
   GM_xmlhttpRequest({

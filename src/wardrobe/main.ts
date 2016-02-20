@@ -1,4 +1,5 @@
-/// <reference path="../common/functions/functions.dom.ts" />
+/// <reference path="../common/functions/dom/add.ts" />
+/// <reference path="../common/functions/dom/attr.ts" />
 /// <reference path="../common/prototypes/prototypes.string.ts" />
 /// <reference path="../common/selector.ts" />
 

@@ -1,4 +1,4 @@
-/// <reference path="./special_consumables.ts" />
+/// <reference path="./special-consumables.ts" />
 
 class StorageItem {
 

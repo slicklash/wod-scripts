@@ -2,7 +2,7 @@
 //
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/cssClass.ts" />
+/// <reference path="../common/functions/dom/css-class.ts" />
 
 // --- Main
 

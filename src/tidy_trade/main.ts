@@ -2,20 +2,17 @@
 
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/textContent.ts" />
+/// <reference path="../common/functions/dom/text-content.ts" />
 
 // --- Main ---
 
-function tidyTrade(table) {
+function getItemInfo(table) : [any[], any] {
 
     let rows = Array.from(table.cloneNode(true).querySelectorAll('tr'));
 
-    if (rows.length < 1) return;
+    if (!rows.length) return [[], null];
 
-    let holder   = table.parentNode,
-        position = table.nextSibling,
-        newTable = add('table'),
-        items    = [],
+    let items    = [],
         sums     = {},
         re_uses  = /\(([0-9]+)\/[0-9]+\)/;
 
@@ -44,6 +41,17 @@ function tidyTrade(table) {
         return diff === 0 ? x.uses - y.uses : diff;
     });
 
+    return [items, sums];
+}
+
+function tidyTrade(table) {
+
+    let [items, sums] = getItemInfo(table);
+
+    if (!items.length) return false;
+
+    let newTable      = add('table');
+
     items.forEach((item, i) => {
 
         let size = '&nbsp;' + item.size,
@@ -68,24 +76,28 @@ function tidyTrade(table) {
 
     });
 
+    let holder    = table.parentNode,
+        position  = table.nextSibling;
+
     holder.removeChild(table);
     holder.insertBefore(newTable, position);
 }
 
-function main() {
+function main(main_content?) {
 
-    let main = document.querySelector('#main_content'),
-        h1 = main.querySelector('h1');
+    let main = main_content || document.querySelector('#main_content'),
+        h1 = main ? main.querySelector('h1') : null;
 
-    if (textContent(h1).indexOf('Trade with') > -1) {
+    if (textContent(h1).indexOf('Trade with') < 0) return false;
 
-        let tables = main.querySelectorAll('table'),
-            tb_sell = tables[1],
-            tb_buy = tables[2];
+    let tables = main.querySelectorAll('table'),
+        tb_sell = tables[1],
+        tb_buy = tables[2];
 
-        if (tb_sell) tidyTrade(tb_sell);
-        if (tb_buy)  tidyTrade(tb_buy);
-    }
+    if (tb_sell) tidyTrade(tb_sell);
+    if (tb_buy)  tidyTrade(tb_buy);
+
+    return true;
 }
 
-document.addEventListener('DOMContentLoaded', main);
+if (!(<any>window).__karma__) document.addEventListener('DOMContentLoaded', () => main());

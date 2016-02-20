@@ -2,9 +2,9 @@
 //
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/textContent.ts" />
+/// <reference path="../common/functions/dom/text-content.ts" />
 
-/// <reference path="./storage_item.ts" />
+/// <reference path="./storage-item.ts" />
 /// <reference path="./nls.ts" />
 
 function getRows(main_content): any[] {
