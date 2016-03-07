@@ -49,7 +49,7 @@ function initHighlights(context) {
 function getPassingtimeHighlights() {
     return {
         '*': ['bejeweled necklace'],
-        'Grandfather answers': ['stonemasonry', 'carpenters']
+        'Grandfather answers': ['stonemasonry', 'carpenters', 'cobblers', 'bakers']
     };
 }
 function getWuelHighlights() {
@@ -94,21 +94,21 @@ function initHotKeys() {
     }
     var choices = Array.from(document.querySelectorAll('input[type="radio"]')), choiceMap = {};
     if (choices.length) {
-        var HOT_KEYS = '123456789qwertyuiop';
+        var HOT_KEYS_1 = '123456789qwertyuiop';
         choices.forEach(function (choice, i) {
-            var labelElem = choice.parentNode, hotkey = HOT_KEYS[i], keyCode = hotkey.toUpperCase().charCodeAt(0);
+            var labelElem = choice.parentNode, hotkey = HOT_KEYS_1[i], keyCode = hotkey.toUpperCase().charCodeAt(0);
             choiceMap[keyCode] = choice;
             addHotkeyFor(labelElem, hotkey);
         });
     }
     if (choices.length || buttonNext || buttonMore) {
-        var normalizeKey = function (key) { return key >= 96 && key <= 105 ? key - 48 : key; };
+        var normalizeKey_1 = function (key) { return key >= 96 && key <= 105 ? key - 48 : key; };
         document.onkeyup = function (e) {
             var activeElem = document.activeElement;
             if (activeElem && activeElem.tagName.toLowerCase() === 'input' && activeElem.getAttribute('type') === 'text') {
                 return;
             }
-            var keyCode = normalizeKey(e.which);
+            var keyCode = normalizeKey_1(e.which);
             if (buttonMore && keyCode === 77) {
                 buttonMore.focus();
             }
@@ -134,20 +134,20 @@ function addHotkeyFor(elem, text) {
 var crafting = [], appointments = [];
 function initTabs() {
     if (document.querySelector('.paginator_row')) {
-        var appList = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
-        var isAppointment = function (title) { return appList.some(function (x) { return title.indexOf(x) > -1; }); };
+        var appList_1 = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
+        var isAppointment = function (title) { return appList_1.some(function (x) { return title.indexOf(x) > -1; }); };
         var invertClass = function (className) { return className === 'row0' ? 'row1' : 'row0'; };
-        var titleOf = function (node) { return (node.querySelector('h3') || { innerHTML: '' }).innerHTML; };
+        var titleOf_1 = function (node) { return (node.querySelector('h3') || { innerHTML: '' }).innerHTML; };
         var adventures = Array.from(document.querySelectorAll('.row0, .row1')), craftClass = 'row1', appClass = 'row1';
-        var guild = adventures.filter(function (x) { return titleOf(x) === appList[0]; }).pop();
+        var guild = adventures.filter(function (x) { return titleOf_1(x) === appList_1[0]; }).pop();
         if (guild) {
             guild.parentNode.insertBefore(guild, guild.parentNode.childNodes[0]);
             adventures.splice(adventures.indexOf(guild), 1);
             adventures.splice(0, 0, guild);
         }
-        for (var _i = 0; _i < adventures.length; _i++) {
-            var adventure = adventures[_i];
-            var className = adventure.className, title = titleOf(adventure);
+        for (var _i = 0, adventures_1 = adventures; _i < adventures_1.length; _i++) {
+            var adventure = adventures_1[_i];
+            var className = adventure.className, title = titleOf_1(adventure);
             if (!title)
                 continue;
             if (isAppointment(title)) {
@@ -245,6 +245,7 @@ function main() {
     initHighlights(context);
     initHotKeys();
 }
-document.addEventListener('DOMContentLoaded', main);
+if (!window.__karma__)
+    document.addEventListener('DOMContentLoaded', function () { return main(); });
 
 })();

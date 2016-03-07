@@ -29,6 +29,8 @@ module.exports = function(config) {
         '**/coverage/'
     ],
 
+    failOnEmptyTestSuite: false,
+
     preprocessors: {
         '**/!(*spec|*header).js': ['coverage']
     },

@@ -55,14 +55,14 @@ function main() {
             if (form)
                 form.submit();
         };
-        var newTable = add('table'), newTbody = add('tbody', newTable);
+        var newTable = add('table'), newTbody_1 = add('tbody', newTable);
         attr(newTable, 'class', 'content_table');
         var headerWeight = add('th'), label = add('span', headerWeight), buttonSave = add('input', headerWeight);
         label.innerHTML = 'weight<br/>';
         attr(buttonSave, { 'type': 'button', 'value': 'Save', 'class': 'button clickable' });
         buttonSave.addEventListener('click', saveWeights, false);
         rows[0].appendChild(headerWeight);
-        newTbody.appendChild(rows[0]);
+        newTbody_1.appendChild(rows[0]);
         var heroes = [];
         for (var i = 1; i < rows.length; i++) {
             var row = rows[i], cells = row.cells, hid = Number(cells[0].querySelector('input').value).toString(), level = Number(textContent(cells[2])), weight = (GM_getValue(hid) || (level === 0 ? 100 : level));
@@ -75,13 +75,14 @@ function main() {
             attr(colWeight, 'align', 'center');
             attr(txt, { 'type': 'text', 'style': 'width: 30px', 'value': hero.weight });
             add(txt, colWeight);
-            add(hero.row, newTbody);
+            add(hero.row, newTbody_1);
         });
         var parentNode = table_heroes.parentNode, position = table_heroes.nextSibling;
         parentNode.insertBefore(newTable, position);
         parentNode.removeChild(table_heroes);
     }
 }
-document.addEventListener('DOMContentLoaded', main);
+if (!window.__karma__)
+    document.addEventListener('DOMContentLoaded', function () { return main(); });
 
 })();

@@ -25,16 +25,18 @@ var build_dir = 'build/',
         { key: 'wardrobe', dir: 'wardrobe' }
     ];
 
-var tsProject = ts.createProject({
-    removeComments: false,
-    target: 'es5',
-});
+var createTsProject = function(overrides) {
+    return ts.createProject(Object.assign({
+        removeComments: false,
+        target: 'es5',
+    }, overrides || {}));
+};
 
 var compile = function(rootDir) {
     return gulp
             .src(rootDir + '**/*.ts')
             .pipe(sourcemaps.init())
-            .pipe(ts(tsProject))
+            .pipe(ts(createTsProject()))
             .js
             .pipe(sourcemaps.write('.', { sourceRoot: function(file) { return file.cwd + '/' + rootDir; } }))
             .pipe(gulp.dest(rootDir));
@@ -69,10 +71,10 @@ scripts.forEach(function (x) {
 
     gulp.task('_clean:' + x.key, function () {
         return del([
-            '!src/' + x.dir + '/**/header.js',
             'src/' + x.dir + '/**/*.js',
             'src/' + x.dir + '/**/*.js.map',
-            'src/' + x.dir + '/coverage/**'
+            'src/' + x.dir + '/coverage/**',
+            '!src/' + x.dir + '/header.js',
         ]);
     });
 
@@ -98,11 +100,11 @@ scripts.forEach(function (x) {
 
     gulp.task('_build:' + x.key, function () {
         return gulp
-                .src('src/' + x.dir + '/*.ts')
-                .pipe(ts(tsProject, {
-                     out: x.dir + '.js',
-                     removeComments: true,
-                 }))
+                .src(['src/' + x.dir + '/*.ts', '!src/' + x.dir + '/*.spec.ts'])
+                .pipe(ts(createTsProject({
+                     outFile: x.dir + '.js',
+                     removeComments: true
+                 })))
                 .pipe(gulp.dest(build_dir));
     });
 

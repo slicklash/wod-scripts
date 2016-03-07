@@ -38,7 +38,7 @@ function initHotKeys() {
 
     if (choices.length) {
 
-        let HOT_KEYS = '123456789qwertyuiop';
+        const HOT_KEYS = '123456789qwertyuiop';
 
         choices.forEach((choice, i) => {
 

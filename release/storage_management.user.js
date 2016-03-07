@@ -114,7 +114,7 @@ var StorageItem = (function () {
         configurable: true
     });
     return StorageItem;
-})();
+}());
 var _t;
 if (location.href.indexOf('.net') > 0) {
     _t = function (text) { return text; };
@@ -158,8 +158,8 @@ function getItems(rows, options) {
         item.ctrlSell = ctrl_sell;
         item.value = value;
         items.push(item);
-        for (var _i = 0; _i < options.length; _i++) {
-            var option = options[_i];
+        for (var _i = 0, options_1 = options; _i < options_1.length; _i++) {
+            var option = options_1[_i];
             if (option.predicate && option.predicate(item)) {
                 if (item.ctrlLocation)
                     option.count = option.count ? option.count + 1 : 1;
@@ -221,8 +221,8 @@ function main() {
     var labelSellInfo = add('span'), labelSellInfo2 = labelSellInfo.cloneNode(true), selectedCount = 0, sellCount = 0, sellSum = 0;
     var onSelectChanged = function (e) {
         var option = options.find(function (x) { return x.key === e.target.value; });
-        for (var _i = 0; _i < items.length; _i++) {
-            var item = items[_i];
+        for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
+            var item = items_1[_i];
             if (item.ctrlSelect && option.predicate(item)) {
                 item.ctrlSelect.checked = option.pick;
             }
@@ -234,8 +234,8 @@ function main() {
             sellSum = 0;
             sellCount = 0;
         }
-        for (var _i = 0; _i < items.length; _i++) {
-            var item = items[_i];
+        for (var _i = 0, items_2 = items; _i < items_2.length; _i++) {
+            var item = items_2[_i];
             if (item.ctrlSell && option.predicate(item)) {
                 item.ctrlSell.checked = option.pick;
                 if (option.pick) {
@@ -253,8 +253,8 @@ function main() {
         if (!items.length)
             return;
         var onlySelected = false, tmp = [];
-        for (var _i = 0; _i < items.length; _i++) {
-            var item = items[_i];
+        for (var _i = 0, items_3 = items; _i < items_3.length; _i++) {
+            var item = items_3[_i];
             if (item.ctrlLocation && item.ctrlSelect) {
                 if (item.ctrlSelect.checked) {
                     item.ctrlLocation.value = !item.isConsumable ? go_tv : go_gs;
@@ -273,8 +273,8 @@ function main() {
         if (!items.length)
             return;
         var onlySelected = false, tmp = [];
-        for (var _i = 0; _i < items.length; _i++) {
-            var item = items[_i];
+        for (var _i = 0, items_4 = items; _i < items_4.length; _i++) {
+            var item = items_4[_i];
             if (item.isUsable && item.ctrlLocation && item.ctrlSelect) {
                 if (item.ctrlSelect.checked) {
                     item.ctrlLocation.value = item.ctrlLocation.options[0].value;
@@ -338,6 +338,7 @@ function main() {
         selectForSell2.disabled = false;
     }, 0);
 }
-document.addEventListener('DOMContentLoaded', main);
+if (!window.__karma__)
+    document.addEventListener('DOMContentLoaded', function () { return main(); });
 
 })();

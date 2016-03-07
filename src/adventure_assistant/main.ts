@@ -11,4 +11,4 @@ function main() {
     initHotKeys();
 }
 
-document.addEventListener('DOMContentLoaded', main);
+if (!(<any>window).__karma__) document.addEventListener('DOMContentLoaded', () => main());

@@ -37,7 +37,7 @@ function initHighlights(context: IAdventureContext) {
 function getPassingtimeHighlights() {
     return {
         '*': ['bejeweled necklace'],
-        'Grandfather answers': ['stonemasonry', 'carpenters']
+        'Grandfather answers': ['stonemasonry', 'carpenters', 'cobblers', 'bakers']
     };
 }
 

@@ -40,11 +40,11 @@ var textContent = function (elem, value) {
     }
     elem.textContent = value;
 };
-function tidyTrade(table) {
+function getItemInfo(table) {
     var rows = Array.from(table.cloneNode(true).querySelectorAll('tr'));
-    if (rows.length < 1)
-        return;
-    var holder = table.parentNode, position = table.nextSibling, newTable = add('table'), items = [], sums = {}, re_uses = /\(([0-9]+)\/[0-9]+\)/;
+    if (!rows.length)
+        return [[], null];
+    var items = [], sums = {}, re_uses = /\(([0-9]+)\/[0-9]+\)/;
     rows.forEach(function (row) {
         var cells = row.cells, icons = Array.from(cells[2].querySelectorAll('img')), rarity = icons[0], condition = icons[1], link = cells[2].querySelector('a'), control = cells.length > 3 ? cells[3].querySelector('input') : null, name = textContent(link), size = textContent(cells[2]).replace(name, '').trim(), m_uses = size.match(re_uses), uses = m_uses ? Number(m_uses[1]) : 1, sum = sums[name], item = { name: name, condition: condition, rarity: rarity, size: size, uses: uses, link: link, control: control, cells: cells };
         items.push(item);
@@ -54,6 +54,13 @@ function tidyTrade(table) {
         var diff = x.name.toLowerCase().localeCompare(y.name.toLowerCase());
         return diff === 0 ? x.uses - y.uses : diff;
     });
+    return [items, sums];
+}
+function tidyTrade(table) {
+    var _a = getItemInfo(table), items = _a[0], sums = _a[1];
+    if (!items.length)
+        return false;
+    var newTable = add('table');
     items.forEach(function (item, i) {
         var size = '&nbsp;' + item.size, row = add('tr', newTable);
         attr(add('td', row), 'align', 'right').innerHTML = i + 1;
@@ -70,19 +77,22 @@ function tidyTrade(table) {
             sums[item.name] = 0;
         }
     });
+    var holder = table.parentNode, position = table.nextSibling;
     holder.removeChild(table);
     holder.insertBefore(newTable, position);
 }
-function main() {
-    var main = document.querySelector('#main_content'), h1 = main.querySelector('h1');
-    if (textContent(h1).indexOf('Trade with') > -1) {
-        var tables = main.querySelectorAll('table'), tb_sell = tables[1], tb_buy = tables[2];
-        if (tb_sell)
-            tidyTrade(tb_sell);
-        if (tb_buy)
-            tidyTrade(tb_buy);
-    }
+function main(main_content) {
+    var main = main_content || document.querySelector('#main_content'), h1 = main ? main.querySelector('h1') : null;
+    if (textContent(h1).indexOf('Trade with') < 0)
+        return false;
+    var tables = main.querySelectorAll('table'), tb_sell = tables[1], tb_buy = tables[2];
+    if (tb_sell)
+        tidyTrade(tb_sell);
+    if (tb_buy)
+        tidyTrade(tb_buy);
+    return true;
 }
-document.addEventListener('DOMContentLoaded', main);
+if (!window.__karma__)
+    document.addEventListener('DOMContentLoaded', function () { return main(); });
 
 })();
