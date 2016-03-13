@@ -1,17 +1,15 @@
 /// <reference path="_references.ts" />
 
-const RescuingFatherWuel = 'Rescuing Father Wuel';
-const Passingtime = 'Passingtime';
-const IngenuityTest = 'Ingenuity Test';
-
 function initHighlights(context: IAdventureContext) {
+
+    if (!context || !context.isQuest) return;
 
     let { adventure, place } = context,
         adventures = {};
 
-    adventures[RescuingFatherWuel] = getWuelHighlights;
-    adventures[Passingtime] = getPassingtimeHighlights;
-    adventures[IngenuityTest] = getIngenuityTestHighlights;
+    adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
+    adventures[Quests.Passingtime] = getPassingtimeHighlights;
+    adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
 
     if (!(adventure in adventures)) return;
 
@@ -43,7 +41,7 @@ function getPassingtimeHighlights() {
 
 function getWuelHighlights() {
    return {
-        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap',
+        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap', 'things that are purple', 'things that glow in the dark',
               'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
               'fine _electric eel_', 'fine _octopus_', 'fine _lantern fish_', 'fine _puffer fish_', 'fine _mackerel_', 'fine _piranha_',
               'other _gear for mages_', 'other _ranged weapons_', 'other _armors_', 'other _melee weapons_', 'herbs, incense and poisons', 'other enhanced _jewelry_', 'instruments and parchments', 'other _exotic items_'],

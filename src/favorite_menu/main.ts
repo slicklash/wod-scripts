@@ -1,4 +1,4 @@
-/// <reference path="../common/prototypes/array.ts" />
+/// <reference path="../../lib/typings/browser.d.ts" />
 //
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />

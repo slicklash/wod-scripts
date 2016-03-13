@@ -6,5 +6,6 @@
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
 // @run-at         document-start
-// @grant          none
+// @grant          GM_getValue
+// @grant          GM_setValue
 // ==/UserScript==

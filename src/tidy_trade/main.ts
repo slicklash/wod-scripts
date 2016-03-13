@@ -1,4 +1,4 @@
-/// <reference path="../common/prototypes/array.ts" />
+/// <reference path="../../lib/typings/browser.d.ts" />
 
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
@@ -8,7 +8,7 @@
 
 function getItemInfo(table) : [any[], any] {
 
-    let rows = Array.from(table.cloneNode(true).querySelectorAll('tr'));
+    let rows: any[]  = Array.from(table.cloneNode(true).querySelectorAll('tr'));
 
     if (!rows.length) return [[], null];
 

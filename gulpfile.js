@@ -1,7 +1,6 @@
 var gulp = require('gulp'),
     concat = require('gulp-concat-util'),
     merge = require('merge2'),
-    tsd = require('gulp-tsd'),
     ts = require('gulp-typescript'),
     run = require('run-sequence'),
     jshint = require('gulp-jshint'),
@@ -124,13 +123,6 @@ scripts.forEach(function (x) {
                    .pipe(jshint.reporter('default'));
     });
 
-});
-
-gulp.task('tsd', function (callback) {
-    tsd({
-        command: 'reinstall',
-        config: 'lib/tsd.json'
-    }, callback);
 });
 
 gulp.task('compile', scripts.map(function(x) { return 'compile:' + x.key }));

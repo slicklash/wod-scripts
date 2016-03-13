@@ -1,2 +1,2 @@
-/// <reference path="../common/prototypes/array.ts" />
+/// <reference path="../../lib/typings/browser.d.ts" />
 /// <reference path="context.ts" />

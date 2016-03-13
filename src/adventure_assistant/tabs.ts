@@ -15,7 +15,7 @@ function initTabs() {
         const invertClass = className => className === 'row0' ? 'row1' : 'row0';
         const titleOf = node => (node.querySelector('h3') || { innerHTML: '' }).innerHTML;
 
-        let adventures = Array.from(document.querySelectorAll('.row0, .row1')),
+        let adventures: any[] = Array.from(document.querySelectorAll('.row0, .row1')),
             craftClass = 'row1', appClass = 'row1';
 
         let guild = adventures.filter(x => titleOf(x) === appList[0]).pop();
@@ -92,13 +92,13 @@ function initTabs() {
 function hideDescription(row) {
 
     let td = row.querySelector('td'),
-        descriptionNodes = Array.from(td.childNodes).filter(x => x.nodeName !== 'TABLE'),
+        descriptionNodes = Array.from(td.childNodes).filter(x => (<any>x).nodeName !== 'TABLE'),
         div = document.createElement('div'),
         header = td.children[0];
 
     div.style.display = 'none';
     td.insertBefore(div, header.nextSibling);
-    descriptionNodes.forEach(x => div.appendChild(x));
+    descriptionNodes.forEach(x => div.appendChild(<any>x));
 
     header.style.cursor = 'pointer';
 

@@ -4,7 +4,7 @@ function initHotKeys() {
 
     // --- Action buttons
 
-    let buttons = Array.from(document.querySelectorAll('a, input[type="submit"]')),
+    let buttons: any[] = Array.from(document.querySelectorAll('a, input[type="submit"]')),
         buttonNext,
         buttonMore;
 
@@ -33,7 +33,7 @@ function initHotKeys() {
 
     // --- Choices
 
-    let choices: HTMLInputElement[] = Array.from(document.querySelectorAll('input[type="radio"]')),
+    let choices: HTMLInputElement[] = <any>(Array.from(document.querySelectorAll('input[type="radio"]'))),
         choiceMap = {};
 
     if (choices.length) {
@@ -77,11 +77,21 @@ function initHotKeys() {
                 let choice = choiceMap[keyCode];
                 choice.checked = true;
                 choice.focus();
+                publishChoiceEvent(choice);
                 return false;
             }
         }
     }
 
+}
+
+function publishChoiceEvent(choice) {
+
+    let event = new CustomEvent('adventure.choiceSelected', {
+        'detail': choice.nextSibling.textContent.trim()
+    });
+
+    window.dispatchEvent(event);
 }
 
 function addHotkeyFor(elem: Node, text: string) {
