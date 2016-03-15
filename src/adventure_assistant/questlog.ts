@@ -62,6 +62,8 @@ class QuestLog {
         let { adventure, place } = _context, adventures = {};
 
         adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
+        adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
+        adventures[Quests.Passingtime] = this.getPassingTimeInfo;
 
         if (!(adventure in adventures)) {
             this.isSupported = false;
@@ -178,7 +180,8 @@ class QuestLog {
     load() : void {
 
         let empty : IQuestLogData = { itemsPicked: [], itemsFound: [], tasksDone: [] },
-            loaded : IQuestLogData = JSON.parse(GM_getValue(this._id));
+            value = GM_getValue(this._id),
+            loaded : IQuestLogData = value ? JSON.parse(value) : {};
 
         Object.keys(loaded).forEach(x => { if (!empty[x]) delete loaded[x]; });
 
@@ -192,6 +195,35 @@ class QuestLog {
     reset(): void {
         this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
         GM_setValue(this._id, undefined);
+    }
+
+    getPassingTimeInfo() : IPlaceInfoMap {
+        return {}
+    }
+
+    getRescueFatherWuelInfo() : IPlaceInfoMap {
+        return {
+            '*': {
+              collect: [
+                  { match: 'unusual iridescent one', found: ['iridescent rock'] },
+                  { match: 'fine electric eel', found: ['electric eel'] },
+                  { match: 'fine octopus', found: ['octopus'] },
+                  { match: 'fine lantern', found: ['lantern fish'] },
+                  { match: 'fine puffer', found: ['puffer fish'] },
+                  { match: 'fine mackerel', found: ['mackerel'] },
+                  { match: 'fine piranha', found: ['piranha'] },
+              ]
+            },
+            "Pekkerin Fen: Mel's School for Adventurers": {
+              do: [
+                  { match: 'Welcome to class #1', done: ['Adventure class #1'] },
+                  { match: 'Welcome to class #2', done: ['Adventure class #2'] },
+                  { match: 'Welcome to class #3', done: ['Adventure class #3'] },
+                  { match: 'Welcome to class #4', done: ['Adventure class #4'] }
+              ]
+            },
+            "Town Hall: Mayor's Office": { reset: 'Father Wuel, welcome' }
+        }
     }
 
     getIngenuityTestInfo() : IPlaceInfoMap {
