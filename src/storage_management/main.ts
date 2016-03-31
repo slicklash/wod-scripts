@@ -140,10 +140,10 @@ let options: ISelectionOption[] = [
 
 function main() {
 
+    if (document.querySelector('[name^="LocationEquip"]')) return;
+
     let main_content = document.querySelector('#main_content'),
         buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
-
-    if (buttons_commit.length < 2) return;
 
     let items: StorageItem[] = [];
 

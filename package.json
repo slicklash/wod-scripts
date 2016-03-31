@@ -8,7 +8,6 @@
     "gulp-concat-util": "^0.5.4",
     "gulp-jshint": "^2.0.0",
     "gulp-sourcemaps": "^1.6.0",
-    "gulp-tsd": "^0.1.0",
     "gulp-typescript": "^2.10.0",
     "http-server": "^0.8.5",
     "jasmine-core": "^2.4.1",

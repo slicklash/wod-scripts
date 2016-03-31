@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.2.1
+// @version        1.2.2
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @run-at         document-start
@@ -214,9 +214,9 @@ var options = [
     { key: 'itm_non_group', title: 'non-group', pick: true, predicate: function (x) { return !x.isGroupItem && !x.isConsumable; }, notForSell: true, count: 0, countSell: 0 },
 ];
 function main() {
-    var main_content = document.querySelector('#main_content'), buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
-    if (buttons_commit.length < 2)
+    if (document.querySelector('[name^="LocationEquip"]'))
         return;
+    var main_content = document.querySelector('#main_content'), buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
     var items = [];
     var labelSellInfo = add('span'), labelSellInfo2 = labelSellInfo.cloneNode(true), selectedCount = 0, sellCount = 0, sellSum = 0;
     var onSelectChanged = function (e) {
