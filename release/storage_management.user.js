@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.2.2
+// @version        1.2.3
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @run-at         document-start
@@ -31,6 +31,17 @@ var attr = function (elem, nameOrMap, value, remove) {
         return elem.getAttribute(nameOrMap);
     }
     return elem;
+};
+var insertAfter = function (node) {
+    var elems = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        elems[_i - 1] = arguments[_i];
+    }
+    var parent = node.parentNode;
+    elems.forEach(function (elem) {
+        parent.insertBefore(elem, node.nextSibling);
+        node = elem;
+    });
 };
 var textContent = function (elem, value) {
     if (!elem)
@@ -162,9 +173,9 @@ function getItems(rows, options) {
             var option = options_1[_i];
             if (option.predicate && option.predicate(item)) {
                 if (item.ctrlLocation)
-                    option.count = option.count ? option.count + 1 : 1;
+                    option.count = (option.count || 0) + 1;
                 if (item.ctrlSell)
-                    option.countSell = option.countSell ? option.countSell + 1 : 1;
+                    option.countSell = (option.countSell || 0) + 1;
             }
         }
     });
@@ -218,7 +229,7 @@ function main() {
         return;
     var main_content = document.querySelector('#main_content'), buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
     var items = [];
-    var labelSellInfo = add('span'), labelSellInfo2 = labelSellInfo.cloneNode(true), selectedCount = 0, sellCount = 0, sellSum = 0;
+    var labelsSellInfo = [], selectedCount = 0, sellCount = 0, sellSum = 0;
     var onSelectChanged = function (e) {
         var option = options.find(function (x) { return x.key === e.target.value; });
         for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
@@ -245,19 +256,28 @@ function main() {
             }
         }
         var sellInfo = sellCount > 0 ? "&nbsp;" + sellCount + " (" + sellSum + " <img alt=\"\" border=\"0\" src=\"/wod/css//skins/skin-2/images/icons/lang/en/gold.gif\" title=\"gold\">)" : '';
-        labelSellInfo.innerHTML = sellInfo;
-        labelSellInfo2.innerHTML = sellInfo;
+        labelsSellInfo.forEach(function (x) { x.innerHTML = sellInfo; });
     };
     var isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1, isGroupTv = window.location.href.indexOf('groupcellar') > -1 && !isGroupStorage, go_tv = isGroupTv ? '-go_group' : 'go_group', go_gs = isGroupStorage ? '-go_group_2' : 'go_group_2';
-    var onSplit = function () {
+    var moveItemToCellar = function (x) { x.ctrlLocation.value = 'go_keller'; };
+    var splitItem = function (x) { x.ctrlLocation.value = !x.isConsumable ? go_tv : go_gs; if (!x.ctrlLocation.value)
+        moveItemToCellar(x); };
+    var equipItem = function (x) { x.ctrlLocation.value = x.ctrlLocation.options[0].value; };
+    var actions = {
+        split: { predicate: function (x) { return x.ctrlLocation && x.ctrlSelect; }, handler: splitItem },
+        cellar: { predicate: function (x) { return x.ctrlLocation && x.ctrlSelect; }, handler: moveItemToCellar },
+        equip: { predicate: function (x) { return x.isUsable && x.ctrlLocation && x.ctrlSelect; }, handler: equipItem },
+    };
+    var onAction = function (_a) {
+        var predicate = _a.predicate, handler = _a.handler;
         if (!items.length)
             return;
         var onlySelected = false, tmp = [];
         for (var _i = 0, items_3 = items; _i < items_3.length; _i++) {
             var item = items_3[_i];
-            if (item.ctrlLocation && item.ctrlSelect) {
+            if (predicate(item)) {
                 if (item.ctrlSelect.checked) {
-                    item.ctrlLocation.value = !item.isConsumable ? go_tv : go_gs;
+                    handler(item);
                     onlySelected = true;
                 }
                 else {
@@ -266,76 +286,44 @@ function main() {
             }
         }
         if (!onlySelected) {
-            tmp.forEach(function (x) { x.ctrlLocation.value = !x.isConsumable ? go_tv : go_gs; });
+            tmp.forEach(handler);
         }
     };
-    var onEquip = function () {
-        if (!items.length)
-            return;
-        var onlySelected = false, tmp = [];
-        for (var _i = 0, items_4 = items; _i < items_4.length; _i++) {
-            var item = items_4[_i];
-            if (item.isUsable && item.ctrlLocation && item.ctrlSelect) {
-                if (item.ctrlSelect.checked) {
-                    item.ctrlLocation.value = item.ctrlLocation.options[0].value;
-                    onlySelected = true;
-                }
-                else {
-                    tmp.push(item);
-                }
-            }
-        }
-        if (!onlySelected) {
-            tmp.forEach(function (x) { x.ctrlLocation.value = x.ctrlLocation.options[0].value; });
-        }
+    var onSplit = onAction.bind(this, actions.split);
+    var onCellar = onAction.bind(this, actions.cellar);
+    var onEquip = onAction.bind(this, actions.equip);
+    var selectsForLocation = [];
+    var selectsForSell = [];
+    var none = { key: 'none', title: 'none', pick: false, predicate: function (x) { return true; } };
+    var makeLabel = function (text) { var label = add('span'); label.innerHTML = "&nbsp;" + text + "&nbsp;"; return label; };
+    var makeButton = function (text, onClick) {
+        var btn = add('input');
+        attr(btn, { 'type': 'button', 'class': 'button clickable', 'name': "button" + text, 'value': "" + text, 'style': 'margin-left: 5px' });
+        btn.addEventListener('click', onClick, false);
+        return btn;
     };
-    var labelMove = add('span'), labelSell = add('span'), buttonSplit = add('input'), buttonEquip = add('input'), selectForLocation = add('select'), selectForSell = add('select'), none = { key: 'none', title: 'none', pick: false, predicate: function (x) { return true; } };
-    addOption(none, selectForLocation);
-    addOption(none, selectForSell);
-    attr(selectForLocation, { 'style': 'min-width: 140px' });
-    attr(selectForSell, { 'style': 'min-width: 120px' });
-    selectForLocation.disabled = true;
-    selectForSell.disabled = true;
-    labelMove.innerHTML = '&nbsp;Select:&nbsp;';
-    labelSell.innerHTML = '&nbsp;Sell:&nbsp;';
-    attr(buttonSplit, { 'type': 'button', 'class': 'button clickable', 'name': 'buttonSplit', 'value': 'Split', 'style': 'margin-left: 5px' });
-    attr(buttonEquip, { 'type': 'button', 'class': 'button clickable', 'name': 'buttonEquip', 'value': 'Equip', 'style': 'margin-left: 5px' });
-    var holder = buttons_commit[0].parentNode, buttonSplit2 = buttonSplit.cloneNode(true), buttonEquip2 = buttonEquip.cloneNode(true), labelSell2 = labelSell.cloneNode(true), labelMove2 = labelMove.cloneNode(true), selectForSell2 = selectForSell.cloneNode(true), selectForLocation2 = selectForLocation.cloneNode(true);
-    selectForLocation.addEventListener('change', onSelectChanged, false);
-    selectForLocation2.addEventListener('change', onSelectChanged, false);
-    selectForSell.addEventListener('change', onSellChanged, false);
-    selectForSell2.addEventListener('change', onSellChanged, false);
-    buttonSplit.addEventListener('click', onSplit, false);
-    buttonSplit2.addEventListener('click', onSplit, false);
-    buttonEquip.addEventListener('click', onEquip, false);
-    buttonEquip2.addEventListener('click', onEquip, false);
-    holder.insertBefore(labelMove, buttons_commit[0].nextSibling);
-    holder.insertBefore(selectForLocation, labelMove.nextSibling);
-    holder.insertBefore(buttonSplit, selectForLocation.nextSibling);
-    holder.insertBefore(buttonEquip, buttonSplit.nextSibling);
-    holder.insertBefore(labelSell, buttonEquip.nextSibling);
-    holder.insertBefore(selectForSell, labelSell.nextSibling);
-    holder.insertBefore(labelSellInfo, selectForSell.nextSibling);
-    holder = buttons_commit[1].parentNode;
-    holder.insertBefore(labelMove2, buttons_commit[1].nextSibling);
-    holder.insertBefore(selectForLocation2, labelMove2.nextSibling);
-    holder.insertBefore(buttonSplit2, selectForLocation2.nextSibling);
-    holder.insertBefore(buttonEquip2, buttonSplit2.nextSibling);
-    holder.insertBefore(labelSell2, buttonEquip2.nextSibling);
-    holder.insertBefore(selectForSell2, labelSell2.nextSibling);
-    holder.insertBefore(labelSellInfo2, selectForSell2.nextSibling);
+    var makeSelect = function (width, onSelect) {
+        var select = add('select');
+        addOption(none, select);
+        attr(select, { 'style': "min-width: " + width + "px" });
+        select.disabled = true;
+        select.addEventListener('change', onSelect, false);
+        return select;
+    };
+    for (var i = 0; i < 2; i++) {
+        var labelMove = makeLabel('Select'), labelSell = makeLabel('Selll'), buttonSplit = makeButton('Split', onSplit), buttonCellar = makeButton('Cellar', onCellar), buttonEquip = makeButton('Equip', onEquip), selectForLocation = makeSelect(140, onSelectChanged), selectForSell = makeSelect(120, onSellChanged), labelSellInfo = add('span');
+        selectsForLocation.push(selectForLocation);
+        selectsForSell.push(selectForSell);
+        labelsSellInfo.push(labelSellInfo);
+        insertAfter(buttons_commit[i], labelMove, selectForLocation, buttonSplit, buttonCellar, buttonEquip, labelSell, selectForSell, labelSellInfo);
+    }
     setTimeout(function () {
         items = getItems(getRows(main_content), options);
-        addOptions(options, selectForLocation);
-        addOptions(options, selectForLocation2);
+        selectsForLocation.forEach(function (x) { addOptions(options, x); });
         var optionsForSell = options.filter(function (x) { return !x.notForSell; });
-        addOptions(optionsForSell, selectForSell, true);
-        addOptions(optionsForSell, selectForSell2, true);
+        selectsForSell.forEach(function (x) { addOptions(optionsForSell, x, true); });
         options.splice(0, 0, none);
-        selectForLocation.disabled = false;
-        selectForLocation2.disabled = false;
-        selectForSell.disabled = false;
-        selectForSell2.disabled = false;
+        selectsForLocation.concat(selectsForSell).forEach(function (x) { x.disabled = false; });
     }, 0);
 }
 if (!window.__karma__)
