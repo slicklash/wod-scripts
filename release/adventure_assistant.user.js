@@ -6,34 +6,43 @@
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
 // @run-at         document-start
-// @grant          none
+// @grant          GM_getValue
+// @grant          GM_setValue
 // ==/UserScript==
 
 (function() {
 'use strict';
+var Quests = {
+    RescuingFatherWuel: 'Rescuing Father Wuel',
+    Passingtime: 'Passingtime',
+    IngenuityTest: 'Ingenuity Test'
+};
 var _context;
 function getContext() {
     if (!_context) {
         var h1 = document.querySelector('h1'), title = h1 ? h1.textContent : '';
         if (!title || title.indexOf('adventure') !== 0)
             return;
+        var texts = Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION'));
         _context = {
             adventure: title.replace('adventure ', ''),
-            texts: Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION')),
-            place: (document.querySelector('#smarttabs__level_inner h3 > a') || { textContent: '*' }).textContent,
+            texts: texts,
+            text: texts.map(function (x) { return x.innerHTML.trim(); }).join(' '),
+            place: (document.querySelector('#smarttabs__level_inner h3 > a') || { textContent: '*' }).textContent.trim(),
             idHero: document.querySelector('[href*="session_hero_id"]').href.match(/session_hero_id=([\d]+)/)[1],
+            world: document.location.hostname.split('.')[0]
         };
+        _context.isQuest = Object.keys(Quests).some(function (x) { return _context.adventure.indexOf(Quests[x]) > -1; });
     }
     return _context;
 }
-var RescuingFatherWuel = 'Rescuing Father Wuel';
-var Passingtime = 'Passingtime';
-var IngenuityTest = 'Ingenuity Test';
 function initHighlights(context) {
+    if (!context || !context.isQuest)
+        return;
     var adventure = context.adventure, place = context.place, adventures = {};
-    adventures[RescuingFatherWuel] = getWuelHighlights;
-    adventures[Passingtime] = getPassingtimeHighlights;
-    adventures[IngenuityTest] = getIngenuityTestHighlights;
+    adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
+    adventures[Quests.Passingtime] = getPassingtimeHighlights;
+    adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
     if (!(adventure in adventures))
         return;
     var highlights = adventures[adventure]()[place];
@@ -54,7 +63,7 @@ function getPassingtimeHighlights() {
 }
 function getWuelHighlights() {
     return {
-        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap',
+        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap', 'things that are purple', 'things that glow in the dark', 'fishes with sharp teeth',
             'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
             'fine _electric eel_', 'fine _octopus_', 'fine _lantern fish_', 'fine _puffer fish_', 'fine _mackerel_', 'fine _piranha_',
             'other _gear for mages_', 'other _ranged weapons_', 'other _armors_', 'other _melee weapons_', 'herbs, incense and poisons', 'other enhanced _jewelry_', 'instruments and parchments', 'other _exotic items_'],
@@ -92,7 +101,7 @@ function initHotKeys() {
             buttonMore.focus();
         }
     }
-    var choices = Array.from(document.querySelectorAll('input[type="radio"]')), choiceMap = {};
+    var choices = (Array.from(document.querySelectorAll('input[type="radio"]'))), choiceMap = {};
     if (choices.length) {
         var HOT_KEYS_1 = '123456789qwertyuiop';
         choices.forEach(function (choice, i) {
@@ -119,10 +128,17 @@ function initHotKeys() {
                 var choice = choiceMap[keyCode];
                 choice.checked = true;
                 choice.focus();
+                publishChoiceEvent(choice);
                 return false;
             }
         };
     }
+}
+function publishChoiceEvent(choice) {
+    var event = new CustomEvent('adventure.choiceSelected', {
+        'detail': choice.nextSibling.textContent.trim()
+    });
+    window.dispatchEvent(event);
 }
 function addHotkeyFor(elem, text) {
     if (elem) {
@@ -239,11 +255,203 @@ function selectTab(e) {
             appointments[i].style.display = options.displayApp;
     }
 }
+function initQuestLog(context) {
+    if (!context || !context.isQuest)
+        return;
+    var questLog = new QuestLog(context), choice;
+    if (!questLog.isSupported)
+        return;
+    window.addEventListener('adventure.choiceSelected', function (e) {
+        choice = e.detail;
+    });
+    var form = document.forms.the_form;
+    if (form) {
+        form.addEventListener('submit', function () {
+            if (choice)
+                questLog.onChoice(choice);
+        });
+    }
+}
+var QuestLog = (function () {
+    function QuestLog(_context) {
+        this._context = _context;
+        this.isSupported = true;
+        var adventure = _context.adventure, place = _context.place, adventures = {};
+        adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
+        adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
+        adventures[Quests.Passingtime] = this.getPassingTimeInfo;
+        if (!(adventure in adventures)) {
+            this.isSupported = false;
+            return;
+        }
+        this._info = adventures[adventure]();
+        this._placeOptions = this._info[place];
+        this._id = _context.world + "_" + _context.idHero + "_" + _context.adventure.replace(/ /g, '').toLowerCase();
+        this.load();
+        if (this._placeOptions)
+            this.checkPlace();
+        console.log('questlog:', this._data);
+        console.log('context:', _context.place, _context.texts);
+        this.display();
+    }
+    QuestLog.prototype.onChoice = function (choice) {
+        if (!this._placeOptions)
+            return;
+        this.pickItem(choice);
+        this.save();
+        console.log('on submit', choice, this._data);
+    };
+    QuestLog.prototype.pickItem = function (item) {
+        var op = this._placeOptions;
+        if (op.pickSingle) {
+            var itm = (op.pickSingleTransform ? op.pickSingleTransform(item) : item).trim();
+            if (itm && op.pickSingle.indexOf(itm) > -1) {
+                this._data.itemsPicked = this._data.itemsPicked.filter(function (x) { return op.pickSingle.indexOf(x) < 0; });
+                this._data.itemsPicked.push(itm);
+            }
+        }
+    };
+    QuestLog.prototype.checkPlace = function () {
+        var _this = this;
+        var op = this._placeOptions, isChanged = false, text = this._context.text;
+        if (op.reset && text.indexOf(op.reset) > -1) {
+            this.reset();
+            return;
+        }
+        if (op.collect) {
+            op.collect.forEach(function (x) {
+                if (text.indexOf(x.match) > -1) {
+                    x.found.forEach(function (itm) {
+                        if (_this._data.itemsFound.indexOf(itm) < 0) {
+                            _this._data.itemsFound.push(itm);
+                            isChanged = true;
+                        }
+                    });
+                }
+            });
+        }
+        if (op.use) {
+            op.use.forEach(function (x) {
+                if (text.indexOf(x.match) > -1) {
+                    if (x.found)
+                        _this._data.itemsFound = _this._data.itemsFound.filter(function (itm) { return x.found.indexOf(itm) < 0; });
+                    if (x.picked)
+                        _this._data.itemsPicked = _this._data.itemsPicked.filter(function (itm) { return x.picked.indexOf(itm) < 0; });
+                    isChanged = true;
+                }
+            });
+        }
+        if (op.do) {
+            op.do.forEach(function (x) {
+                if (text.indexOf(x.match) > -1) {
+                    x.done.forEach(function (task) {
+                        if (_this._data.tasksDone.indexOf(task) < 0) {
+                            _this._data.tasksDone.push(task);
+                            isChanged = true;
+                        }
+                    });
+                }
+            });
+        }
+        if (isChanged)
+            this.save();
+    };
+    QuestLog.prototype.display = function () {
+        var h1 = document.querySelector('h1');
+        if (!h1)
+            return;
+        var toText = function (title, items) {
+            if (!items || !items.length)
+                return '';
+            items.sort();
+            return title + '\n' + items.join('\n');
+        };
+        var data = this._data, text = [toText('backpack:', data.itemsPicked.concat(data.itemsFound)), toText('done:', data.tasksDone)].join('\n\n');
+        h1.setAttribute('title', text);
+    };
+    QuestLog.prototype.load = function () {
+        var empty = { itemsPicked: [], itemsFound: [], tasksDone: [] }, value = GM_getValue(this._id), loaded = value ? JSON.parse(value) : {};
+        Object.keys(loaded).forEach(function (x) { if (!empty[x])
+            delete loaded[x]; });
+        this._data = Object.assign(empty, loaded);
+    };
+    QuestLog.prototype.save = function () {
+        GM_setValue(this._id, JSON.stringify(this._data));
+    };
+    QuestLog.prototype.reset = function () {
+        this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
+        GM_setValue(this._id, undefined);
+    };
+    QuestLog.prototype.getPassingTimeInfo = function () {
+        return {};
+    };
+    QuestLog.prototype.getRescueFatherWuelInfo = function () {
+        return {
+            '*': {
+                collect: [
+                    { match: 'unusual iridescent one', found: ['iridescent rock'] },
+                    { match: 'fine electric eel', found: ['electric eel'] },
+                    { match: 'fine octopus', found: ['octopus'] },
+                    { match: 'fine lantern', found: ['lantern fish'] },
+                    { match: 'fine puffer', found: ['puffer fish'] },
+                    { match: 'fine mackerel', found: ['mackerel'] },
+                    { match: 'fine piranha', found: ['piranha'] },
+                ]
+            },
+            "Pekkerin Fen: Mel's School for Adventurers": {
+                do: [
+                    { match: 'Welcome to class #1', done: ['Adventure class #1'] },
+                    { match: 'Welcome to class #2', done: ['Adventure class #2'] },
+                    { match: 'Welcome to class #3', done: ['Adventure class #3'] },
+                    { match: 'Welcome to class #4', done: ['Adventure class #4'] }
+                ]
+            },
+            "Town Hall: Mayor's Office": { reset: 'Father Wuel, welcome' }
+        };
+    };
+    QuestLog.prototype.getIngenuityTestInfo = function () {
+        return {
+            '*': {
+                collect: [
+                    { match: 'You find a sparkly bejeweled necklace', found: ['bejeweled necklace'] },
+                    { match: 'you see a blue key', found: ['blue key'] },
+                    { match: 'You thank them for the wings', found: ['wings'] }
+                ],
+                use: [
+                    { match: "it doesn't last forever", picked: ['bunch of driftwood', 'limburger cheese'] },
+                    { match: 'You put a shell in', picked: ['bunch of tiny shells'] }
+                ],
+                do: [
+                    { match: 'River mini-game done', done: ['River mini-game'] }
+                ]
+            },
+            'The Fairytale Princess': { collect: [{ match: 'hands you some pink hair ribbons', found: ['pink hair ribbons'] }] },
+            "Rialb's Ghost": { collect: [{ match: 'purple key', found: ['purple key'] }] },
+            'Dwarf': { use: [{ match: 'He drinks it all down', found: ['water'], picked: ['bananas'] }] },
+            'Rickety Shed : Pick ...': { pickSingle: ['coil of rope', 'grass skirt', 'boat oars'] },
+            'Sheltered Beach : Pick ...': { pickSingle: ['iridescent rock', 'bunch of driftwood', 'large carapace'] },
+            'Middle of the River : Pick ...': {
+                pickSingle: ['leaf lettuce', 'pumpkin', 'bananas', 'deck of playing cards', 'carrots', 'rainbow trout', 'corn', 'limburger cheese', 'suspenders'],
+                pickSingleTransform: function (x) { return x.indexOf('Buy ') === 0 ? x.replace('Buy ', '') : ''; }
+            },
+            'Middle of the River : Chatting': { collect: [{ match: 'red key', found: ['red key'] }] },
+            'Rocky Shore, at a River': { collect: [{ match: 'decent rowboat here', found: ['rowboat with oars'] }] },
+            'Waves Beach : Pick ...': { pickSingle: ['bunch of tiny shells', 'bulbaroose shell', 'conch shell'] },
+            'Freshwater Spring': { collect: [{ match: 'the water', found: ['water'] }] },
+            'The Upside-Down Carnival Machine': { do: [{ match: 'Carnival Machine mini-game done', done: ['Carnival Machine mini-game'] }] },
+            'Up on a Ledge': { do: [{ match: 'Thief mini-game done', done: ['Thief mini-game'] }] },
+            'Copious Cutouts': { do: [{ match: 'Copious Cutouts mini-game done', done: ['Copious Cutouts mini-game'] }] },
+            'Back at the Guild': { reset: 'Across the bridge' }
+        };
+    };
+    return QuestLog;
+}());
 function main() {
     initTabs();
     var context = getContext();
     initHighlights(context);
     initHotKeys();
+    initQuestLog(context);
 }
 if (!window.__karma__)
     document.addEventListener('DOMContentLoaded', function () { return main(); });

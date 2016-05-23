@@ -41,7 +41,7 @@ function getPassingtimeHighlights() {
 
 function getWuelHighlights() {
    return {
-        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap', 'things that are purple', 'things that glow in the dark',
+        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap', 'things that are purple', 'things that glow in the dark', 'fishes with sharp teeth',
               'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
               'fine _electric eel_', 'fine _octopus_', 'fine _lantern fish_', 'fine _puffer fish_', 'fine _mackerel_', 'fine _piranha_',
               'other _gear for mages_', 'other _ranged weapons_', 'other _armors_', 'other _melee weapons_', 'herbs, incense and poisons', 'other enhanced _jewelry_', 'instruments and parchments', 'other _exotic items_'],

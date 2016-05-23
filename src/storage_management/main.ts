@@ -2,6 +2,7 @@
 //
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
+/// <reference path="../common/functions/dom/insert-after.ts" />
 /// <reference path="../common/functions/dom/text-content.ts" />
 
 /// <reference path="./storage-item.ts" />
@@ -75,8 +76,8 @@ function getItems(rows: any[], options: ISelectionOption[]): StorageItem[] {
 
         for (let option of options) {
             if (option.predicate && option.predicate(item)) {
-                if (item.ctrlLocation) option.count = option.count ? option.count + 1 : 1;
-                if (item.ctrlSell) option.countSell = option.countSell ? option.countSell + 1 : 1;
+                if (item.ctrlLocation) option.count = (option.count || 0) + 1;
+                if (item.ctrlSell) option.countSell = (option.countSell || 0) + 1;
             }
         }
 
@@ -88,7 +89,9 @@ function getItems(rows: any[], options: ISelectionOption[]): StorageItem[] {
 function addOption(option: ISelectionOption, select, sellable?: boolean, option_group?) {
 
     let op = add('option');
+
     attr(op, 'value', option.key).innerHTML = option.key === 'none'? 'none' : sellable ? `${option.title} (${option.countSell})` : `${option.title} (${option.count})`;
+
     if (option_group) {
         option_group.appendChild(op);
     }
@@ -140,15 +143,15 @@ let options: ISelectionOption[] = [
 
 function main() {
 
-    if (document.querySelector('[name^="LocationEquip"]')) return;
+    if (document.querySelector('[name^="LocationEquip"]'))
+        return;
 
     let main_content = document.querySelector('#main_content'),
         buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
 
     let items: StorageItem[] = [];
 
-    let labelSellInfo = add('span'),
-        labelSellInfo2 = labelSellInfo.cloneNode(true),
+    let labelsSellInfo = [],
         selectedCount: number = 0,
         sellCount: number = 0,
         sellSum: number = 0;
@@ -183,8 +186,7 @@ function main() {
 
         let sellInfo = sellCount > 0 ? `&nbsp;${sellCount} (${sellSum} <img alt="" border="0" src="/wod/css//skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
 
-        labelSellInfo.innerHTML = sellInfo;
-        labelSellInfo2.innerHTML = sellInfo;
+        labelsSellInfo.forEach(x => { x.innerHTML = sellInfo });
     };
 
     let isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1,
@@ -192,7 +194,17 @@ function main() {
         go_tv = isGroupTv ? '-go_group' : 'go_group',
         go_gs = isGroupStorage ? '-go_group_2' : 'go_group_2';
 
-    let onSplit = () => {
+    const moveItemToCellar = (x: StorageItem) => { x.ctrlLocation.value = 'go_keller'; };
+    const splitItem = (x: StorageItem) => { x.ctrlLocation.value = !x.isConsumable ? go_tv : go_gs; if (!x.ctrlLocation.value) moveItemToCellar(x); };
+    const equipItem = (x: StorageItem) => { x.ctrlLocation.value = x.ctrlLocation.options[0].value; };
+
+    let actions = {
+       split:  { predicate: (x: StorageItem) => x.ctrlLocation && x.ctrlSelect, handler: splitItem },
+       cellar: { predicate: (x: StorageItem) => x.ctrlLocation && x.ctrlSelect, handler: moveItemToCellar },
+       equip:  { predicate: (x: StorageItem) => x.isUsable && x.ctrlLocation && x.ctrlSelect, handler: equipItem },
+    };
+
+    let onAction = function ({predicate, handler}) {
 
         if (!items.length) return;
 
@@ -200,9 +212,9 @@ function main() {
             tmp = [];
 
         for (let item of items) {
-            if (item.ctrlLocation && item.ctrlSelect) {
+            if (predicate(item)) {
                 if (item.ctrlSelect.checked) {
-                    item.ctrlLocation.value = !item.isConsumable ? go_tv : go_gs;
+                    handler(item);
                     onlySelected = true;
                 }
                 else {
@@ -212,110 +224,74 @@ function main() {
         }
 
         if (!onlySelected) {
-            tmp.forEach(x => { x.ctrlLocation.value = !x.isConsumable ? go_tv : go_gs });
+            tmp.forEach(handler);
         }
-    };
+    }
 
-    let onEquip = () => {
+    let onSplit = onAction.bind(this, actions.split);
+    let onCellar = onAction.bind(this, actions.cellar);
+    let onEquip = onAction.bind(this, actions.equip);
 
-        if (!items.length) return;
+    let selectsForLocation = [];
+    let selectsForSell = [];
+    let none: ISelectionOption = { key: 'none', title: 'none', pick: false, predicate: x => true };
 
-        let onlySelected = false,
-            tmp = [];
+    const makeLabel = (text: string) => { let label = add('span'); label.innerHTML = `&nbsp;${text}&nbsp;`; return label; }
 
-        for (let item of items) {
-            if (item.isUsable && item.ctrlLocation && item.ctrlSelect) {
-                if (item.ctrlSelect.checked) {
-                    item.ctrlLocation.value = item.ctrlLocation.options[0].value;
-                    onlySelected = true;
-                }
-                else {
-                    tmp.push(item);
-                }
-            }
-        }
+    const makeButton = (text: string, onClick: Function) => {
+        let btn = add('input');
+        attr(btn, {'type': 'button', 'class': 'button clickable', 'name': `button${text}`, 'value': `${text}`, 'style': 'margin-left: 5px'});
+        btn.addEventListener('click', onClick, false);
+        return btn;
+    }
 
-        if (!onlySelected) {
-            tmp.forEach(x => { x.ctrlLocation.value = x.ctrlLocation.options[0].value });
-        }
-    };
+    const makeSelect = (width: number, onSelect: Function) => {
+        let select = add('select');
+        addOption(none, select);
+        attr(select, { 'style': `min-width: ${width}px` });
+        select.disabled = true;
+        select.addEventListener('change', onSelect, false);
+        return select;
+    }
 
-    let labelMove = add('span'),
-        labelSell = add('span'),
-        buttonSplit = add('input'),
-        buttonEquip = add('input'),
-        selectForLocation = add('select'),
-        selectForSell = add('select'),
-        none: ISelectionOption = { key: 'none', title: 'none', pick: false, predicate: x => true };
+    for (let i = 0; i < 2; i++) {
 
-    addOption(none, selectForLocation);
-    addOption(none, selectForSell);
+        let labelMove = makeLabel('Select'),
+            labelSell = makeLabel('Selll'),
+            buttonSplit = makeButton('Split', onSplit),
+            buttonCellar = makeButton('Cellar', onCellar),
+            buttonEquip = makeButton('Equip', onEquip),
+            selectForLocation = makeSelect(140, onSelectChanged),
+            selectForSell = makeSelect(120, onSellChanged),
+            labelSellInfo = add('span');
 
-    attr(selectForLocation, { 'style': 'min-width: 140px' });
-    attr(selectForSell, { 'style': 'min-width: 120px' });
+        selectsForLocation.push(selectForLocation);
+        selectsForSell.push(selectForSell);
+        labelsSellInfo.push(labelSellInfo);
 
-    selectForLocation.disabled = true;
-    selectForSell.disabled = true;
-
-    labelMove.innerHTML = '&nbsp;Select:&nbsp;';
-    labelSell.innerHTML = '&nbsp;Sell:&nbsp;';
-    attr(buttonSplit, {'type': 'button', 'class': 'button clickable', 'name': 'buttonSplit', 'value': 'Split', 'style': 'margin-left: 5px'});
-    attr(buttonEquip, {'type': 'button', 'class': 'button clickable', 'name': 'buttonEquip', 'value': 'Equip', 'style': 'margin-left: 5px'});
-
-    let holder = buttons_commit[0].parentNode,
-        buttonSplit2 = buttonSplit.cloneNode(true),
-        buttonEquip2 = buttonEquip.cloneNode(true),
-        labelSell2   = labelSell.cloneNode(true),
-        labelMove2   = labelMove.cloneNode(true),
-        selectForSell2  = selectForSell.cloneNode(true),
-        selectForLocation2  = selectForLocation.cloneNode(true);
-
-    selectForLocation.addEventListener('change', onSelectChanged, false);
-    selectForLocation2.addEventListener('change', onSelectChanged, false);
-
-    selectForSell.addEventListener('change', onSellChanged, false);
-    selectForSell2.addEventListener('change', onSellChanged, false);
-
-    buttonSplit.addEventListener('click', onSplit, false);
-    buttonSplit2.addEventListener('click', onSplit, false);
-
-    buttonEquip.addEventListener('click', onEquip, false);
-    buttonEquip2.addEventListener('click', onEquip, false);
-
-    holder.insertBefore(labelMove, buttons_commit[0].nextSibling);
-    holder.insertBefore(selectForLocation, labelMove.nextSibling);
-    holder.insertBefore(buttonSplit, selectForLocation.nextSibling);
-    holder.insertBefore(buttonEquip, buttonSplit.nextSibling);
-    holder.insertBefore(labelSell, buttonEquip.nextSibling);
-    holder.insertBefore(selectForSell, labelSell.nextSibling);
-    holder.insertBefore(labelSellInfo, selectForSell.nextSibling);
-
-    holder = buttons_commit[1].parentNode;
-    holder.insertBefore(labelMove2, buttons_commit[1].nextSibling);
-    holder.insertBefore(selectForLocation2, labelMove2.nextSibling);
-    holder.insertBefore(buttonSplit2, selectForLocation2.nextSibling);
-    holder.insertBefore(buttonEquip2, buttonSplit2.nextSibling);
-    holder.insertBefore(labelSell2, buttonEquip2.nextSibling);
-    holder.insertBefore(selectForSell2, labelSell2.nextSibling);
-    holder.insertBefore(labelSellInfo2, selectForSell2.nextSibling);
+        insertAfter(buttons_commit[i],
+                    labelMove,
+                    selectForLocation,
+                    buttonSplit,
+                    buttonCellar,
+                    buttonEquip,
+                    labelSell,
+                    selectForSell,
+                    labelSellInfo);
+    }
 
     setTimeout(() => {
 
         items = getItems(getRows(main_content), options);
 
-        addOptions(options, selectForLocation);
-        addOptions(options, selectForLocation2);
+        selectsForLocation.forEach(x => { addOptions(options, x) });
 
         let optionsForSell = options.filter(x => !x.notForSell);
-        addOptions(optionsForSell, selectForSell, true);
-        addOptions(optionsForSell, selectForSell2, true);
+        selectsForSell.forEach(x => { addOptions(optionsForSell, x, true) });
 
         options.splice(0, 0, none);
 
-        selectForLocation.disabled = false;
-        selectForLocation2.disabled = false;
-        selectForSell.disabled = false;
-        selectForSell2.disabled = false;
+        selectsForLocation.concat(selectsForSell).forEach(x => { x.disabled = false });
 
     }, 0);
 }
