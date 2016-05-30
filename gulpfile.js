@@ -1,3 +1,5 @@
+process.chdir(__dirname);
+
 var gulp = require('gulp'),
     concat = require('gulp-concat-util'),
     merge = require('merge2'),

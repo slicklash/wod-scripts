@@ -3,6 +3,8 @@
 /// <reference path="../common/functions/dom/add.ts" />
 /// <reference path="../common/functions/dom/attr.ts" />
 /// <reference path="../common/functions/dom/text-content.ts" />
+/// <reference path="../common/functions/dom/insert-after.ts" />
+/// <reference path="../common/functions/ajax/http-fetch.ts" />
 
 function main() {
 
@@ -13,22 +15,33 @@ function main() {
 
         const saveWeights = () => {
 
+            let promises = [];
+
             for (let i = 1; i < rows.length; i++) {
 
                 let row    = rows[i],
                     cells  = row.cells,
                     hid    = Number(cells[0].querySelector('input').value).toString(),
-                    weight = Number(cells[5].querySelector('input').value),
+                    weight = Number(cells[6].querySelector('input').value),
                     group  = 'no group';
 
                 if (isNaN(weight)) weight = 0;
 
-                GM_setValue(hid, JSON.stringify({ weight, group }));
+                let p = httpFetch('/wod/spiel/hero/profile.php?id=' + hid);
+                p.then((data: string) => {
+                    let n = data.indexOf('group:'),
+                        group = data.slice(n, n + 200).split('<a')[1].split(/[><]/)[1];
+                    console.log(group);
+                    GM_setValue(hid, JSON.stringify({ weight, group }));
+                });
+
+                promises.push(p);
             }
 
-            var form = (<any>document.forms).the_form;
-
-            if (form) form.submit();
+            Promise.all(promises).then(() => {
+                let form = (<any>document.forms).the_form;
+                if (form) form.submit();
+            });
         }
 
         let newTable  = add('table'),
@@ -46,6 +59,10 @@ function main() {
         rows[0].appendChild(headerWeight);
         newTbody.appendChild(rows[0]);
 
+        let groupName = add('th')
+        textContent(groupName, 'group')
+        rows[0].insertBefore(groupName, rows[0].cells[4]);
+
         let heroes = [];
 
         for (let i = 1; i < rows.length; i++) {
@@ -55,7 +72,7 @@ function main() {
                 hid     = Number(cells[0].querySelector('input').value).toString(),
                 level   = Number(textContent(cells[2])),
                 next    = cells[4],
-                tooltip = next.getAttribute('onmouseover'),
+                tooltip = attr(next, 'onmouseover'),
                 time    = textContent(cells[4]).trim(),
                 value   = GM_getValue(hid),
                 info    = value ? JSON.parse(value) : {},
@@ -68,30 +85,55 @@ function main() {
                 next.setAttribute('onmouseover', `return wodToolTip(this,"${dungeon} <br/> ${time}");`);
             }
 
-            heroes.push({ 'weight': Number(weight), 'row': row });
+            let timeCell = add('td');
+            textContent(timeCell,  time);
+
+            heroes.push({ 'weight': Number(weight), row, group: info.group || 'no group'});
         }
 
         heroes.sort((a, b) => a.weight - b.weight);
 
-        heroes.forEach((hero, i) => {
+        let group;
 
-            let row = hero.row,
-                colWeight = add('td', row),
+        let makeInput = (row, value) => {
+
+            let colWeight = add('td', row),
                 txt = add('input');
 
-            attr(row, 'class', 'row' + i % 2);
+            attr(txt, { 'type': 'text', 'style': 'width: 30px', 'value': value });
             attr(colWeight, 'align', 'center');
-            attr(txt, { 'type': 'text', 'style': 'width: 30px', 'value': hero.weight });
-
             add(txt, colWeight);
+        };
+
+        let color = 0;
+
+        heroes.forEach((hero,i) => {
+
+            let row = hero.row;
+            makeInput(row, hero.weight);
+            attr(row, 'class', 'row' + (color++ % 2));
+
+            let c = add('td')
+            textContent(c, hero.group)
+            row.insertBefore(c, row.cells[4])
+
+            if (i > 0 && group !== hero.group) {
+                group = hero.group;
+                // let rowGroup = add('tr');
+                // attr(rowGroup, 'class', 'row' + (color++ % 2));
+                // let cellGroup = add('td', rowGroup);
+                // attr(cellGroup, {'colspan': 6, 'style': 'text-align: center'});
+                // textContent(cellGroup, group);
+                // makeInput(rowGroup, hero.groupWeight);
+                // add(rowGroup, newTbody);
+                // attr(row, {'style': 'border-top: 2px solid #fff'});
+            }
+
             add(hero.row, newTbody);
         });
 
-        let parentNode = table_heroes.parentNode,
-            position   = table_heroes.nextSibling;
-
-        parentNode.insertBefore(newTable, position);
-        parentNode.removeChild(table_heroes);
+        insertAfter(table_heroes, newTable);
+        table_heroes.parentNode.removeChild(table_heroes);
     }
 }
 
