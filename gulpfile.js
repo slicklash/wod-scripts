@@ -17,6 +17,7 @@ var build_dir = 'build/',
     scripts = [
         { key: 'common', dir: 'common' },
         { key: 'adventure', dir: 'adventure_assistant' },
+        { key: 'arcane', dir: 'arcane_library' },
         { key: 'favmenu', dir: 'favorite_menu' },
         { key: 'heroes', dir: 'hero_list' },
         { key: 'profile', dir: 'profile_export' },
