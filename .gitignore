@@ -18,3 +18,6 @@ src/**/*.js
 src/**/*.js.map
 tests/**/*.js
 tests/**/*.js.map
+__pycache__/
+.ropeproject/
+*.pyc
