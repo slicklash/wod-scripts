@@ -32,7 +32,7 @@ class Controller {
 
     onRunCommand () {
        let [cmd, ...args] = this.inputCmd.value.split(':');
-       this.inputCmd.value = '';
+       // this.inputCmd.value = '';
        this.handleCommand(cmd, args);
     }
 
@@ -58,7 +58,7 @@ class Controller {
         this.outputWindow = add('textarea', panel);
 
         attr(panel, {'height': '100px'});
-        attr(this.inputCmd, {'type': 'text'});
+        attr(this.inputCmd, {'type': 'text', 'value': 'parse:torch'});
         attr(this.buttonRun, {'type': 'button', 'class': 'button clickable', 'value':'run'});
         attr(this.outputWindow,  {'style': 'width:500px;height:200px', 'readonly': 'readonly'});
 
@@ -69,6 +69,7 @@ class Controller {
         header.addEventListener('click', () => { panel.style.display = panel.style.display ? '' : 'none'; });
 
         this.buttonRun.addEventListener('click', this.onRunCommand.bind(this));
+        this.inputCmd.addEventListener('keyup', (e: KeyboardEvent) => { if (e.which === 13) this.onRunCommand() });
     }
 
     log (msg) {
