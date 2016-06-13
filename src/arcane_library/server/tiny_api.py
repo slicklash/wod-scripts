@@ -2,6 +2,7 @@
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
+from urllib.error import HTTPError
 from json import dumps, loads
 from collections import OrderedDict
 import re
@@ -42,29 +43,31 @@ class Api:
         self.content_parsers = {'application/json': lambda content: loads(content.decode(encoding='utf-8'), object_pairs_hook=OrderedDict)}
         self.content_formatters = {'application/json': lambda code, content, headers: bytes(dumps(content), 'utf-8')}
 
+    # ===== public
+
     def run(self, **kwargs):
         bind, port = kwargs.get('bind', ''), kwargs.get('port', 8081)
         print('Starting server at {}:{}'.format(bind or '0.0.0.0', port))
         Server((bind, port), RequestHandler, self).serve_forever()
 
     def process_request(self, handler):
-        x = urlparse(handler.path)
-        request = RequestMessage(handler.headers.__dict__, x.path, handler.command, parse_qs(x.query))
         try:
+            x = urlparse(handler.path)
+            request = RequestMessage(handler.headers.__dict__, x.path, handler.command, parse_qs(x.query))
             route = self._get_route(request)
-        except KeyError:
-            return self._send_response(handler, 405)
-        if route is None:
-            return self._send_response(handler, 404)
-        try:
-            request.content = self._read_content(handler)
-        except KeyError:
-            return self._send_response(handler, 415)
-        self._dispatch_request(handler, route, request)
+            request.content = self._read_content(handler, request)
+            self._dispatch_request(handler, route, request)
+        except HTTPError as e:
+            return self._send_response(handler, e.code)
+
+    def response(self, content=None, status_code=200, headers=None):
+        return (status_code, content, headers or {})
+
+    # ===== decorators
 
     def route(self, template, methods=None):
         def decorator(func):
-            self.routes.append((self.route_pattern(template), func, methods or 'GET'))
+            self.routes.append((self._route_pattern(template), func, methods or 'GET'))
             return func
         return decorator
 
@@ -80,40 +83,41 @@ class Api:
             return func
         return decorator
 
-    def response(self, content=None, status_code=200, headers=None):
-        return (status_code, content, headers or {})
+    # ===== private
 
     def _dispatch_request(self, handler, route, request):
         func, kwargs = route
         status_code, content, headers = func(request, **kwargs)
-        self._send_response(handler, status_code, content, headers)
+        self._send_response(handler, status_code, request.path, content, headers)
 
-    def _send_response(self, handler, status_code, content=None, headers=None):
+    def _send_response(self, handler, status_code, path=None, content=None, headers=None):
         _headers = {'content-type': 'application/json'}
         _headers.update(headers or {})
         try:
-            formatter = self.content_formatters[_headers['content-type']]
-            content = formatter(status_code, content, _headers) if content else None
+            content_type = _headers['content-type']
+            formatter = self.content_formatters[content_type]
         except KeyError:
-            status_code = 415
-            content = None
+            raise HTTPError(path, 415, 'Unsupported Media Type', _headers, None)
+        content = formatter(status_code, content, _headers) if content else None
         handler.send_response(status_code)
-        handler.send_header('Content-Type', _headers.get('content-type'))
+        handler.send_header('Content-Type', content_type)
         handler.end_headers()
         if content:
             handler.wfile.write(content)
 
-    def _read_content(self, handler):
+    def _read_content(self, handler, request):
         try:
             length = int(handler.headers['content-length'])
             content = handler.rfile.read(length)
+            parser = self.content_parsers[handler.headers['content-type']]
+            return parser(content)
         except TypeError:
             return None
-        parser = self.content_parsers[handler.headers['content-type']]
-        return parser(content)
+        except KeyError:
+            raise HTTPError(request.path, 415, 'Unsupported Media Type', request.headers, None)
 
     @staticmethod
-    def route_pattern(route):
+    def _route_pattern(route):
         return re.compile('^{}$'.format(re.sub(r'(<\w+>)', r'(?P\1.+)', route)))
 
     def _get_route(self, request):
@@ -126,5 +130,5 @@ class Api:
                 else:
                     return func, m.groupdict()
         if not_allowed:
-            raise KeyError('Method not allowed')
-        return None
+            raise HTTPError(request.path, 405, 'Method Not Allowed', request.headers, None)
+        raise HTTPError(request.path, 404, 'Not Found', request.headers, None)

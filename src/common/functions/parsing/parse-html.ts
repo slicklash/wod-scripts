@@ -1,6 +1,6 @@
 
-const parseHTML = str => {
+const parseHTML = (str, returnBody?: boolean) => {
   let tmp = (<any>document.implementation).createHTMLDocument();
   tmp.body.innerHTML = str;
-  return tmp.body.children;
+  return returnBody ? tmp.body : tmp.body.children;
 };
