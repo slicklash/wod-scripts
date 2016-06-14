@@ -10,7 +10,9 @@ var gulp = require('gulp'),
     remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul'),
     del = require('del'),
     exec = require('child_process').exec,
-    Server = require('karma').Server;
+    Server = require('karma').Server,
+    packageJSON  = require('./package'),
+    jshintrc = packageJSON.jshintrc;
 
 var build_dir = 'build/',
     re_dir = 'release/',
@@ -122,7 +124,7 @@ scripts.forEach(function (x) {
 
     gulp.task('_lint:' + x.key, function() {
         return gulp.src(re_dir + x.dir + '.user.js')
-                   .pipe(jshint())
+                   .pipe(jshint(jshintrc))
                    .pipe(jshint.reporter('default'));
     });
 

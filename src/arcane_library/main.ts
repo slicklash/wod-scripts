@@ -7,7 +7,8 @@
 
 /// <reference path="../common/functions/ajax/http-fetch.ts" />
 /// <reference path="../common/functions/parsing/parse-html.ts" />
-/// <reference path="../common/functions/parsing/parse-item.ts" />
+/// <reference path="../common/functions/parsing/parse-item-details.ts" />
+/// <reference path="../common/functions/parsing/parse-modifiers.ts" />
 
 function main (main_content?) {
 
@@ -15,9 +16,18 @@ function main (main_content?) {
         h1 = main.querySelector('h1');
 
     if (h1) {
+        try {
         let ctrl = new Controller();
         ctrl.init(h1);
+        }
+        catch (x) {
+            console.log(x);
+        }
     }
+}
+
+interface ItemInfo extends ItemDetails {
+    modifiers: Modifiers;
 }
 
 class Controller {
@@ -44,7 +54,20 @@ class Controller {
 
         if (cmd === 'parse') {
             httpFetch('/wod/spiel/hero/item.php?name=' + args.join(':')).then((result: string) => {
-                let item = parseItem(result);
+
+                debugger;
+
+                let html = parseHTML(result, true);
+                let details = html.querySelector('#details');
+
+                if (!details) return undefined;
+
+                let info = parseItemDetails(details)
+                let modifiers = parseModifiers(html.querySelector('#link'));
+
+                if (modifiers) Object.assign(info, { modifiers });
+
+                this.log(JSON.stringify(info));
             });
         }
     }

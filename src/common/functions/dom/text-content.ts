@@ -1,4 +1,3 @@
-
 const textContent = (elem, value?) => {
 
     if (!elem) return '';
@@ -9,3 +8,5 @@ const textContent = (elem, value?) => {
 
     elem.textContent = value;
 };
+
+const textNormalized = x => textContent(x).trim().split(/\s+/).join(' ');
