@@ -27,7 +27,8 @@ function main (main_content?) {
 }
 
 interface ItemInfo extends ItemDetails {
-    modifiers: Modifiers;
+    name: string;
+    modifiers?: Modifiers;
 }
 
 class Controller {
@@ -53,21 +54,34 @@ class Controller {
         }
 
         if (cmd === 'parse') {
-            httpFetch('/wod/spiel/hero/item.php?name=' + args.join(':')).then((result: string) => {
+            let name = args.join(':');
+            this.log(`parsing ${name}...`);
+            httpFetch('/wod/spiel/hero/item.php?name=' + name).then((result: string) => {
 
-                debugger;
+                // debugger;
 
                 let html = parseHTML(result, true);
                 let details = html.querySelector('#details');
 
                 if (!details) return undefined;
 
-                let info = parseItemDetails(details)
+                let itemDetails = Object.assign(parseItemDetails(details), { name });
+
                 let modifiers = parseModifiers(html.querySelector('#link'));
 
-                if (modifiers) Object.assign(info, { modifiers });
+                if (modifiers) Object.assign(itemDetails, { modifiers });
 
-                this.log(JSON.stringify(info));
+                // this.log(JSON.stringify(itemDetails));
+
+                httpFetch('http://localhost:8081/items', 'POST', itemDetails);
+            });
+        }
+        else if (cmd === 'jobs') {
+            httpFetch('http://localhost:8081/jobs').then((jobs: any) => {
+                jobs = JSON.parse(jobs);
+                if (jobs && jobs.length) {
+                    jobs.forEach(x=> { this.handleCommand('parse', [x.item]); });
+                }
             });
         }
     }

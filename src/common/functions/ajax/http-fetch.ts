@@ -1,9 +1,9 @@
 /// <reference path="../../../../lib/typings/browser.d.ts" />
 
-function httpFetch (url, method = 'GET') {
+function httpFetch (url, method = 'GET', data = undefined) {
 
    return new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
+        let request: any = {
             method: method,
             url: url,
             onload: (request) => {
@@ -13,6 +13,11 @@ function httpFetch (url, method = 'GET') {
                 else
                     reject(request.responseText);
             }
-        });
+        };
+        if (typeof data === 'object') {
+            request.data = JSON.stringify(data);
+            request.headers = { 'Content-Type': 'application/json' };
+        }
+        GM_xmlhttpRequest(request);
     });
 }

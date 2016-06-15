@@ -11,6 +11,7 @@ interface ItemDetails {
     races: Constraints | string;
     requirements: string[] | string;
     unique: string;
+    usesLeft: string;
     usesPerDungeon: string | number;
     usesPerFight: string | number;
     effect: string;
@@ -19,6 +20,7 @@ interface ItemDetails {
     itemClasses: string[];
     skills: string[];
     remarks: string;
+    set: string;
 }
 
 interface Constraints {
@@ -34,6 +36,7 @@ class ItemDetailsParser {
     races: Constraints | string;
     requirements: string[] | string;
     unique: string;
+    usesLeft: string;
     usesPerDungeon: string | number;
     usesPerFight: string | number;
     effect: string;
@@ -42,6 +45,7 @@ class ItemDetailsParser {
     itemClasses: string[];
     skills: string[];
     remarks: string;
+    set: string;
 
     parse (elem): ItemDetails {
 
@@ -58,6 +62,7 @@ class ItemDetailsParser {
             races: this.races,
             requirements: this.requirements,
             unique: this.unique,
+            usesLeft: this.usesLeft,
             usesPerDungeon: this.usesPerDungeon,
             usesPerFight: this.usesPerFight,
             effect: this.effect,
@@ -66,6 +71,7 @@ class ItemDetailsParser {
             itemClasses: this.itemClasses,
             skills: this.skills,
             remarks: this.remarks,
+            set: this.set,
         };
     }
 
@@ -80,6 +86,8 @@ class ItemDetailsParser {
     parseRace (values) { this.races = this.getConstraints(values); };
 
     parseUnique (value) { this.unique = textNormalized(value).replace('-', 'not unique'); }
+
+    parseUsesLeft (value) { this.usesLeft = textNormalized(value); }
 
     parseUsesPerDungeon (value) { this.usesPerDungeon = textNormalized(value); }
 
@@ -96,6 +104,8 @@ class ItemDetailsParser {
     parseSkills (values) { this.skills = Array.from(values.querySelectorAll('a'), textNormalized); }
 
     parseRemarks (value) { this.remarks = textNormalized(value); }
+
+    parseSet (value) { this.set = textNormalized(value); }
 
     parseRequirements (values) {
         this.requirements = Array.from(values.childNodes, textNormalized).reduce((acc,x) => {
