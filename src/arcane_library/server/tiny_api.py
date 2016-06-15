@@ -18,7 +18,7 @@ class Server(HTTPServer):
 class RequestHandler(BaseHTTPRequestHandler):
 
     def __init__(self, *args):
-        for x in ['GET', 'POST', 'PUT', 'DELETE']:
+        for x in ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE']:
             self.__dict__['do_' + x] = self._handle_request
         super().__init__(*args)
 
@@ -58,6 +58,8 @@ class Api:
             request.content = self._read_content(handler, request)
             self._dispatch_request(handler, route, request)
         except HTTPError as e:
+            if e.code == 405 and request.method == 'OPTIONS':
+                return self._send_response(handler, 200)
             return self._send_response(handler, e.code)
 
     def response(self, content=None, status_code=200, headers=None):
@@ -100,17 +102,20 @@ class Api:
             raise HTTPError(path, 415, 'Unsupported Media Type', _headers, None)
         content = formatter(status_code, content, _headers) if content else None
         handler.send_response(status_code)
-        handler.send_header('Content-Type', content_type)
+        for k,v in _headers.items():
+            k = '-'.join([x.title() for x in k.split(' ')])
+            handler.send_header(k, v)
         handler.end_headers()
         if content:
             handler.wfile.write(content)
 
     def _read_content(self, handler, request):
+        # print('received',handler.headers.items())
         try:
             length = int(handler.headers['content-length'])
             content = handler.rfile.read(length)
             parser = self.content_parsers[handler.headers['content-type']]
-            return parser(content)
+            return parser(content) if content else None
         except TypeError:
             return None
         except KeyError:
