@@ -25,6 +25,7 @@ def main():
     Job = Query()
     Item = Query()
 
+    """
     print('Reading items...')
     with open(path + '/items.txt', 'r') as f:
         lines = [x for x in f.read().split('\n') if x]
@@ -52,6 +53,7 @@ def main():
     del new_items
     del db_items
     del db_jobs
+    """
 
     @route('/status')
     def status(request):
@@ -83,6 +85,11 @@ def main():
             store.removeJob(where('item') == item['name'])
         return response()
 
+    @route('/items', 'GET')
+    def query_items(request):
+        print(request.query_params)
+        return response(store.query(request.query_params))
+
     api.run(**kwargs)
 
 
@@ -92,6 +99,7 @@ class Store:
         self.db = TinyDB(path + '/db.json')
         self.jobs = self.db.table('jobs')
         self.items = self.db.table('items')
+        self._cache = None
 
     # ===== items
 
@@ -108,10 +116,20 @@ class Store:
                 return existing.eid
 
     def findItem(self, query):
-        return self.single(self.items.search(query))
+        return self._single(self.items.search(query))
 
     def getItems(self, query=None):
         return self.items.all() if not query else self.items.search(query)
+
+    def query(self, query_params):
+
+        if not self._cache:
+            self._cache = self.getItems()
+
+        predicates = [self._predicate(k,v) for k,v in query_params.items()]
+        result = [item for item in self._cache if all(p(item[field]) for field, p in predicates)]
+        return result
+        return [x['name'] for x in result]
 
     # ===== jobs
 
@@ -122,7 +140,7 @@ class Store:
         return self.jobs.insert_multiple(jobs)
 
     def findJob(self, query):
-        return self.single(self.jobs.search(query))
+        return self._single(self.jobs.search(query))
 
     def getJobs(self, query=None):
         return self.jobs.all() if not query else self.jobs.search(query)
@@ -133,10 +151,25 @@ class Store:
     def removeJob(self, query):
         self.jobs.remove(query)
 
-    # =====
+    # ===== private
 
-    def single(self, xs):
+    def _single(self, xs):
         return next(iter(xs), None)
+
+    def _predicate(self, field, values):
+
+        value = values[0]
+
+        if value.startswith('*') and value.endswith('*'):
+            return field, lambda x: value[1:-1].lower() in x.lower()
+
+        if value.startswith('*'):
+            return field, lambda x: x.lower().endswith(value[1:].lower())
+
+        if value.endswith('*'):
+            return field, lambda x: x.lower().startswith(value[:-1].lower())
+
+        return field, lambda x: x.lower() == value.lower()
 
 
 if __name__ == '__main__':

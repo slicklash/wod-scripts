@@ -54,9 +54,11 @@ class Controller {
         }
 
         if (cmd === 'parse') {
+
             let name = args.join(':');
             this.log(`parsing ${name}...`);
-            httpFetch('/wod/spiel/hero/item.php?name=' + name).then((result: string) => {
+
+            httpFetch('/wod/spiel/hero/item.php?name=' + encodeURIComponent(name)).then((result: string) => {
 
                 // debugger;
 
