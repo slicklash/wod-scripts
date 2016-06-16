@@ -3,6 +3,8 @@
 from argparse import ArgumentParser
 from tiny_api import Api
 from tinydb import TinyDB, Query, where
+from collections import OrderedDict
+import re
 
 
 api = Api()
@@ -50,10 +52,12 @@ def main():
     print('Job queue:', len(new_items) + len(db_jobs))
     print('Pending:', sum(x['status'] in ['running'] for x in store.getJobs()))
 
+    with open(path + '/pending.txt', 'w') as f:
+      f.writelines('\n'.join(x['item'] for x in store.getJobs()))
+
     del new_items
     del db_items
     del db_jobs
-    """
 
     @route('/status')
     def status(request):
@@ -62,9 +66,9 @@ def main():
     @route('/jobs')
     def query_jobs(request):
 
-        jo = store.getJobs(Job.status == 'new')
+        # jo = store.getJobs(Job.status == 'new')
 
-        batch = jo[:1200]
+        batch = jo[:1000]
         if batch:
             for job in batch:
                 store.updateJobs({'status': 'running'}, batch)
@@ -75,6 +79,7 @@ def main():
         print()
 
         return response(batch)
+    """
 
     @route('/items', 'POST')
     def add_item(request):
@@ -107,6 +112,7 @@ class Store:
         name = item['name']
         if name:
             existing = self.findItem(where('name') == name)
+            self._cache = None
             if not existing:
                 print('New item:', name)
                 return self.items.insert(item)
@@ -126,10 +132,41 @@ class Store:
         if not self._cache:
             self._cache = self.getItems()
 
-        predicates = [self._predicate(k,v) for k,v in query_params.items()]
-        result = [item for item in self._cache if all(p(item[field]) for field, p in predicates)]
-        return result
-        return [x['name'] for x in result]
+        fields = query_params.get('fields', None)
+        if fields:
+            fields = fields[0].split(',')
+            del query_params['fields']
+
+        select = self._select(fields)
+
+        predicates = [self._predicate(k,v[0]) for k,v in query_params.items()]
+        result = []
+
+        for item in self._cache:
+
+            should_select = True
+
+            for field, p in predicates:
+                if field in item:
+                    value = item[field]
+                    if type(value) is list:
+                        if not any(p(v) for v in value):
+                            should_select = False
+                            break
+                    elif not p(value):
+                        should_select = False
+                        break
+
+            if should_select:
+                result.append(select(item))
+
+        count = len(result)
+        result = result[:100]
+
+        r = OrderedDict()
+        r['_list'] = result
+        r['_pagination'] = { 'total': count }
+        return r
 
     # ===== jobs
 
@@ -156,20 +193,24 @@ class Store:
     def _single(self, xs):
         return next(iter(xs), None)
 
-    def _predicate(self, field, values):
+    def _predicate(self, field, test_value):
+        return field, lambda x: re.match(test_value.replace('*', '.*'), x, re.IGNORECASE)
 
-        value = values[0]
+    def _select(self, fields):
 
-        if value.startswith('*') and value.endswith('*'):
-            return field, lambda x: value[1:-1].lower() in x.lower()
+        if not fields:
+            return lambda x: x
 
-        if value.startswith('*'):
-            return field, lambda x: x.lower().endswith(value[1:].lower())
+        def select_fields(x):
+            result = dict()
+            for f in fields:
+                try:
+                    result[f] = x[f]
+                except:
+                    pass
+            return result
 
-        if value.endswith('*'):
-            return field, lambda x: x.lower().startswith(value[:-1].lower())
-
-        return field, lambda x: x.lower() == value.lower()
+        return select_fields
 
 
 if __name__ == '__main__':
