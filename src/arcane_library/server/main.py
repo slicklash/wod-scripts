@@ -47,6 +47,7 @@ def main():
         store.addJobs(new_items)
 
     print('Job queue:', len(new_items) + len(db_jobs))
+    print('Pending:', sum(x['status'] in ['running'] for x in store.getJobs()))
 
     del new_items
     del db_items
@@ -59,13 +60,12 @@ def main():
     @route('/jobs')
     def query_jobs(request):
 
-        jo = store.getJobs()
+        jo = store.getJobs(Job.status == 'new')
 
-        batch = jo[:100]
+        batch = jo[:1200]
         if batch:
             for job in batch:
-                job['status'] = 'running'
-            store.updateJobs(batch)
+                store.updateJobs({'status': 'running'}, batch)
 
         print()
         print('New batch:', [x['item'] for x in batch])
@@ -127,9 +127,8 @@ class Store:
     def getJobs(self, query=None):
         return self.jobs.all() if not query else self.jobs.search(query)
 
-    def updateJobs(self, jobs):
-        for job in jobs:
-            self.jobs.update(job, eids=[job.eid])
+    def updateJobs(self, values, jobs):
+        self.jobs.update(values, eids=[x.eid for x in jobs])
 
     def removeJob(self, query):
         self.jobs.remove(query)
