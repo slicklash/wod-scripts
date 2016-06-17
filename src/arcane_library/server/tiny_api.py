@@ -39,11 +39,16 @@ class RequestMessage:
 class Api:
 
     def __init__(self):
+        self.resources = {}
         self.routes = []
         self.content_parsers = {'application/json': lambda content: loads(content.decode(encoding='utf-8'), object_pairs_hook=OrderedDict)}
         self.content_formatters = {'application/json': lambda code, content, headers: bytes(dumps(content), 'utf-8')}
 
     # ===== public
+
+    def register(self, *resources):
+        for x in resources:
+            self.resources[x.__class__.__name__] = x
 
     def run(self, **kwargs):
         bind, port = kwargs.get('bind', ''), kwargs.get('port', 8081)
@@ -58,8 +63,6 @@ class Api:
             request.content = self._read_content(handler, request)
             self._dispatch_request(handler, route, request)
         except HTTPError as e:
-            if e.code == 405 and request.method == 'OPTIONS':
-                return self._send_response(handler, 200)
             return self._send_response(handler, e.code)
 
     def response(self, content=None, status_code=200, headers=None):
@@ -68,10 +71,11 @@ class Api:
     # ===== decorators
 
     def route(self, template, methods=None):
-        def decorator(func):
-            self.routes.append((self._route_pattern(template), func, methods or 'GET'))
+        def wrap(func):
+            resource_name = func.__qualname__.split('.')[0]
+            self.routes.append((self._route_pattern(template), resource_name, func, methods or 'GET'))
             return func
-        return decorator
+        return wrap
 
     def parse(self, content_type):
         def decorator(func):
@@ -88,8 +92,8 @@ class Api:
     # ===== private
 
     def _dispatch_request(self, handler, route, request):
-        func, kwargs = route
-        status_code, content, headers = func(request, **kwargs)
+        resource_name, func, kwargs = route
+        status_code, content, headers = func(self.resources[resource_name], request, **kwargs)
         self._send_response(handler, status_code, request.path, content, headers)
 
     def _send_response(self, handler, status_code, path=None, content=None, headers=None):
@@ -127,13 +131,13 @@ class Api:
 
     def _get_route(self, request):
         not_allowed = False
-        for pattern, func, methods in self.routes:
+        for pattern, resource, func, supported_methods in self.routes:
             m = pattern.match(request.path)
             if m:
-                if request.method not in methods:
+                if request.method not in supported_methods:
                     not_allowed = True
                 else:
-                    return func, m.groupdict()
+                    return resource, func, m.groupdict()
         if not_allowed:
             raise HTTPError(request.path, 405, 'Method Not Allowed', request.headers, None)
         raise HTTPError(request.path, 404, 'Not Found', request.headers, None)

@@ -2,8 +2,9 @@
 
 from argparse import ArgumentParser
 from tiny_api import Api
-from tinydb import TinyDB, Query, where
+from tinydb import TinyDB, where, Query
 from collections import OrderedDict
+from itertools import chain
 import re
 
 
@@ -24,8 +25,6 @@ def main():
     path = kwargs.get('dir')
 
     store = Store(path)
-    Job = Query()
-    Item = Query()
 
     """
     print('Reading items...')
@@ -59,43 +58,52 @@ def main():
     del db_items
     del db_jobs
 
-    @route('/status')
-    def status(request):
-        return response({'status': 'ok'})
+    """
+
+    api.register(ItemsResource(store), JobsResource(store))
+    api.run(**kwargs)
+
+
+class ItemsResource:
+
+    def __init__(self, store):
+        self.store = store
+
+    @route('/items', 'GET')
+    def query_items(self, request):
+        print(request.query_params)
+        return response(self.store.query(request.query_params))
+
+    @route('/items', 'POST')
+    def add_item(self, request):
+        item = request.content
+        if item:
+            self.store.addItem(item)
+            print('Removing job:', item['name'])
+            self.store.removeJob(where('item') == item['name'])
+        return response()
+
+
+class JobsResource:
+
+    def __init__(self, store):
+        self.store = store
 
     @route('/jobs')
-    def query_jobs(request):
+    def query_jobs(self, request):
 
-        # jo = store.getJobs(Job.status == 'new')
+        jobs = self.store.getJobs(where('status') == 'new')
+        batch = jobs[:1000]
 
-        batch = jo[:1000]
-        if batch:
-            for job in batch:
-                store.updateJobs({'status': 'running'}, batch)
+        for job in batch:
+            self.store.updateJobs({'status': 'running'}, batch)
 
         print()
         print('New batch:', [x['item'] for x in batch])
-        print('Job queue:', len(jo))
+        print('Job queue:', len(jobs))
         print()
 
         return response(batch)
-    """
-
-    @route('/items', 'POST')
-    def add_item(request):
-        item = request.content
-        if item:
-            store.addItem(item)
-            print('Removing job:', item['name'])
-            store.removeJob(where('item') == item['name'])
-        return response()
-
-    @route('/items', 'GET')
-    def query_items(request):
-        print(request.query_params)
-        return response(store.query(request.query_params))
-
-    api.run(**kwargs)
 
 
 class Store:
@@ -139,25 +147,34 @@ class Store:
 
         select = self._select(fields)
 
-        predicates = [self._predicate(k,v[0]) for k,v in query_params.items()]
+        predicates = [self._predicate(k, v[0]) for k, v in query_params.items()]
+        filter_by = query_params.keys()
         result = []
 
         for item in self._cache:
 
             should_select = True
+            searchable = self._make_searchable(filter_by, item)
 
             for field, p in predicates:
-                if field in item:
-                    value = item[field]
-                    if type(value) is list:
-                        if not any(p(v) for v in value):
-                            should_select = False
-                            break
-                    elif not p(value):
+
+                if not field in searchable:
+                    should_select = False
+                    break
+
+                value = searchable[field]
+                if type(value) is list:
+                    if not any(p(v) for v in value):
                         should_select = False
                         break
+                elif p(value):
+                    should_select = False
+                    break
+                if not should_select:
+                    break
 
             if should_select:
+                print(item['name'])
                 result.append(select(item))
 
         count = len(result)
@@ -165,8 +182,35 @@ class Store:
 
         r = OrderedDict()
         r['_list'] = result
-        r['_pagination'] = { 'total': count }
+        r['_pagination'] = {'total': count}
         return r
+
+    def _make_searchable(self, filter_by, item):
+
+        result = {}
+
+        for field in filter_by:
+
+            path = field.split('.')
+            key = path.pop(0)
+
+            if key not in item:
+                continue
+
+            values = item[key]
+            if type(values) is not list:
+                values = [values]
+
+            while values and path:
+                key = path.pop(0)
+                values = [x[key] for x in values if key in x]
+                if values and type(values[0]) is list:
+                    values = list(chain(*values))
+
+            if values:
+                result[field] = values
+
+        return result
 
     # ===== jobs
 
