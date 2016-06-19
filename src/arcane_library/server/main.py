@@ -140,16 +140,21 @@ class Store:
         if not self._cache:
             self._cache = self.getItems()
 
-        fields = query_params.get('fields', None)
-        if fields:
-            fields = fields[0].split(',')
-            del query_params['fields']
+        special_keys = ['fields', 'page', 'pageSize', 'orderBy']
+        predicates = []
+        filter_by = []
 
-        select = self._select(fields)
+        for k, v in query_params.items():
+            if k in special_keys:
+                if k in ['fields', 'orderBy']:
+                    query_params[k] = v[0].split(',')
+            else:
+                filter_by.append(k)
+                predicates.append(self._predicate(k, v[0]))
 
-        predicates = [self._predicate(k, v[0]) for k, v in query_params.items()]
-        filter_by = query_params.keys()
-        result = []
+        select = self._select(query_params.get('fields', None))
+
+        items = []
 
         for item in self._cache:
 
@@ -158,7 +163,7 @@ class Store:
 
             for field, p in predicates:
 
-                if not field in searchable:
+                if field not in searchable:
                     should_select = False
                     break
 
@@ -175,14 +180,23 @@ class Store:
 
             if should_select:
                 print(item['name'])
-                result.append(select(item))
+                items.append(select(item))
 
-        count = len(result)
-        result = result[:100]
+        return self._collection_response(query_params, items)
+
+    def _collection_response(self, query_params, items):
+
+        items = sorted(items, key=lambda x: x['name'].lower())
+        page = int(query_params.get('page', [1])[0])
+        pageSize = int(query_params.get('pageSize', [50])[0])
+        count = len(items)
+        items = items[(page - 1) * pageSize:page * pageSize]
+        q, r = divmod(count, pageSize)
+        pages = q + (1 if r else 0)
 
         r = OrderedDict()
-        r['_list'] = result
-        r['_pagination'] = {'total': count}
+        r['_list'] = items
+        r['_pagination'] = {'total': count, 'pageSize': pageSize, 'page': page, 'pages': pages}
         return r
 
     def _make_searchable(self, filter_by, item):

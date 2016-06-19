@@ -24,15 +24,15 @@ describe('hero_list', () => {
             makeHero(1, 'H1', 'Mage', 1, true, '07:14', 'Duel in the grass')
         ]
 
-        let table = parseHTML(`
+        let table = <HTMLTableElement>parseHTML(`
             <table>
                 <tr class="header">
                     <th>name</th> <th>class</th> <th>level</th> <th>active</th> <th><a href="/wod/spiel/dungeon/dungeon.php">Next<br>dungeon</a></th>
                 </tr>
                 ${heroes.join('')}
             </table>
-        `)[0];
+        `);
 
-        let info = getInfo(table.querySelectorAll('tr'))
+        let info = getInfo(<any>table.querySelectorAll('tr'))
     })
 })

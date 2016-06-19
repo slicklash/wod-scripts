@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 from urllib.error import HTTPError
 from json import dumps, loads
@@ -8,7 +9,7 @@ from collections import OrderedDict
 import re
 
 
-class Server(HTTPServer):
+class Server(ThreadingMixIn, HTTPServer):
 
     def __init__(self, server_address, RequestHandlerClass, api):
         HTTPServer.__init__(self, server_address, RequestHandlerClass)

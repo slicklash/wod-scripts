@@ -52,7 +52,7 @@ describe('tidy_trade', () => {
                     </tr>
                 </tbody>
             </table>
-        `)[0];
+        `);
 
         let [items, sums] = getItemInfo(table),
             item1 = items[0];
@@ -72,7 +72,7 @@ describe('tidy_trade', () => {
                <table></table>
                <table><tbody>
             </div>
-        `)[0];
+        `);
 
         let sut = main(main_content);
 
