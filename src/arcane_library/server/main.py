@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from tiny_api import Api
-from tinydb import TinyDB, where, Query
+from tinydb import TinyDB, where
 from collections import OrderedDict
 from itertools import chain
 import re
@@ -156,12 +156,36 @@ class Store:
 
         items = []
 
+        def matches_constraint(con, p):
+            print(con)
+            if con == 'any':
+                return True
+            if 'exclude' in con and any(p(x) for x in con['exclude']):
+                return False
+            if 'include' in con:
+                return any(p(x) for x in con['include'])
+            return True
+
         for item in self._cache:
 
             should_select = True
             searchable = self._make_searchable(filter_by, item)
 
             for field, p in predicates:
+
+                if field == 'heroClasses.include':
+                    if 'heroClasses' not in item or matches_constraint(item['heroClasses'], p):
+                        continue
+                    else:
+                        should_select = False
+                        break
+
+                if field == 'races.include':
+                    if 'races' not in item or matches_constraint(item['races'], p):
+                        continue
+                    else:
+                        should_select = False
+                        break
 
                 if field not in searchable:
                     should_select = False
@@ -252,7 +276,10 @@ class Store:
         return next(iter(xs), None)
 
     def _predicate(self, field, test_value):
-        return field, lambda x: re.match(test_value.replace('*', '.*'), x, re.IGNORECASE)
+        return field, lambda value: self._is_match(test_value, value)
+
+    def _is_match(self, test_value, value):
+        return re.match('^' + test_value.replace('+', '\+').replace('*', '.*') + '$', value, re.IGNORECASE)
 
     def _select(self, fields):
 

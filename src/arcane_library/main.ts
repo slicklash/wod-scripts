@@ -38,6 +38,16 @@ class Controller {
 
     inputSearch: HTMLInputElement;
     buttonSearch: HTMLInputElement;
+
+    inputClass: HTMLInputElement;
+    inputRace: HTMLInputElement;
+    inputLocation: HTMLInputElement;
+    inputUnique: HTMLInputElement;
+    inputType: HTMLInputElement;
+    inputSkill: HTMLInputElement;
+    inputEffect: HTMLInputElement;
+    inputNeeds: HTMLInputElement;
+
     grid: Grid;
 
     inputCmd;
@@ -137,6 +147,13 @@ class Controller {
                            </td>
                        </tr>
                        <tr>
+                           <td>Effect / Needs </td>
+                           <td>
+                               <input type="text" id="input-effect" />
+                               <input type="text" id="input-needs" />
+                           </td>
+                       </tr>
+                       <tr>
                            <td>Consumable</td>
                            <td>
                                <label><input type="radio" name="input-usage" value="both" checked />Both</label>
@@ -165,6 +182,53 @@ class Controller {
         `);
 
         insertAfter(header, panel);
+
+        this.initGrid();
+
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', () => { panel.style.display = panel.style.display ? '' : 'none'; });
+
+        [this.inputSearch, this.buttonSearch,
+         this.inputClass, this.inputRace,
+         this.inputLocation, this.inputUnique,
+         this.inputType, this.inputSkill,
+         this.inputEffect, this.inputNeeds,
+         this.buttonRun, this.inputCmd, this.outputWindow] = [
+             '#input-search', '#btn-search',
+             '#input-class', '#input-race',
+             '#input-location', '#input-unique',
+             '#input-type', '#input-skill',
+             '#input-effect', '#input-needs',
+             '#btn-run', '#input-cmd', '#output-window'].map(x => <any>panel.querySelector(x));
+
+        this.buttonRun.addEventListener('click', this.onRunCommand.bind(this));
+        this.inputCmd.addEventListener('keyup', (e: KeyboardEvent) => { if (e.which === 13) this.onRunCommand() });
+        this.buttonSearch.addEventListener('click', this.applySearch.bind(this));
+    }
+
+    filters: any;
+
+    applySearch (args) {
+        this.filters = {
+            name: this.inputSearch.value,
+            'heroClasses.include': this.inputClass.value,
+            'races.include': this.inputRace.value,
+            location: this.inputLocation.value,
+            unique: this.inputUnique.value,
+            itemClasses: this.inputType.value,
+            skills: this.inputSkill.value,
+            effect: this.inputEffect.value,
+            needs: this.inputNeeds.value,
+        };
+        this.grid.fetchPage(1);
+    }
+
+    onGridRequest (req: GridRequest) {
+        Object.assign(req.params, this.filters);
+        return req;
+    }
+
+    initGrid () {
 
         this.grid = new Grid();
 
@@ -209,6 +273,7 @@ class Controller {
                 { header: 'Location', field: 'location' },
                 { header: 'Level', field: 'level', render: renderLevel },
                 { header: 'Unique', field: 'unique' },
+                { header: 'Effect', field: 'effect' },
                 { header: 'Classes', field: 'heroClasses', render: renderContrainsts.bind(this, 'heroClasses') },
                 { header: 'Races', field: 'races', render: renderContrainsts.bind(this, 'races') },
             ],
@@ -220,30 +285,6 @@ class Controller {
         }
 
         this.grid.init('#grid-items', options, dt);
-
-        header.style.cursor = 'pointer';
-        header.addEventListener('click', () => { panel.style.display = panel.style.display ? '' : 'none'; });
-
-        [this.inputSearch, this.buttonSearch,
-         this.buttonRun, this.inputCmd, this.outputWindow] = [
-             'input-search', 'btn-search',
-             'btn-run', 'input-cmd', 'output-window'].map(x => <any>document.getElementById(x));
-
-        this.buttonRun.addEventListener('click', this.onRunCommand.bind(this));
-        this.inputCmd.addEventListener('keyup', (e: KeyboardEvent) => { if (e.which === 13) this.onRunCommand() });
-        this.buttonSearch.addEventListener('click', this.applySearch.bind(this));
-    }
-
-    filters: any;
-
-    applySearch (args) {
-        this.filters = { name: this.inputSearch.value };
-        this.grid.fetchPage(1);
-    }
-
-    onGridRequest (req: GridRequest) {
-        Object.assign(req.params, this.filters);
-        return req;
     }
 
     log (msg) {

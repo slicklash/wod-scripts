@@ -32,7 +32,7 @@ class GridDataSource {
     }
 
     private _buildUri (params): string {
-        let queryParams = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
+        let queryParams = Object.keys(params).map(k => params[k] === undefined || params[k] === '' ? undefined : `${k}=${encodeURIComponent(params[k])}`).filter(x=>x != undefined).join('&');
         return this.options.url + '?' + queryParams;
     }
 }
