@@ -2,7 +2,7 @@
 
 /// <reference path="../../functions/parsing/parse-html.ts" />
 //
-/// <reference path="./grid-data-source.ts" />
+/// <reference path="grid.data-source.ts" />
 
 interface GridOptions {
     columns: GridColumn[];

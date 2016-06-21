@@ -1,10 +1,5 @@
 /// <reference path="../../../lib/typings/browser.d.ts" />
 
-/// <reference path="../../common/functions/dom/add.ts" />
-/// <reference path="../../common/functions/dom/attr.ts" />
-/// <reference path="../../common/functions/dom/text-content.ts" />
-/// <reference path="../../common/functions/dom/insert-after.ts" />
-
 /// <reference path="../../common/functions/ajax/http-fetch.ts" />
 /// <reference path="../../common/functions/parsing/parse-html.ts" />
 /// <reference path="../../common/functions/parsing/parse-item-details.ts" />
@@ -19,36 +14,27 @@ interface ItemInfo extends ItemDetails {
 
 class AppController {
 
-    inputSearch: HTMLInputElement;
-    buttonSearch: HTMLInputElement;
-
-    inputClass: HTMLInputElement;
-    inputRace: HTMLInputElement;
-    inputLocation: HTMLInputElement;
-    inputUnique: HTMLInputElement;
-    inputType: HTMLInputElement;
-    inputSkill: HTMLInputElement;
-    inputEffect: HTMLInputElement;
-    inputNeeds: HTMLInputElement;
+    filters: any = {};
+    logMsg: string;
 
     grid: Grid;
 
-    inputCmd;
-    buttonRun;
-    outputWindow;
 
     $onInit () {
-        this.renderUI();
+        this.initGrid();
     }
 
+    cmd: string = 'parse:torch';
+
     onRunCommand () {
-       let [cmd, ...args] = this.inputCmd.value.split(':');
-       // this.inputCmd.value = '';
+       let [cmd, ...args] = this.cmd.split(':');
        this.handleCommand(cmd, args);
     }
 
     handleCommand (cmd, args) {
+
         this.log(`command: ${cmd}`);
+
         if (args && args.length) {
             this.log(`args: [${args.join(',')}]`);
         }
@@ -88,52 +74,21 @@ class AppController {
         }
     }
 
-    renderUI () {
+    applySearch () {
+        // this.filters = {
+        //     name: this.inputSearch.value,
+        //     'heroClasses.include': this.inputClass.value,
+        //     'races.include': this.inputRace.value,
+        //     location: this.inputLocation.value,
+        //     unique: this.inputUnique.value,
+        //     itemClasses: this.inputType.value,
+        //     skills: this.inputSkill.value,
+        //     effect: this.inputEffect.value,
+        //     needs: this.inputNeeds.value,
+        // };
+        // this.grid.fetchPage(1);
 
-        // let view = prepareView(Controller);
-        // let panel = <HTMLDivElement>parseHTML(view);
-        // insertAfter(header, panel);
-        // bootstrap(Controller, panel);
-        let panel = <HTMLDivElement>document.querySelector('#app-panel');
-
-        this.initGrid();
-
-        // header.style.cursor = 'pointer';
-        // header.addEventListener('click', () => { panel.style.display = panel.style.display ? '' : 'none'; });
-
-        [this.inputSearch, this.buttonSearch,
-         this.inputClass, this.inputRace,
-         this.inputLocation, this.inputUnique,
-         this.inputType, this.inputSkill,
-         this.inputEffect, this.inputNeeds,
-         this.buttonRun, this.inputCmd, this.outputWindow] = [
-             '#input-search', '#btn-search',
-             '#input-class', '#input-race',
-             '#input-location', '#input-unique',
-             '#input-type', '#input-skill',
-             '#input-effect', '#input-needs',
-             '#btn-run', '#input-cmd', '#output-window'].map(x => <any>panel.querySelector(x));
-
-        this.buttonRun.addEventListener('click', this.onRunCommand.bind(this));
-        this.inputCmd.addEventListener('keyup', (e: KeyboardEvent) => { if (e.which === 13) this.onRunCommand() });
-        this.buttonSearch.addEventListener('click', this.applySearch.bind(this));
-    }
-
-    filters: any;
-
-    applySearch (args) {
-        this.filters = {
-            name: this.inputSearch.value,
-            'heroClasses.include': this.inputClass.value,
-            'races.include': this.inputRace.value,
-            location: this.inputLocation.value,
-            unique: this.inputUnique.value,
-            itemClasses: this.inputType.value,
-            skills: this.inputSkill.value,
-            effect: this.inputEffect.value,
-            needs: this.inputNeeds.value,
-        };
-        this.grid.fetchPage(1);
+        console.log(this.filters);
     }
 
     onGridRequest (req: GridRequest) {
@@ -201,6 +156,6 @@ class AppController {
     }
 
     log (msg) {
-       this.outputWindow.value += msg + '\n';
+       this.logMsg += msg + '\n';
     }
 }

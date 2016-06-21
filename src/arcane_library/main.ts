@@ -1,4 +1,4 @@
-/// <reference path="../common/toymvc.ts" />
+/// <reference path="../common/toymvc/bootstrap.ts" />
 /// <reference path="./app/index.ts" />
 
 function main (main_content?) {

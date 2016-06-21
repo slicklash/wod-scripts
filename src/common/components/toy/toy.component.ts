@@ -1,6 +1,6 @@
 /// <reference path="toy.controller.ts" />
 
-const ToyComponent = {
+const ToyComponent: IComponent = {
    selector: 'toy',
    controller: ToyController,
    template: `

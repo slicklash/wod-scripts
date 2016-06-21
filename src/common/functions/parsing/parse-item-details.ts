@@ -83,7 +83,7 @@ class ItemDetailsParser {
 
     parseHeroClasses (values) { this.heroClasses = this.getConstraints(values); }
 
-    parseRace (values) { this.races = this.getConstraints(values); };
+    parseRace (values) { this.races = this.getConstraints(values); }
 
     parseUnique (value) { this.unique = textNormalized(value).replace('-', 'not unique'); }
 
