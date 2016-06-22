@@ -52,20 +52,42 @@ var noAMD = (match, imports, body) => {
 scripts.forEach(x => {
 
     gulp.task('release:' + x.key, () => {
-        run(/*'test:' + x.key, */'compile:' + x.key, '_concat:' + x.key, '_lint:' + x.key);
+        run('compile:' + x.key, '_concat:' + x.key, '_lint:' + x.key);
     });
 
     gulp.task('compile:' + x.key, () => {
-        return gulp.src('src/' + x.dir + '/main.ts')
+        return gulp.src(['src/userscripts/' + x.dir + '/main.ts', 'lib/typings/index.d.ts'])
             .pipe(ts(createTsProject({ outFile: x.dir + '.js', removeComments: true })))
             .pipe(replace(reAMD, noAMD))
             .pipe(gulp.dest(build_dir));
     });
 
+    gulp.task('test:' + x.key, function() {
+        run('_test_compile:' + x.key, '_test_run:' + x.key);
+    });
+
     //////////
 
+    var specConfig = {
+        projectName: x.dir,
+        configFile: __dirname + '/karma.conf.js',
+        basePath: __dirname + '/build',
+        specFile: __dirname + '/build/' + x.dir + '.spec.js',
+    };
+
+    gulp.task('_test_run:' + x.key, function (done) {
+        new Server(specConfig, done).start();
+    });
+
+    gulp.task('_test_compile:' + x.key, function() {
+        return gulp.src(['src/userscripts/' + x.dir + '/*.spec.ts', 'lib/typings/index.d.ts'])
+            .pipe(ts(createTsProject({ outFile: x.dir + '.spec.js' })))
+            .pipe(replace(reAMD, noAMD))
+            .pipe(gulp.dest(build_dir));
+    });
+
     gulp.task('_concat:' + x.key, () => {
-        return merge(gulp.src('src/' + x.dir + '/header.js'),
+        return merge(gulp.src('src/userscripts/' + x.dir + '/header.js'),
                      gulp
                        .src(build_dir + x.dir + '.js')
                        .pipe(concat.header("(function() {\n'use strict';\n"))

@@ -1,17 +1,22 @@
 
-module.exports = function(config) {
+module.exports = function (config) {
+
+  // var files = [
+  //       { pattern: '*|)}>#*.js', included: true, watched: false },
+  //       { pattern: '*|)}>#*.js.map', included: false, watched: false },
+  //       { pattern: '*|)}>#*.ts', included: false, watched: false },
+  // ];
 
   var files = [
-        { pattern: '**/*.js', included: true, watched: false },
-        { pattern: '**/*.js.map', included: false, watched: false },
-        { pattern: '**/*.ts', included: false, watched: false },
+      { pattern: '../lib/*polyfills.js', included: true, watched: false },
+      config.specFile
   ];
 
-  if (config.projectName !== 'common') {
-      files.push(
-        { pattern: '../common/**/!(*spec).js', included: true, watched: false }
-      );
-  }
+  // if (config.projectName !== 'common') {
+  //     files.push(
+  //       { pattern: '../common#<{(||)}>#!(*spec).js', included: true, watched: false }
+  //     );
+  // }
 
   config.set({
 

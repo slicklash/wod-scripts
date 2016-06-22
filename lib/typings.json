@@ -1,8 +1,8 @@
 {
   "version": false,
-  "ambientDependencies": {
-    "es6-shim": "github:DefinitelyTyped/DefinitelyTyped/es6-shim/es6-shim.d.ts#4de74cb527395c13ba20b438c3a7a419ad931f1c",
-    "greasemonkey": "github:DefinitelyTyped/DefinitelyTyped/greasemonkey/greasemonkey.d.ts#97f46965dd957961c49e5cece702fadb97ed1f8e",
-    "jasmine": "github:DefinitelyTyped/DefinitelyTyped/jasmine/jasmine.d.ts#4bb54542fe6502597f50c762695fcd140a61fd89"
+  "globalDependencies": {
+    "es6-shim": "registry:dt/es6-shim#0.31.2+20160602141504",
+    "greasemonkey": "registry:dt/greasemonkey#0.0.0+20160316155526",
+    "jasmine": "registry:dt/jasmine#2.2.0+20160621224255"
   }
 }
