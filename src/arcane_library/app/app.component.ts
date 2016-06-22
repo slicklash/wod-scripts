@@ -14,7 +14,7 @@ const AppComponent: IComponent = {
             <tbody>
                 <tr>
                     <td>
-                        Name: <input type="text" [value]="$ctrl.filters.name" size="30">
+                        Name: <input type="text" [(ngModel)]="$ctrl.filters.name" size="30">
                         <input type="button" value="Search" class="button clickable" (click)="$ctrl.applySearch()" />
                     </td>
                 </tr>
@@ -27,29 +27,35 @@ const AppComponent: IComponent = {
                     <tr>
                         <td>Class / Race </td>
                         <td>
-                            <input type="text" [value]="$ctrl.filters.race" />
-                            <input type="text" [value]="$ctrl.filters.class" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.heroClasses" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.races" />
                         </td>
                     </tr>
                     <tr>
                         <td>Location / Unique </td>
                         <td>
-                            <input type="text" [value]="$ctrl.filters.location" />
-                            <input type="text" [value]="$ctrl.filters.unique" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.location" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.unique" />
                         </td>
                     </tr>
                     <tr>
                         <td>Type / Skill </td>
                         <td>
-                            <input type="text" [value]="$ctrl.filters.itemClasses" />
-                            <input type="text" [value]="$ctrl.filters.skills" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.itemClasses" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.skills" />
                         </td>
                     </tr>
                     <tr>
                         <td>Effect / Needs </td>
                         <td>
-                            <input type="text" [value]="$ctrl.filters.effect" />
-                            <input type="text" [value]="$ctrl.filters.needs" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.effect" />
+                            <input type="text" [(ngModel)]="$ctrl.filters.needs" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Raw </td>
+                        <td>
+                            <input type="text" [(ngModel)]="$ctrl.rawFilter" style="width: 600px" />
                         </td>
                     </tr>
                     <tr>
@@ -68,8 +74,8 @@ const AppComponent: IComponent = {
 
             <br/>
 
-            <input type="text" [value]="$ctrl.cmd" />
-            <input type="button" value="run" class="button clickable" (click)="$ctrl.runCmd()" />
+            <input type="text" [(ngModel)]="$ctrl.cmd" />
+            <input type="button" value="run" class="button clickable" (click)="$ctrl.onRunCommand()" />
 
             <br/>
 

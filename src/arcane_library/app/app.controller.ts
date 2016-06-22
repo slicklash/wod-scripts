@@ -15,16 +15,15 @@ interface ItemInfo extends ItemDetails {
 class AppController {
 
     filters: any = {};
-    logMsg: string;
 
     grid: Grid;
 
+    cmd: string = 'parse:torch';
+    logMsg: string;
 
     $onInit () {
         this.initGrid();
     }
-
-    cmd: string = 'parse:torch';
 
     onRunCommand () {
        let [cmd, ...args] = this.cmd.split(':');
@@ -46,8 +45,6 @@ class AppController {
 
             httpFetch('/wod/spiel/hero/item.php?name=' + encodeURIComponent(name)).then((result: string) => {
 
-                // debugger;
-
                 let html = <any>parseHTML(result, true);
                 let details = html.querySelector('#details');
 
@@ -58,8 +55,6 @@ class AppController {
                 let modifiers = parseModifiers(html.querySelector('#link'));
 
                 if (modifiers) Object.assign(itemDetails, { modifiers });
-
-                // this.log(JSON.stringify(itemDetails));
 
                 httpFetch('http://localhost:8081/items', 'POST', itemDetails);
             });
@@ -74,25 +69,22 @@ class AppController {
         }
     }
 
-    applySearch () {
-        // this.filters = {
-        //     name: this.inputSearch.value,
-        //     'heroClasses.include': this.inputClass.value,
-        //     'races.include': this.inputRace.value,
-        //     location: this.inputLocation.value,
-        //     unique: this.inputUnique.value,
-        //     itemClasses: this.inputType.value,
-        //     skills: this.inputSkill.value,
-        //     effect: this.inputEffect.value,
-        //     needs: this.inputNeeds.value,
-        // };
-        // this.grid.fetchPage(1);
+    rawFilter: string;
 
-        console.log(this.filters);
+    applySearch () {
+        this.grid.fetchPage(1);
     }
 
     onGridRequest (req: GridRequest) {
         Object.assign(req.params, this.filters);
+        let raw = this.rawFilter;
+        if (raw) {
+           let p: string[] = raw.split('&');
+           p.forEach(x => {
+               let [key, val] = x.split('=');
+               req.params[key] = val;
+           });
+        }
         return req;
     }
 

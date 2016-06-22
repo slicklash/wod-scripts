@@ -5,6 +5,7 @@ from tiny_api import Api
 from tinydb import TinyDB, where
 from collections import OrderedDict
 from itertools import chain
+from operator import lt, gt, eq
 import re
 
 
@@ -137,7 +138,7 @@ class Store:
 
     def query(self, query_params):
 
-        if not self._cache:
+        if self._cache is None:
             self._cache = self.getItems()
 
         special_keys = ['fields', 'page', 'pageSize', 'orderBy']
@@ -148,7 +149,10 @@ class Store:
             if k in special_keys:
                 if k in ['fields', 'orderBy']:
                     query_params[k] = v[0].split(',')
+            elif k == 'level':
+                predicates.append((k, v[0]))
             else:
+                k = k.replace('races', 'races.include').replace('heroClasses', 'heroClasses.include')
                 filter_by.append(k)
                 predicates.append(self._predicate(k, v[0]))
 
@@ -157,7 +161,6 @@ class Store:
         items = []
 
         def matches_constraint(con, p):
-            print(con)
             if con == 'any':
                 return True
             if 'exclude' in con and any(p(x) for x in con['exclude']):
@@ -166,12 +169,30 @@ class Store:
                 return any(p(x) for x in con['include'])
             return True
 
+        def matches_level(requirements, test_value):
+            item_lvl = next((x for x in requirements if 'level is' in x), None)
+            if item_lvl:
+                op = test_value[0]
+                a = int(item_lvl.split()[-1])
+                b = int(test_value[1:]) if op in '<>' else int(test_value)
+                op = lt if op == '<' else gt if op == '>' else eq
+                print (op, a, b)
+                return op(a, b)
+            return True
+
         for item in self._cache:
 
             should_select = True
             searchable = self._make_searchable(filter_by, item)
 
             for field, p in predicates:
+
+                if field == 'level':
+                    if 'requirements' not in item or matches_level(item['requirements'], p):
+                        continue
+                    else:
+                        should_select = False
+                        break
 
                 if field == 'heroClasses.include':
                     if 'heroClasses' not in item or matches_constraint(item['heroClasses'], p):
