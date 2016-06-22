@@ -1,6 +1,6 @@
-/// <reference path="./special-consumables.ts" />
+import { SPECIAL_CONSUMABLES } from './special-consumables'
 
-class StorageItem {
+export class StorageItem {
 
     public name = '';
 

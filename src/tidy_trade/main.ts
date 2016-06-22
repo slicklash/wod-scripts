@@ -1,8 +1,8 @@
 /// <reference path="../../lib/typings/browser.d.ts" />
 
-/// <reference path="../common/functions/dom/add.ts" />
-/// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/text-content.ts" />
+import { textContent } from '../common/functions/dom/text-content'
+import { add } from '../common/functions/dom/add'
+import { attr } from '../common/functions/dom/attr'
 
 // --- Main ---
 

@@ -1,12 +1,12 @@
 /// <reference path="../../lib/typings/browser.d.ts" />
-//
-/// <reference path="../common/functions/dom/add.ts" />
-/// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/insert-after.ts" />
-/// <reference path="../common/functions/dom/text-content.ts" />
 
-/// <reference path="./storage-item.ts" />
-/// <reference path="./nls.ts" />
+import { add } from '../common/functions/dom/add'
+import { attr } from '../common/functions/dom/attr'
+import { textContent } from '../common/functions/dom/text-content'
+import { insertAfter } from '../common/functions/dom/insert-after'
+
+import { StorageItem } from './storage-item'
+import { _t } from './nls'
 
 function getRows(main_content): any[] {
 
@@ -122,7 +122,7 @@ function addOptions(options, select, sellable?: boolean) {
 
 let options: ISelectionOption[] = [
     { key: '---', title: 'All' },
-    { key: 'all', title: 'all', pick: true, predicate: x => true, count: 0, countSell: 0 },
+    { key: 'all', title: 'all', pick: true, predicate: () => true, count: 0, countSell: 0 },
     { key: 'all_use', title: 'usable', pick: true, predicate: x => x.isUsable, count: 0, countSell: 0 },
     { key: 'all_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable, count: 0, countSell: 0 },
     { key: 'all_group', title: 'group', pick: true, predicate: x => x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
@@ -152,7 +152,6 @@ function main() {
     let items: StorageItem[] = [];
 
     let labelsSellInfo = [],
-        selectedCount: number = 0,
         sellCount: number = 0,
         sellSum: number = 0;
 
@@ -234,7 +233,7 @@ function main() {
 
     let selectsForLocation = [];
     let selectsForSell = [];
-    let none: ISelectionOption = { key: 'none', title: 'none', pick: false, predicate: x => true };
+    let none: ISelectionOption = { key: 'none', title: 'none', pick: false, predicate: () => true };
 
     const makeLabel = (text: string) => { let label = add('span'); label.innerHTML = `&nbsp;${text}&nbsp;`; return label; }
 

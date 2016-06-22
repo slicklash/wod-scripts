@@ -1,5 +1,4 @@
-
-const attr = (elem, nameOrMap: string | Object, value?, remove?: boolean) => {
+export function attr (elem, nameOrMap: string | Object, value?, remove?: boolean) {
 
     if (remove) {
         elem.removeAttribute(nameOrMap);
@@ -15,4 +14,4 @@ const attr = (elem, nameOrMap: string | Object, value?, remove?: boolean) => {
     }
 
     return elem;
-};
+}

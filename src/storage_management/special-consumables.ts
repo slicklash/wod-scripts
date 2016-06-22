@@ -1,5 +1,4 @@
-
-const SPECIAL_CONSUMABLES = [
+export const SPECIAL_CONSUMABLES = [
     'aloe plant',
     'bat toy',
     'carded cotton',

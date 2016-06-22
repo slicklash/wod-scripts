@@ -1,10 +1,10 @@
 /// <reference path="../../lib/typings/browser.d.ts" />
 
-/// <reference path="../common/functions/dom/add.ts" />
-/// <reference path="../common/functions/dom/attr.ts" />
-/// <reference path="../common/functions/dom/text-content.ts" />
-/// <reference path="../common/functions/dom/insert-after.ts" />
-/// <reference path="../common/functions/ajax/http-fetch.ts" />
+import { add } from '../common/functions/dom/add'
+import { attr } from '../common/functions/dom/attr'
+import { textContent } from '../common/functions/dom/text-content'
+import { insertAfter } from '../common/functions/dom/insert-after'
+import { httpFetch } from '../common/functions/ajax/http-fetch'
 
 interface HeroInfo {
    group: string;
@@ -54,8 +54,7 @@ function saveWeights (rows: HTMLTableRowElement[]) {
         let row    = rows[i],
             cells  = row.cells,
             hid    = Number((<any>cells[0].querySelector('input')).value).toString(),
-            weight = Number((<any>cells[6].querySelector('input')).value),
-            group  = 'no group';
+            weight = Number((<any>cells[6].querySelector('input')).value);
 
         if (isNaN(weight)) weight = 0;
 
@@ -74,7 +73,6 @@ function saveWeights (rows: HTMLTableRowElement[]) {
         if (form) form.submit();
     });
 }
-
 
 function main (main_content?) {
 
@@ -129,14 +127,6 @@ function main (main_content?) {
 
             if (i > 0 && group !== hero.group) {
                 group = hero.group;
-                // let rowGroup = add('tr');
-                // attr(rowGroup, 'class', 'row' + (color++ % 2));
-                // let cellGroup = add('td', rowGroup);
-                // attr(cellGroup, {'colspan': 6, 'style': 'text-align: center'});
-                // textContent(cellGroup, group);
-                // makeInput(rowGroup, hero.groupWeight);
-                // add(rowGroup, newTbody);
-                // attr(row, {'style': 'border-top: 2px solid #fff'});
             }
 
             add(hero.row, newTbody);

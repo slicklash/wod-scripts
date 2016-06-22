@@ -1,6 +1,6 @@
 /// <reference path="../../../../lib/typings/browser.d.ts" />
 
-function httpFetch (url, method = 'GET', data = undefined) {
+export function httpFetch (url, method = 'GET', data = undefined) {
 
    return new Promise((resolve, reject) => {
         let request: any = {
