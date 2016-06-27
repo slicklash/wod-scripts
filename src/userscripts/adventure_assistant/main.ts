@@ -1,11 +1,10 @@
-/// <reference path="_references.ts" />
+import { getContext } from './context'
+import { initHighlights } from './highlights'
+import { initHotKeys } from './hotkeys'
+import { initTabs } from './tabs'
+import { initQuestLog } from './questlog'
 
-/// <reference path="hotkeys.ts" />
-/// <reference path="tabs.ts" />
-/// <reference path="highlights.ts" />
-/// <reference path="questlog.ts" />
-
-function main() {
+export function main() {
     initTabs();
     let context = getContext();
     initHighlights(context);

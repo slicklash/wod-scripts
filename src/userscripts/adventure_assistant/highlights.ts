@@ -1,6 +1,6 @@
-/// <reference path="_references.ts" />
+import { IAdventureContext, Quests } from './context'
 
-function initHighlights(context: IAdventureContext) {
+export function initHighlights (context: IAdventureContext) {
 
     if (!context || !context.isQuest) return;
 
@@ -32,14 +32,14 @@ function initHighlights(context: IAdventureContext) {
     context.texts.forEach((x,i) => { x.innerHTML = texts[i] });
 }
 
-function getPassingtimeHighlights() {
+function getPassingtimeHighlights () {
     return {
         '*': ['bejeweled necklace'],
         'Grandfather answers': ['stonemasonry', 'carpenters', 'cobblers', 'bakers']
     };
 }
 
-function getWuelHighlights() {
+function getWuelHighlights () {
    return {
         '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap', 'things that are purple', 'things that glow in the dark', 'fishes with sharp teeth',
               'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
@@ -50,7 +50,7 @@ function getWuelHighlights() {
     };
 }
 
-function getIngenuityTestHighlights() {
+function getIngenuityTestHighlights () {
     return {
         '*': ['bejeweled necklace', 'blue key', 'Large', 'Medium', 'Small', 'Tiny'],
         'Middle of the River : Chatting': ['red key', 'crescent', 'rectangle', 'circle', 'heart', 'diamond', 'plus-sign', 'oval', 'star', 'triangle', 'square'],

@@ -1,5 +1,3 @@
-/// <reference path="../../../../lib/typings/browser.d.ts" />
-
 var get = function(url, callback, obj?, async?) {
   GM_xmlhttpRequest({
       method: 'GET',

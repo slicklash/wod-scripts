@@ -1,10 +1,10 @@
-/// <reference path="core.ts" />
-/// <reference path="observable.ts" />
-/// <reference path="bind-value.ts" />
+import { ATTR, ensureMetadata, getByPath } from './core'
+import { observable } from './observable'
+import { bindValue } from './bind-value'
 
-function link($ctrl, elem) {
+export function link($ctrl, elem) {
 
-    _ensureMetadata($ctrl);
+    ensureMetadata($ctrl);
 
     const ATTRS = ['bind', 'click', 'change', 'input', 'mode'];
     let nodes = elem.querySelectorAll(ATTRS.map(x => `[${ATTR}-${x}]`).join(','));

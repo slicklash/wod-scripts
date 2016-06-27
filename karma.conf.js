@@ -1,22 +1,14 @@
 
 module.exports = function (config) {
 
-  // var files = [
-  //       { pattern: '*|)}>#*.js', included: true, watched: false },
-  //       { pattern: '*|)}>#*.js.map', included: false, watched: false },
-  //       { pattern: '*|)}>#*.ts', included: false, watched: false },
-  // ];
-
   var files = [
       { pattern: '../lib/*polyfills.js', included: true, watched: false },
-      config.specFile
-  ];
+  ].concat(config.specs);
 
-  // if (config.projectName !== 'common') {
-  //     files.push(
-  //       { pattern: '../common#<{(||)}>#!(*spec).js', included: true, watched: false }
-  //     );
-  // }
+  var specFiles = config.projectName === 'common' ? '**/!(*spec|*header).js' : '!(common)/**/!(*spec|*header).js';
+  var preprocessors = {};
+
+  preprocessors[specFiles] = ['coverage'];
 
   config.set({
 
@@ -36,15 +28,14 @@ module.exports = function (config) {
 
     failOnEmptyTestSuite: false,
 
-    preprocessors: {
-        '**/!(*spec|*header).js': ['coverage']
-    },
+    preprocessors: preprocessors,
 
     reporters: !config.DEBUG ? ['spec', 'coverage'] : ['progress'],
 
     coverageReporter: {
         reporters:[
-            { type: 'json', subdir: '.', file: 'coverage-final.json'}
+            { type: 'json', subdir: '.', file: 'coverage-final.json'},
+            { type: 'html', subdir: './pew'}
         ]
     },
 

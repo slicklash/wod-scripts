@@ -1,12 +1,11 @@
-/// <reference path="_references.ts" />
 
-const Quests = {
+export const Quests = {
     RescuingFatherWuel : 'Rescuing Father Wuel',
     Passingtime : 'Passingtime',
     IngenuityTest : 'Ingenuity Test'
 }
 
-interface IAdventureContext {
+export interface IAdventureContext {
     idHero: string;
     world: string;
     adventure: string;
@@ -18,7 +17,7 @@ interface IAdventureContext {
 
 let _context : IAdventureContext;
 
-function getContext() : IAdventureContext {
+export function getContext () : IAdventureContext {
 
     if (!_context) {
 

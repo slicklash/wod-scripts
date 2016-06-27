@@ -1,18 +1,18 @@
-/// <reference path="../../../lib/typings/browser.d.ts" />
+import { parseHTML } from '../../common/dom/parse-html'
+import { httpFetch } from '../../common/net/http-fetch'
 
-/// <reference path="../../common/functions/ajax/http-fetch.ts" />
-/// <reference path="../../common/functions/parsing/parse-html.ts" />
-/// <reference path="../../common/functions/parsing/parse-item-details.ts" />
-/// <reference path="../../common/functions/parsing/parse-modifiers.ts" />
+import { ItemDetails, Constraints, parseItemDetails } from '../../common/parsing/parse-item-details'
+import { Modifiers, parseModifiers } from '../../common/parsing/parse-modifiers'
 
-/// <reference path="../../common/components/grid/grid.ts" />
+import { Grid, GridOptions } from  '../../common/components/grid/grid'
+import { GridDataSourceOptions, GridRequest } from  '../../common/components/grid/grid.data-source'
 
 interface ItemInfo extends ItemDetails {
     name: string;
     modifiers?: Modifiers;
 }
 
-class AppController {
+export class AppController {
 
     filters: any = {};
 

@@ -1,7 +1,7 @@
-/// <reference path="core.ts" />
-/// <reference path="compile.ts" />
+import { IComponent } from './core'
+import { compile } from './compile'
 
-function bootstrap (component: IComponent, parentElem?: Element) {
+export function bootstrap (component: IComponent, parentElem?: Element) {
 
     parentElem = <Element>(parentElem || document);
 

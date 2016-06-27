@@ -1,5 +1,5 @@
-import { parseHTML } from  '../common/dom/parse-html'
 import { getItemInfo, main } from './main'
+import { parseHTML } from '../common/dom/parse-html'
 
 describe('tidy_trade', () => {
 

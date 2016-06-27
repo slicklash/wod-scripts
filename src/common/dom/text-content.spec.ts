@@ -1,6 +1,4 @@
-/// <reference path="../../../_references.spec.ts" />
-
-/// <reference path="text-content.ts" />
+import { textContent } from './text-content'
 
 describe('common / functions / dom / textContent', () => {
 

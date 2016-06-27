@@ -1,6 +1,7 @@
-/// <reference path="toy.controller.ts" />
+import { IComponent } from '../toymvc/core'
+import { ToyController } from './toy.controller'
 
-const ToyComponent: IComponent = {
+export const ToyComponent: IComponent = {
    selector: 'toy',
    controller: ToyController,
    template: `

@@ -1,6 +1,6 @@
-/// <reference path="core.ts" />
+import { getByPath } from './core'
 
-function bindValue (elem, $ctrl, path, isTwoWay = undefined) {
+export function bindValue (elem, $ctrl, path, isTwoWay = undefined) {
 
     let sub = $ctrl.$subscribers[path];
     let key = elem.tagName === 'INPUT' ? 'value' : 'textContent';

@@ -1,8 +1,8 @@
-/// <reference path="../../common/components/toy/index.ts" />
+import { IComponent } from '../../common/toymvc/core'
+import { AppController } from './app.controller'
+import { ToyComponent } from '../../common/components/toy/toy.component'
 
-/// <reference path="app.controller.ts" />
-
-const AppComponent: IComponent = {
+export const AppComponent: IComponent = {
     controller: AppController,
     directives: [ToyComponent],
     selector: 'app',

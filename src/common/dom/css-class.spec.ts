@@ -1,6 +1,4 @@
-/// <reference path="../../../_references.spec.ts" />
-
-/// <reference path="css-class.ts" />
+import { cssClass } from './css-class'
 
 describe('common / functions / dom / cssClass', () => {
 

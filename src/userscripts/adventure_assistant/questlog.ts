@@ -1,6 +1,6 @@
-/// <reference path="_references.ts" />
+import { IAdventureContext, Quests } from './context'
 
-function initQuestLog(context: IAdventureContext) {
+export function initQuestLog(context: IAdventureContext) {
 
     if (!context || !context.isQuest) return;
 

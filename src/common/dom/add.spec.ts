@@ -1,6 +1,4 @@
-/// <reference path="../../../_references.spec.ts" />
-
-/// <reference path="add.ts" />
+import { add } from  './add'
 
 describe('common / functions / dom / add', () => {
 

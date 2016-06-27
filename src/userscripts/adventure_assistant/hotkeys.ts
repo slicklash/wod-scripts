@@ -1,6 +1,5 @@
-/// <reference path="_references.ts" />
 
-function initHotKeys() {
+export function initHotKeys () {
 
     // --- Action buttons
 
@@ -85,7 +84,7 @@ function initHotKeys() {
 
 }
 
-function publishChoiceEvent(choice) {
+function publishChoiceEvent (choice) {
 
     let event = new CustomEvent('adventure.choiceSelected', {
         'detail': choice.nextSibling.textContent.trim()
@@ -94,7 +93,7 @@ function publishChoiceEvent(choice) {
     window.dispatchEvent(event);
 }
 
-function addHotkeyFor(elem: Node, text: string) {
+function addHotkeyFor (elem: Node, text: string) {
     if (elem) {
         let span = document.createElement('span');
         span.innerHTML = `<sup style="padding: 1px 3px; border: 1px solid #666; font-size: 10px">${text}</sup>`;

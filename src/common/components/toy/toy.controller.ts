@@ -1,5 +1,4 @@
-
-class ToyController {
+export class ToyController {
 
     toy: any = { name: 'toy default' };
     name: string = 'default';

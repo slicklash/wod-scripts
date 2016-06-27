@@ -1,6 +1,6 @@
-/// <reference path="core.ts" />
+import { ensureMetadata, getByPath } from './core'
 
-const observable = ($ctrl, path, isComputed = undefined, expression = undefined, dependencies = undefined) => {
+export function observable ($ctrl, path, isComputed = undefined, expression = undefined, dependencies = undefined) {
 
     if (isComputed === false && path.indexOf('$ctrl.') !== 0) throw 'non computed path must start with: $ctrl.';
 
@@ -34,7 +34,7 @@ const observable = ($ctrl, path, isComputed = undefined, expression = undefined,
 
     Object.defineProperty(parent, key, { get: () => value, set: setter || function () {}, enumerable: true });
 
-    _ensureMetadata($ctrl);
+    ensureMetadata($ctrl);
     $ctrl.$subscribers[path] = fn => { subscribers.push(fn); };
     return $ctrl.$subscribers[path];
 }

@@ -1,18 +1,16 @@
-/// <reference path="../../../../lib/typings/browser.d.ts" />
+import { httpFetch } from '../net/http-fetch'
 
-/// <reference path="../../functions/ajax/http-fetch.ts" />
-
-interface GridDataSourceOptions {
+export interface GridDataSourceOptions {
     url: string;
     onConstructRequest: (req: GridRequest) => GridRequest;
 }
 
-interface GridRequest {
+export interface GridRequest {
     action: string;
     params: any;
 }
 
-class GridDataSource {
+export class GridDataSource {
 
     currentParams: any;
     currentOrderBy: any;

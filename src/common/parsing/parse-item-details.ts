@@ -1,12 +1,11 @@
-/// <reference path="../../../../lib/typings/browser.d.ts" />
+import { titleCase } from '../text/title-case'
+import { attr } from '../dom/attr'
+import { textContent } from '../dom/text-content'
+import { textNormalized } from '../dom/text-normalized'
+import { cssClass } from '../dom/css-class'
+import { parseHTML } from '../dom/parse-html'
 
-/// <reference path="../title-case.ts" />
-/// <reference path="../dom/attr.ts" />
-/// <reference path="../dom/text-content.ts" />
-/// <reference path="../dom/css-class.ts" />
-/// <reference path="./parse-html.ts" />
-
-interface ItemDetails {
+export interface ItemDetails {
     heroClasses: Constraints | string;
     races: Constraints | string;
     requirements: string[] | string;
@@ -23,12 +22,12 @@ interface ItemDetails {
     set: string;
 }
 
-interface Constraints {
+export interface Constraints {
     include: string[];
     exclude: string[];
 }
 
-const parseItemDetails = (elem: Element) : ItemDetails => { return new ItemDetailsParser().parse(elem); };
+export const parseItemDetails = (elem: Element) : ItemDetails => { return new ItemDetailsParser().parse(elem); };
 
 class ItemDetailsParser {
 

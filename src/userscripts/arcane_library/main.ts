@@ -1,7 +1,7 @@
-/// <reference path="../common/toymvc/bootstrap.ts" />
-/// <reference path="./app/index.ts" />
+import { bootstrap } from '../common/toymvc/bootstrap'
+import { AppComponent } from './app/app.component'
 
-function main (main_content?) {
+export function main (main_content?) {
 
     let main = main_content || document.querySelector('#main_content'),
         h1: Element = main.querySelector('h1');

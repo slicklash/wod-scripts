@@ -1,12 +1,11 @@
-/// <reference path="../../../../lib/typings/browser.d.ts" />
+import { attr } from '../dom/attr'
+import { textContent } from '../dom/text-content'
+import { textNormalized } from '../dom/text-normalized'
+import { cssClass } from '../dom/css-class'
+import { titleCase } from  '../text/title-case'
+import { camelCase } from  '../text/camel-case'
 
-/// <reference path="../dom/attr.ts" />
-/// <reference path="../dom/text-content.ts" />
-/// <reference path="../dom/css-class.ts" />
-/// <reference path="../title-case.ts" />
-/// <reference path="../camel-case.ts" />
-
-interface Modifiers {
+export interface Modifiers {
     owner: Modifier[];
     affected: Modifier[];
 }
@@ -25,7 +24,7 @@ interface Modifier {
     skill?: string;
 }
 
-const parseModifiers = (elem: Element) : Modifiers => { return new ModifiersParser().parse(elem); };
+export const parseModifiers = (elem: Element) : Modifiers => { return new ModifiersParser().parse(elem); };
 
 class ModifiersParser {
 

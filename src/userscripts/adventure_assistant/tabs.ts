@@ -1,9 +1,8 @@
-/// <reference path="_references.ts" />
 
 let crafting = [],
     appointments = [];
 
-function initTabs() {
+export function initTabs() {
 
     // --- Adventures
 

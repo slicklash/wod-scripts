@@ -1,7 +1,7 @@
-/// <reference path="core.ts" />
-/// <reference path="link.ts" />
+import { ATTR } from './core'
+import { link } from './link'
 
-function compile ($ctrl, elem, tpl) {
+export function compile ($ctrl, elem, tpl) {
 
     tpl = tpl.replace(/[^">]?\{\{(.+)\}\}[^"<]?/gi, (exp, value) => `<span [textContent]="{{${value}}}"></span>`);
 

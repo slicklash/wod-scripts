@@ -1,10 +1,7 @@
-/// <reference path="../../../../lib/typings/browser.d.ts" />
+import { parseHTML } from '../dom/parse-html'
+import { GridDataSource, GridDataSourceOptions } from './grid.data-source'
 
-/// <reference path="../../functions/parsing/parse-html.ts" />
-//
-/// <reference path="grid.data-source.ts" />
-
-interface GridOptions {
+export interface GridOptions {
     columns: GridColumn[];
     pageSize?: number;
 }
@@ -29,7 +26,7 @@ interface CollectionResponse {
 
 let forEach = (xs: any[], fn) => xs.map(fn).join('');
 
-class Grid {
+export class Grid {
 
     element: Element;
     tbody: HTMLTableSectionElement;
