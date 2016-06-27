@@ -21,17 +21,15 @@ export function getInfo (rows: HTMLTableRowElement[]): HeroInfo[] {
             hid     = Number((<any>cells[0].querySelector('input')).value).toString(),
             level   = Number(textContent(cells[2])),
             next    = cells[4],
-            tooltip = attr(next, 'onmouseover'),
+            dungeon = getDungeonName(<any>next),
             time    = textContent(cells[4]).trim(),
             value   = GM_getValue(hid),
             info    = value ? JSON.parse(value) : {},
             weight  = info.weight || (level === 0 ? 100 : level);
 
-        if (tooltip) {
-            let dungeon = tooltip.split("'")[1];
+        if (dungeon) {
             let localTime = time.split('/')[0];
             textContent(next, `${localTime} - ${dungeon}`);
-            next.setAttribute('onmouseover', `return wodToolTip(this,"${dungeon} <br/> ${time}");`);
         }
 
         let timeCell = add('td');
@@ -43,7 +41,14 @@ export function getInfo (rows: HTMLTableRowElement[]): HeroInfo[] {
     return result.sort((a, b) => a.weight - b.weight);
 }
 
-function saveWeights (rows: HTMLTableRowElement[]) {
+export function getDungeonName (td: HTMLTableCellElement) : string {
+    let tooltip: string = attr(td, 'onmouseover') || '';
+    let n = tooltip.lastIndexOf('left;\'>');
+    if (n > -1) tooltip = tooltip.slice(n);
+    return tooltip.replace(/.+\(this,'(.+)'\);/, '$1').replace(/.+>(.+)<\/th.+/i, '$1');
+}
+
+export function saveWeights (rows: HTMLTableRowElement[]) {
 
     let promises = [];
 
@@ -72,7 +77,7 @@ function saveWeights (rows: HTMLTableRowElement[]) {
     });
 }
 
-function main (main_content?) {
+export function main (main_content?) {
 
     let table = (main_content || document.querySelector('#main_content')).querySelector('form table'),
         rows: HTMLTableRowElement[] = table ? <HTMLTableRowElement[]>Array.from(table.querySelectorAll('tr')) : undefined;
@@ -90,12 +95,12 @@ function main (main_content?) {
 
         label.innerHTML = 'weight<br/>';
         attr(buttonSave, { 'type': 'button', 'value': 'Update', 'class': 'button clickable' });
-        buttonSave.addEventListener('click', saveWeights.bind(rows), false);
+        buttonSave.addEventListener('click', () => { saveWeights(rows) }, false);
         rows[0].appendChild(headerWeight);
         newTbody.appendChild(rows[0]);
 
-        let groupName = add('th')
-        textContent(groupName, 'group')
+        let groupName = add('th');
+        textContent(groupName, 'group');
         rows[0].insertBefore(groupName, rows[0].cells[4]);
 
         let heroes = getInfo(rows);
@@ -119,9 +124,9 @@ function main (main_content?) {
             makeInput(row, hero.weight);
             attr(row, 'class', 'row' + (color++ % 2));
 
-            let c = add('td')
-            textContent(c, hero.group)
-            row.insertBefore(c, row.cells[4])
+            let c = add('td');
+            c.innerHTML = `<a href="/wod/spiel/dungeon/group.php?name=${hero.group}" target="_blank" />${hero.group}</a>`;
+            row.insertBefore(c, row.cells[4]);
 
             if (i > 0 && group !== hero.group) {
                 group = hero.group;

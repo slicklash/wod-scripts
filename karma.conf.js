@@ -2,6 +2,7 @@
 module.exports = function (config) {
 
   var files = [
+      { pattern: '../node_modules/jasmine-data_driven_tests/src/all.js', included: true, watched: false },
       { pattern: '../lib/*polyfills.js', included: true, watched: false },
   ].concat(config.specs);
 
