@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser
-from tiny_api import Api
+from toyapi import Api
 from tinydb import TinyDB, where
 from collections import OrderedDict
 from itertools import chain
@@ -176,7 +176,7 @@ class Store:
                 a = int(item_lvl.split()[-1])
                 b = int(test_value[1:]) if op in '<>' else int(test_value)
                 op = lt if op == '<' else gt if op == '>' else eq
-                print (op, a, b)
+                print(op, a, b)
                 return op(a, b)
             return True
 

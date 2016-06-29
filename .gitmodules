@@ -1,0 +1,3 @@
+[submodule "src/userscripts/arcane_library/server/toyapi"]
+	path = src/userscripts/arcane_library/server/toyapi
+	url = git@github.com:slicklash/toyapi.git
