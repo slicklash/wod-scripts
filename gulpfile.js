@@ -3,6 +3,9 @@
 process.chdir(__dirname);
 
 let gulp = require('gulp'),
+    tsc = require('./gulp/tsc'),
+    stripAMD = require('./gulp/strip-amd'),
+    runall = require('./gulp/runall'),
     concat = require('gulp-concat-util'),
     replace = require('gulp-replace'),
     merge = require('merge2'),
@@ -27,6 +30,7 @@ let build_dir = 'build/',
         { key: 'arcane', dir: 'arcane_library' },
         { key: 'favmenu', dir: 'favorite_menu' },
         { key: 'heroes', dir: 'hero_list' },
+        { key: 'numismatist', dir: 'numismatist' },
         // { key: 'profile', dir: 'profile_export' },
         // { key: 'report', dir: 'report_exporter' },
         { key: 'storage', dir: 'storage_management' },
@@ -34,32 +38,6 @@ let build_dir = 'build/',
         // { key: 'wardrobe', dir: 'wardrobe' }
     ];
 
-let createTsProject = overrides => ts.createProject(Object.assign({
-        module: 'amd',
-        target: 'es5',
-        removeComments: true,
-        sourceMap: false
-}, overrides || {}));
-
-let reAMD = /define\(\[?".+require, exports(.+)?\) {\n\s{4}"use strict";\n((?:\s{4}.+\n?)+)}\);/g;
-let reIgnore = /exports\.(.+) = \1;/;
-let noAMD = function (shouldOptimize, match, imports, body) {
-    imports = (imports || '').split(/[,\s]+/).filter(x => !!x);
-    imports.forEach(x => { body = body.replace(new RegExp(x + '.', 'g'), ''); });
-    return (shouldOptimize ? '' : '\n\n') + body.split('\n').map(x => {
-       if (reIgnore.test(x)) return shouldOptimize ? '' : '//';
-       x = x.replace(/exports\.(.+) = /, 'var $1 = ').replace(/([^a-z_])exports\.([a-z0-9_$]+)([^a-z_])/gi, '$1$2$3');
-       if (shouldOptimize) x = x.replace(/\s{4}/, '');
-       return x;
-    })
-    .filter(x => x.trim()).join('\n');
-};
-
-let runall = function () {
-    let argv = Array.from(arguments);
-    let key = argv.pop();
-    run.apply(null, argv.map(x => x.indexOf(':') < 0 ? `${x}:${key}` : x));
-}
 
 scripts.forEach(x => {
 
@@ -68,8 +46,8 @@ scripts.forEach(x => {
     gulp.task('compile:' + x.key, () => {
         return gulp
                 .src([`${us_dir + x.dir}/main.ts`, 'lib/typings/index.d.ts'])
-                .pipe(ts(createTsProject({ outFile: x.dir + '.js', removeComments: true })))
-                .pipe(replace(reAMD, noAMD.bind(null, true)))
+                .pipe(tsc({ outFile: x.dir + '.js', removeComments: true }))
+                .pipe(stripAMD(true))
                 .pipe(gulp.dest(build_dir));
     });
 
@@ -113,8 +91,8 @@ scripts.forEach(x => {
         return gulp
                 .src(sources)
                 .pipe(sourcemaps.init())
-                .pipe(ts(createTsProject()))
-                .pipe(replace(reAMD, noAMD.bind(null, false)))
+                .pipe(tsc())
+                .pipe(stripAMD(false))
                 .pipe(sourcemaps.write('.', { sourceRoot: file => file.cwd + '/' + rootDir }))
                 .pipe(gulp.dest(build_dir + outDir));
     });
