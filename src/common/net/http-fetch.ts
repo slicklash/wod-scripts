@@ -1,4 +1,8 @@
-export function httpFetch (url, method = 'GET', data = undefined) {
+export interface IResponse {
+    data?: any
+}
+
+export function httpFetch (url, method = 'GET', data = undefined): Promise<IResponse> {
 
    return new Promise((resolve, reject) => {
         let request: any = {
@@ -7,9 +11,13 @@ export function httpFetch (url, method = 'GET', data = undefined) {
             onload: (request) => {
                 if (request.readyState !== 4) return;
                 if (request.status >= 200 && request.status < 300)
-                    resolve(request.responseText);
+                    resolve({
+                        data: request.responseText
+                    });
                 else
-                    reject(request.responseText);
+                    reject({
+                        data: request.responseText
+                    });
             }
         };
         if (typeof data === 'object') {

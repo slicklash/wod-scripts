@@ -43,8 +43,9 @@ export class AppController {
             let name = args.join(':');
             this.log(`parsing ${name}...`);
 
-            httpFetch('/wod/spiel/hero/item.php?name=' + encodeURIComponent(name)).then((result: string) => {
+            httpFetch('/wod/spiel/hero/item.php?name=' + encodeURIComponent(name)).then(resp => {
 
+                let result = resp.data;
                 let html = <any>parseHTML(result, true);
                 let details = html.querySelector('#details');
 
@@ -60,8 +61,8 @@ export class AppController {
             });
         }
         else if (cmd === 'jobs') {
-            httpFetch('http://localhost:8081/jobs').then((jobs: any) => {
-                jobs = JSON.parse(jobs);
+            httpFetch('http://localhost:8081/jobs').then(resp => {
+                let jobs = JSON.parse(resp.data);
                 if (jobs && jobs.length) {
                     jobs.forEach(x=> { this.handleCommand('parse', [x.item]); });
                 }

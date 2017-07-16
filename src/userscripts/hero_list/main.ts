@@ -1,8 +1,8 @@
-import { add } from '../common/dom/add'
-import { attr } from '../common/dom/attr'
-import { textContent } from '../common/dom/text-content'
-import { insertAfter } from '../common/dom/insert-after'
-import { httpFetch } from '../common/net/http-fetch'
+import { add } from '../../common/dom/add'
+import { attr } from '../../common/dom/attr'
+import { textContent } from '../../common/dom/text-content'
+import { insertAfter } from '../../common/dom/insert-after'
+import { httpFetch } from '../../common/net/http-fetch'
 
 interface HeroInfo {
    group: string;
@@ -62,8 +62,9 @@ export function saveWeights (rows: HTMLTableRowElement[]) {
         if (isNaN(weight)) weight = 0;
 
         let p = httpFetch('/wod/spiel/hero/profile.php?id=' + hid);
-        p.then((data: string) => {
-            let n = data.indexOf('group:'),
+        p.then(resp => {
+            let data = resp.data,
+                n = data.indexOf('group:'),
                 group = data.slice(n, n + 200).split('<a')[1].split(/[><]/)[1];
             GM_setValue(hid, JSON.stringify({ weight, group }));
         });

@@ -11,12 +11,11 @@ let gulp = require('gulp'),
     merge = require('merge2'),
     run = require('run-sequence'),
     del = require('del'),
-    ts = require('gulp-typescript'),
     jshint = require('gulp-jshint'),
     sourcemaps = require('gulp-sourcemaps'),
     remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul'),
     exec = require('child_process').exec,
-    Server = require('karma').Server,
+    KarmaServer = require('karma').Server,
     packageJSON  = require('./package'),
     jshintrc = packageJSON.jshintrc;
 
@@ -71,7 +70,7 @@ scripts.forEach(x => {
         ]
     };
 
-    gulp.task('_test_run:' + x.key, done => { new Server(specConfig, done).start(); });
+    gulp.task('_test_run:' + x.key, done => { new KarmaServer(specConfig, done).start(); });
 
     gulp.task('_test_compile:' + x.key, () => {
 
