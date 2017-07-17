@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Favorite Menu
 // @description    Script allows to alter main menu by injecting customizable entries
-// @version        1.0.1
+// @version        1.0.2
 // @author         Never
 // @include        http*://*.world-of-dungeons.*
 // @run-at         document-start
@@ -10,14 +10,14 @@
 
 (function() {
 'use strict';
-var add = function (tag, parentNode) {
+function add(tag, parentNode) {
     var elem = typeof tag === 'string' ? document.createElement(tag) : tag;
     if (parentNode && parentNode.nodeType) {
         parentNode.appendChild(elem);
     }
     return elem;
-};
-var attr = function (elem, nameOrMap, value, remove) {
+}
+function attr(elem, nameOrMap, value, remove) {
     if (remove) {
         elem.removeAttribute(nameOrMap);
     }
@@ -31,8 +31,8 @@ var attr = function (elem, nameOrMap, value, remove) {
         return elem.getAttribute(nameOrMap);
     }
     return elem;
-};
-var cssClass = function (elem, name, toggleOn) {
+}
+function cssClass(elem, name, toggleOn) {
     var classNames = elem.className.split(' '), has = classNames.some(function (x) { return x === name; });
     if (typeof toggleOn !== 'boolean')
         return has;
@@ -40,7 +40,7 @@ var cssClass = function (elem, name, toggleOn) {
         return elem;
     elem.className = toggleOn ? elem.className + ' ' + name : classNames.filter(function (x) { return x !== name; }).join(' ');
     return elem;
-};
+}
 var MENU_NAME = 'Favorites';
 var MENU_LAYOUT = {
     'my_heroes': [
@@ -82,7 +82,7 @@ var MENU_LAYOUT = {
 function main() {
     var verticalMenu = document.querySelector('.menu-vertical .menu-0-body');
     if (verticalMenu) {
-        var match_skin = document.querySelector('link[href*="skin"]').href.match(/skin[0-9\-]+/i), skin = match_skin ? match_skin[0] : '', font_render_url = 'http://fonts.neise-games.de/java_font_renderer/render?skin=' + skin, fav_menu = add('div'), caption = add('a', fav_menu), supports_img = skin !== 'skin-1';
+        var match_skin = document.querySelector('link[href*="skin"]').href.match(/skin[0-9\-]+/i), skin = match_skin ? match_skin[0] : '', font_render_url = window.location.protocol + "//fonts.neise-games.de/java_font_renderer/render?skin=" + skin, fav_menu = add('div'), caption = add('a', fav_menu), supports_img = skin !== 'skin-1';
         attr(fav_menu, { 'class': 'menu-1', id: 'menu_my_menu' });
         attr(caption, { 'class': 'menu-1-caption alink selected', 'onclick': "return menuOnClick(this,'','','');" });
         if (supports_img) {

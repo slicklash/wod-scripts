@@ -52,7 +52,7 @@ function main() {
 
         let match_skin = (<any>document.querySelector('link[href*="skin"]')).href.match(/skin[0-9\-]+/i),
             skin = match_skin ? match_skin[0] : '',
-            font_render_url = 'http://fonts.neise-games.de/java_font_renderer/render?skin=' + skin,
+            font_render_url = `${window.location.protocol}//fonts.neise-games.de/java_font_renderer/render?skin=${skin}`,
             fav_menu = add('div'),
             caption = add('a', fav_menu),
             supports_img = skin !== 'skin-1';
