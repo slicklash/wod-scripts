@@ -1,17 +1,14 @@
 import { parseHTML } from '../../common/dom/parse-html'
-// import { add } from '../../common/dom/add'
-// import { attr } from '../../common/dom/attr'
-// import { textContent } from '../../common/dom/text-content'
-// import { insertAfter } from '../../common/dom/insert-after'
+import { add } from '../../common/dom/add'
+import { attr } from '../../common/dom/attr'
 import { httpFetch } from '../../common/net/http-fetch'
 
 export function main (main_content?) {
 
     let idGroup = (<any>document.forms).the_form.gruppe_id.value;
 
-    debugger
-
-    getGroupHeroes(idGroup).then(getMedalInfo);
+    getGroupHeroes(idGroup).then(getMedalInfo)
+                           .then(showMedalInfo);
 }
 
 interface IHeroProfileInfo {
@@ -36,7 +33,7 @@ function getGroupHeroes(idGroup: string): Promise<IHeroProfileInfo[]> {
 
 }
 
-function getMedalInfo(profiles: IHeroProfileInfo[]) : Promise<any> {
+function getMedalInfo(profiles: IHeroProfileInfo[]) : Promise<IHeroProfileInfo[]> {
 
     let promises = profiles.map(profile => new Promise((resolve, reject) => {
 
@@ -57,7 +54,42 @@ function getMedalInfo(profiles: IHeroProfileInfo[]) : Promise<any> {
 
     }));
 
-    return Promise.all(promises);
+    return <any>Promise.all(promises);
+}
+
+function showMedalInfo(profiles: IHeroProfileInfo[]) {
+
+    let map: { [x: string]: string[] } = profiles.reduce((acc, x) => {
+
+        x.medals.forEach(m => {
+            let key = m.toLowerCase();
+            if (!Array.isArray(acc[key])) acc[key] = [];
+            acc[key].push(x.name);
+        });
+
+        return acc;
+
+    }, <any>{});
+
+    let dungeons = Array.from(document.querySelectorAll('#main_content .content_table tbody tr td:nth-child(2)'));
+
+    dungeons.forEach(td => {
+
+        let key = td.textContent.trim().toLowerCase();
+        let heroes = map[key] || [];
+        let allHeroes = heroes.length === profiles.length;
+
+        if (!allHeroes) {
+            let text = profiles.filter(x => heroes.indexOf(x.name) < 0).map(x => x.name).join('\n');
+            td.setAttribute('title', text);
+        }
+
+        let img: HTMLImageElement = add('img', td);
+
+        img.src = `/wod/css/icons/common/${allHeroes ? 'medal_big' : 'medal_big_gray' }.png`;
+        attr(img, 'style', 'width: 24px');
+    });
+
 }
 
 

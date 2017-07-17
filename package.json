@@ -3,29 +3,27 @@
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
   "devDependencies": {
-    "del": "^2.2.0",
+    "del": "^2.2.2",
     "gulp": "^3.9.1",
     "gulp-concat-util": "^0.5.5",
-    "gulp-jshint": "^2.0.1",
+    "gulp-jshint": "^2.0.4",
     "gulp-replace": "^0.5.4",
-    "gulp-sourcemaps": "^1.6.0",
-    "gulp-tsd": "^0.1.1",
-    "gulp-typescript": "^2.13.5",
+    "gulp-sourcemaps": "^1.12.0",
+    "gulp-typescript": "^2.14.1",
     "http-server": "^0.8.5",
-    "jasmine-core": "^2.4.1",
+    "jasmine-core": "^2.6.4",
     "jasmine-data_driven_tests": "^1.0.0",
-    "jshint": "^2.9.2",
+    "jshint": "^2.9.5",
     "karma": "^0.13.22",
     "karma-chrome-launcher": "^0.2.3",
     "karma-coverage": "^0.5.5",
     "karma-jasmine": "^0.3.8",
-    "karma-phantomjs-launcher": "^1.0.0",
+    "karma-phantomjs-launcher": "^1.0.4",
     "karma-spec-reporter": "0.0.24",
     "merge2": "^0.3.7",
-    "phantomjs-prebuilt": "^2.1.7",
+    "phantomjs-prebuilt": "^2.1.14",
     "remap-istanbul": "^0.5.1",
-    "run-sequence": "^1.2.1",
-    "typescript": "^1.8.10"
+    "run-sequence": "^1.2.2"
   },
   "scripts": {
     "re": "http-server -c-1 -o -p 8000 ./release"
@@ -60,5 +58,8 @@
       "GM_getValue": false,
       "GM_setValue": false
     }
+  },
+  "dependencies": {
+    "typescript": "^2.4.1"
   }
 }
