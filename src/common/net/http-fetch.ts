@@ -8,6 +8,7 @@ export function httpFetch (url, method = 'GET', data = undefined): Promise<IResp
         let request: any = {
             method: method,
             url: url,
+            headers: { Cookie: document.cookie },
             onload: (request) => {
                 if (request.readyState !== 4) return;
                 if (request.status >= 200 && request.status < 300)

@@ -2,6 +2,7 @@ import { parseHTML } from '../../common/dom/parse-html'
 import { add } from '../../common/dom/add'
 import { attr } from '../../common/dom/attr'
 import { httpFetch } from '../../common/net/http-fetch'
+import { log } from '../../common/debugging/log'
 
 export function main (main_content?) {
 
@@ -77,7 +78,7 @@ function showMedalInfo(profiles: IHeroProfileInfo[]) {
 
         let key = td.textContent.trim().toLowerCase();
         let heroes = map[key] || [];
-        let allHeroes = heroes.length === profiles.length;
+        let allHeroes = profiles.length && heroes.length === profiles.length;
 
         if (!allHeroes) {
             let text = profiles.filter(x => heroes.indexOf(x.name) < 0).map(x => x.name).join('\n');
@@ -87,7 +88,7 @@ function showMedalInfo(profiles: IHeroProfileInfo[]) {
         let img: HTMLImageElement = add('img', td);
 
         img.src = `/wod/css/icons/common/${allHeroes ? 'medal_big' : 'medal_big_gray' }.png`;
-        attr(img, 'style', 'width: 24px');
+        attr(img, 'style', 'width: 24px; float: right');
     });
 
 }
