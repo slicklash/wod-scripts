@@ -7,5 +7,5 @@ export function log (...args) {
         log.setAttribute('id', '_log-window');
         center.parentNode.insertBefore(log, center)
     }
-    log.textContent += args.join(' ');
+    log.textContent += args.join(' ') + '\n';
 }

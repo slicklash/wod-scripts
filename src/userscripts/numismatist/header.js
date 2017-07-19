@@ -4,6 +4,7 @@
 // @version        1.0.0
 // @author         Never
 // @include        http*://*.world-of-dungeons.*wod/spiel/help/dungeonlist.php*
+// @include        http*://*.world-of-dungeons.*wod/spiel/hero/title_list.php?menukey=hero_titles*
 // @run-at         document-start
 // @grant          GM_xmlhttpRequest
 // ==/UserScript==
