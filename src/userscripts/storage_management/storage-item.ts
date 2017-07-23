@@ -10,11 +10,11 @@ export class StorageItem {
 
     private _isConsumbale = false;
 
-    public ctrlSelect = null;
-    public ctrlLocation = null;
-    public ctrlSell = null;
+    public ctrlLocationSelect: HTMLSelectElement = null;
+    public ctrlLocationCheckbox: HTMLInputElement = null;
+    public ctrlSellCheckbox: HTMLInputElement = null;
 
-    public value: number = 0;
+    public price: number = 0;
 
     get isConsumable(): boolean {
         if (this._isConsumbale) return true;

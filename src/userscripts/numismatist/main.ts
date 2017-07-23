@@ -9,8 +9,17 @@ export function main (main_content?) {
     let isDungeonList = location.pathname.includes('dungeonlist');
     let idGroup = (<any>document.forms).the_form.gruppe_id.value;
 
-    getGroupHeroes(idGroup).then(getHeroProfiles.bind(null, isDungeonList))
-                           .then(isDungeonList ? showDungeonMedalInfo : showFameMedalInfo);
+    let p = getGroupHeroes(idGroup).then(getHeroProfiles.bind(null, isDungeonList));
+
+    if (isDungeonList) {
+        p.then(showDungeonMedalInfo);
+    }
+    else if (location.pathname.includes('title_list')) {
+        p.then(showFameMedalInfo);
+    }
+    else {
+        p.then(showLevelUpMedalInfo);
+    }
 }
 
 interface IHero {
@@ -21,6 +30,7 @@ interface IHero {
 interface IHeroProfileInfo extends IHero {
     medals?: string[];
     fame?: number;
+    exp?: number;
     isMentor: boolean;
 }
 
@@ -60,6 +70,9 @@ function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfile
                 else if (x.cells[0].textContent.trim() === 'fame') {
                     profile.fame = Number(x.cells[1].textContent.replace(/ /g, ''));
                 }
+                else if (x.cells[0].textContent.trim().includes('gained')) {
+                    profile.exp = Number(x.cells[1].textContent.replace(/ /g, ''));
+                }
             });
 
             if (!includeMedals || profile.isMentor) {
@@ -79,6 +92,33 @@ function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfile
                 resolve(profile);
             });
         });
+    });
+}
+
+function showLevelUpMedalInfo(profiles: IHeroProfileInfo[]) {
+
+    let rows: HTMLTableRowElement[] = <any>Array.from(document.querySelectorAll('.content_table tr'));
+
+    let nonMentors = profiles.filter(x => !x.isMentor);
+
+    rows.forEach((tr, i) => {
+
+        let td = tr.cells[0];
+        td.setAttribute('style', 'min-width: 50px');
+
+        if (i > 2) {
+
+            let requiredExp = parseInt(tr.cells[2].textContent.replace(/\s/g, ''));
+            let notObtained = nonMentors.filter(x => x.exp < requiredExp).map(x => `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`).sort();
+
+            if (notObtained.length) {
+                addMedalIcon(false, td, 'left');
+                tr.setAttribute('title', `Exp deficit (${notObtained.length}):\n\n${notObtained.join('\n')}`);
+            }
+            else {
+                addMedalIcon(true, td, 'left');
+            }
+        }
     });
 }
 
@@ -154,12 +194,12 @@ function showDungeonMedalInfo(profiles: IHeroProfileInfo[]) {
     });
 }
 
-function addMedalIcon(isAchieved: boolean, elem: Element) {
+function addMedalIcon(isAchieved: boolean, elem: Element, position: string = 'right') {
 
-    let img: HTMLImageElement = add('img', elem);
+    let img: HTMLImageElement = add<HTMLImageElement>('img', elem);
 
     img.src = `/wod/css/icons/common/${isAchieved ? 'medal_big' : 'medal_big_gray' }.png`;
-    attr(img, 'style', 'width: 24px; float: right');
+    attr(img, 'style', 'width: 24px; float: ' + position);
 }
 
 
