@@ -19,6 +19,7 @@ export class StorageController {
         let rows = this._getTableRows(main_content);
         this._items = this._parseItems(rows);
         this._createControls(<any>buttons_commit);
+        this._attachEvents();
     }
 
     _createControls(buttons_commit: HTMLInputElement[]) {
@@ -77,22 +78,30 @@ export class StorageController {
         let option = this._options.find(x => x.key === e.target.value);
 
         if (option.key === 'none') {
-            this.sellSum = 0;
-            this.sellCount = 0;
         }
 
         for (let item of this._items) {
             if (item.ctrlSellCheckbox && option.predicate(item)) {
                 item.ctrlSellCheckbox.checked = option.pick;
-                if (option.pick) {
-                    this.sellCount++;
-                    this.sellSum += item.price;
-                }
+            }
+        }
+
+        this._updateSellInfo();
+    }
+
+    _updateSellInfo() {
+
+        this.sellSum = 0;
+        this.sellCount = 0;
+
+        for (let item of this._items) {
+            if (item.ctrlSellCheckbox && item.ctrlSellCheckbox.checked) {
+                this.sellCount++;
+                this.sellSum += item.price;
             }
         }
 
         let sellInfo = this.sellCount > 0 ? `&nbsp;${this.sellCount} (${this.sellSum} <img alt="" border="0" src="/wod/css//skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
-
         this.labelsSellInfo.forEach(x => { x.innerHTML = sellInfo });
     }
 
@@ -234,6 +243,46 @@ export class StorageController {
         }, []);
     }
 
+    _table: HTMLTableElement;
+
+    _attachEvents() {
+
+        if (!this._table) {
+            return;
+        }
+
+        this._table.addEventListener('click', (e) => {
+
+            let elem: HTMLInputElement = <any>e.target;
+
+            if (elem.tagName !== 'INPUT' || elem.type !== 'checkbox') {
+                return;
+            }
+
+            let name = elem.name;
+            let item: StorageItem;
+
+            if (name.startsWith('Sell')) {
+                item = this._items.find(x => x.ctrlSellCheckbox === elem);
+                if (item && e.shiftKey) {
+                    this._items.forEach(y => {
+                        if (y.name === item.name) y.ctrlSellCheckbox.checked = elem.checked;
+                    });
+                }
+
+                this._updateSellInfo();
+            }
+            else if (name.startsWith('doEquip')) {
+                item = this._items.find(x => x.ctrlLocationCheckbox === elem);
+                if (item) {
+                    this._items.forEach(y => {
+                        if (y.name === item.name) y.ctrlLocationCheckbox.checked = elem.checked;
+                    });
+                }
+            }
+        });
+    }
+
     _getTableRows(main_content): HTMLTableRowElement[] {
 
         let scope: any = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]');
@@ -241,10 +290,12 @@ export class StorageController {
         if (!scope || !scope.length) scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_KELLER_DO_SORT"][class*="table_h"]');
         if (!scope || !scope.length) scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_GROUPCELLAR_DO_SORT"][class*="table_h"]');
 
-        try { scope = scope[0].parentNode.parentNode.parentNode.parentNode; } catch (ex) { scope = null; }
+        try { scope = scope[0].parentNode.parentNode.parentNode.parentNode.querySelector('tbody'); } catch (ex) { scope = null; }
 
         if (!scope) return [];
 
-        return <any>Array.from(scope.querySelectorAll('tbody tr[class="row0"], tbody tr[class="row1"]'));
+        this._table = scope;
+
+        return <any>Array.from(scope.querySelectorAll('tr'));
     }
 }
