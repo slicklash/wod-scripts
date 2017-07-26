@@ -60,13 +60,18 @@ function httpFetch(url, method, data) {
         var request = {
             method: method,
             url: url,
+            headers: { Cookie: document.cookie },
             onload: function (request) {
                 if (request.readyState !== 4)
                     return;
                 if (request.status >= 200 && request.status < 300)
-                    resolve(request.responseText);
+                    resolve({
+                        data: request.responseText
+                    });
                 else
-                    reject(request.responseText);
+                    reject({
+                        data: request.responseText
+                    });
             }
         };
         if (typeof data === 'object') {
@@ -104,8 +109,8 @@ function saveWeights(rows) {
         if (isNaN(weight))
             weight = 0;
         var p = httpFetch('/wod/spiel/hero/profile.php?id=' + hid);
-        p.then(function (data) {
-            var n = data.indexOf('group:'), group = data.slice(n, n + 200).split('<a')[1].split(/[><]/)[1];
+        p.then(function (resp) {
+            var data = resp.data, n = data.indexOf('group:'), group = data.slice(n, n + 200).split('<a')[1].split(/[><]/)[1];
             GM_setValue(hid, JSON.stringify({ weight: weight, group: group }));
         });
         promises.push(p);
