@@ -85,14 +85,14 @@ export function main (main_content?) {
 
     if (rows) {
 
-        let newTable  = add('table'),
-            newTbody  = add('tbody', newTable);
+        let newTable  = add<HTMLElement>('table'),
+            newTbody  = add<HTMLElement>('tbody', newTable);
 
         attr(newTable, 'class', 'content_table');
 
-        let headerWeight = add('th'),
-            label = add('span', headerWeight),
-            buttonSave = add('input', headerWeight);
+        let headerWeight = add<Element>('th'),
+            label = add<HTMLSpanElement>('span', headerWeight),
+            buttonSave = add<HTMLInputElement>('input', headerWeight);
 
         label.innerHTML = 'weight<br/>';
         attr(buttonSave, { 'type': 'button', 'value': 'Update', 'class': 'button clickable' });
@@ -100,7 +100,7 @@ export function main (main_content?) {
         rows[0].appendChild(headerWeight);
         newTbody.appendChild(rows[0]);
 
-        let groupName = add('th');
+        let groupName = add<HTMLElement>('th');
         textContent(groupName, 'group');
         rows[0].insertBefore(groupName, rows[0].cells[4]);
 
@@ -125,7 +125,7 @@ export function main (main_content?) {
             makeInput(row, hero.weight);
             attr(row, 'class', 'row' + (color++ % 2));
 
-            let c = add('td');
+            let c = add<HTMLElement>('td');
             c.innerHTML = `<a href="/wod/spiel/dungeon/group.php?name=${hero.group}" target="_blank" />${hero.group}</a>`;
             row.insertBefore(c, row.cells[4]);
 

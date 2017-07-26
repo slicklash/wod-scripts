@@ -1,6 +1,7 @@
-import { add } from '../common/dom/add'
-import { attr } from '../common/dom/attr'
-import { cssClass } from '../common/dom/css-class'
+import { add } from '../../common/dom/add'
+import { attr } from '../../common/dom/attr'
+import { cssClass } from '../../common/dom/css-class'
+import { waitFor } from '../../common/dom/wait-for'
 
 // --- Main
 
@@ -44,158 +45,155 @@ let MENU_LAYOUT = {
     ]
 };
 
-function main() {
+function main(verticalMenu: HTMLElement) {
 
-    let verticalMenu = document.querySelector('.menu-vertical .menu-0-body');
+    if (!verticalMenu) return;
 
-    if (verticalMenu) {
+    let match_skin = (<any>document.querySelector('link[href*="skin"]')).href.match(/skin[0-9\-]+/i),
+        skin = match_skin ? match_skin[0] : '',
+        font_render_url = `${window.location.protocol}//fonts.neise-games.de/java_font_renderer/render?skin=${skin}`,
+        fav_menu = add<HTMLDivElement>('div'),
+        caption = add<HTMLAnchorElement>('a', fav_menu),
+        supports_img = skin !== 'skin-1';
 
-        let match_skin = (<any>document.querySelector('link[href*="skin"]')).href.match(/skin[0-9\-]+/i),
-            skin = match_skin ? match_skin[0] : '',
-            font_render_url = `${window.location.protocol}//fonts.neise-games.de/java_font_renderer/render?skin=${skin}`,
-            fav_menu = add('div'),
-            caption = add('a', fav_menu),
-            supports_img = skin !== 'skin-1';
+    attr(fav_menu, { 'class': 'menu-1', id: 'menu_my_menu' });
+    attr(caption, { 'class': 'menu-1-caption alink selected', 'onclick': "return menuOnClick(this,'','','');" });
 
-        attr(fav_menu, { 'class': 'menu-1', id: 'menu_my_menu' });
-        attr(caption, { 'class': 'menu-1-caption alink selected', 'onclick': "return menuOnClick(this,'','','');" });
+    if (supports_img) {
+        attr(add('img', caption), { 'class': 'font_menu-1', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1&text=' + MENU_NAME });
+        attr(add('img', caption), { 'class': 'font_menu-1-hovered', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-hovered&text=' + MENU_NAME });
+        attr(add('img', caption), { 'class': 'font_menu-1-selected', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-selected&text=' + MENU_NAME });
+    }
+    else {
+        caption.textContent = MENU_NAME;
+    }
 
-        if (supports_img) {
-            attr(add('img', caption), { 'class': 'font_menu-1', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1&text=' + MENU_NAME });
-            attr(add('img', caption), { 'class': 'font_menu-1-hovered', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-hovered&text=' + MENU_NAME });
-            attr(add('img', caption), { 'class': 'font_menu-1-selected', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-selected&text=' + MENU_NAME });
+    attr(add('span', caption), 'class', 'menu-1-arrow open');
+
+    let menu0 = add('div', fav_menu),
+        menu_body = add('div', menu0),
+        menu_items = {},
+        open_links = {};
+
+    attr(menu0, { 'class': 'menu-1-body', 'style' : 'display: block' });
+    attr(menu_body, 'class', 'menu-2');
+
+    let match_name,
+    menu1 = Array.from(verticalMenu.querySelectorAll('.menu-1'));
+
+    menu1.forEach(open_menu => {
+
+        if (cssClass(open_menu, 'open')) {
+
+            let tmp = open_menu.querySelectorAll('a');
+
+            for (let j = 0, c2 = tmp.length; j < c2; j++) {
+                match_name = attr(tmp[j], 'onclick').match(/'([a-z_ ]+)',''\);$/i);
+                if (match_name) open_links[match_name[1]] = open_menu;
+            }
+        }
+    });
+
+    let links = verticalMenu.querySelectorAll('.menu-2 a');
+
+    for (let i = 0, cnt = links.length; i < cnt; i++) {
+
+        let link = links[i];
+
+        match_name = attr(link, 'onclick').match(/'([a-z_ ]+)',''\);$/i);
+
+        if (match_name) {
+            menu_items[match_name[1]] = link.cloneNode(true);
+            // console.log(match_name[1], ' : ', link.innerText.replace(/^\s+|\s+$/g,""));
+        }
+    }
+
+    Object.keys(MENU_LAYOUT).forEach(key => {
+
+        let link = menu_items[key];
+        let submenu;
+
+        if (!link) {
+            link = add('a');
+            attr(link, { 'href':'#', 'class': 'menu-2-caption' });
+        }
+
+        attr(link, 'onclick', null, true);
+
+        let menu_item = MENU_LAYOUT[key];
+
+        if (typeof menu_item === 'string') {
+
+            link.innerHTML = menu_item;
+
+            let open_menu = open_links[key];
+
+            if (open_menu) {
+
+                let arrow = open_menu.querySelector('.menu-1-arrow');
+
+                cssClass(open_menu, 'open', false);
+
+                if (arrow) {
+                    cssClass(arrow, 'open', false);
+                    cssClass(arrow, 'closed', true);
+                }
+            }
         }
         else {
-            caption.textContent = MENU_NAME;
-        }
 
-        attr(add('span', caption), 'class', 'menu-1-arrow open');
+            link.textContent = menu_item[0];
 
-        let menu0 = add('div', fav_menu),
-            menu_body = add('div', menu0),
-            menu_items = {},
-            open_links = {};
+            let submenu_items = menu_item[1];
 
-        attr(menu0, { 'class': 'menu-1-body', 'style' : 'display: block' });
-        attr(menu_body, 'class', 'menu-2');
+            submenu = add('div');
 
-        let match_name,
-        menu1 = Array.from(verticalMenu.querySelectorAll('.menu-1'));
+            attr(submenu, { 'class': 'menu-2-body', 'style': 'padding-top: 0px' });
 
-        menu1.forEach(open_menu => {
+            Object.keys(submenu_items).forEach(subkey => {
 
-            if (cssClass(open_menu, 'open')) {
+                let sublink = menu_items[subkey];
 
-                let tmp = open_menu.querySelectorAll('a');
+                if (sublink) {
 
-                for (let j = 0, c2 = tmp.length; j < c2; j++) {
-                    match_name = attr(tmp[j], 'onclick').match(/'([a-z_ ]+)',''\);$/i);
-                    if (match_name) open_links[match_name[1]] = open_menu;
-                }
-            }
-        });
+                    attr(sublink, 'onclick', null, true);
 
-        let links = verticalMenu.querySelectorAll('.menu-2 a');
+                    let menu3 = add<HTMLDivElement>('div', submenu),
+                        menu3_cap = add<HTMLAnchorElement>(sublink, menu3);
 
-        for (let i = 0, cnt = links.length; i < cnt; i++) {
+                    attr(menu3, 'class', 'menu-3');
+                    cssClass(menu3_cap, 'menu-2-caption', false);
+                    cssClass(menu3_cap, 'menu-3-caption', true);
 
-            let link = links[i];
+                    menu3_cap.innerHTML = submenu_items[subkey];
 
-            match_name = attr(link, 'onclick').match(/'([a-z_ ]+)',''\);$/i);
+                    let open_menu = open_links[subkey];
 
-            if (match_name) {
-                menu_items[match_name[1]] = link.cloneNode(true);
-                // console.log(match_name[1], ' : ', link.innerText.replace(/^\s+|\s+$/g,""));
-            }
-        }
+                    if (open_menu) {
 
-        Object.keys(MENU_LAYOUT).forEach(key => {
+                        let arrow = open_menu.querySelector('.menu-1-arrow');
 
-            let link = menu_items[key],
-                submenu = false;
+                        cssClass(open_menu, 'open', false);
 
-            if (!link) {
-                link = add('a');
-                attr(link, { 'href':'#', 'class': 'menu-2-caption' });
-            }
-
-            attr(link, 'onclick', null, true);
-
-            let menu_item = MENU_LAYOUT[key];
-
-            if (typeof menu_item === 'string') {
-
-                link.innerHTML = menu_item;
-
-                let open_menu = open_links[key];
-
-                if (open_menu) {
-
-                    let arrow = open_menu.querySelector('.menu-1-arrow');
-
-                    cssClass(open_menu, 'open', false);
-
-                    if (arrow) {
-                        cssClass(arrow, 'open', false);
-                        cssClass(arrow, 'closed', true);
-                    }
-                }
-            }
-            else {
-
-                link.textContent = menu_item[0];
-
-                let submenu_items = menu_item[1];
-
-                submenu = add('div');
-
-                attr(submenu, { 'class': 'menu-2-body', 'style': 'padding-top: 0px' });
-
-                Object.keys(submenu_items).forEach(subkey => {
-
-                    let sublink = menu_items[subkey];
-
-                    if (sublink) {
-
-                        attr(sublink, 'onclick', null, true);
-
-                        let menu3 = add('div', submenu),
-                            menu3_cap = add(sublink, menu3);
-
-                        attr(menu3, 'class', 'menu-3');
-                        cssClass(menu3_cap, 'menu-2-caption', false);
-                        cssClass(menu3_cap, 'menu-3-caption', true);
-
-                        menu3_cap.innerHTML = submenu_items[subkey];
-
-                        let open_menu = open_links[subkey];
-
-                        if (open_menu) {
-
-                            let arrow = open_menu.querySelector('.menu-1-arrow');
-
-                            cssClass(open_menu, 'open', false);
-
-                            if (arrow) {
-                                cssClass(arrow, 'open', false);
-                                cssClass(arrow, 'closed', true);
-                            }
+                        if (arrow) {
+                            cssClass(arrow, 'open', false);
+                            cssClass(arrow, 'closed', true);
                         }
                     }
-                });
-            }
+                }
+            });
+        }
 
-            let new_menu = add('div', menu_body);
-            attr(new_menu, 'class', 'menu-2 open');
-            add(link, new_menu);
-            if (submenu) add(submenu, new_menu);
-        });
+        let new_menu = add('div', menu_body);
+        attr(new_menu, 'class', 'menu-2 open');
+        add(link, new_menu);
+        if (submenu) add(submenu, new_menu);
+    });
 
-        let menu_between = add('div');
-        attr(menu_between, 'class', 'menu-between');
-        verticalMenu.insertBefore(menu_between, verticalMenu.firstChild);
-        verticalMenu.insertBefore(fav_menu, verticalMenu.firstChild);
-    }
+    let menu_between = add<HTMLDivElement>('div');
+    attr(menu_between, 'class', 'menu-between');
+    verticalMenu.insertBefore(menu_between, verticalMenu.firstChild);
+    verticalMenu.insertBefore(fav_menu, verticalMenu.firstChild);
 }
 
-if (!(<any>window).__karma__) document.addEventListener('DOMContentLoaded', () => main());
+waitFor('.menu-vertical .menu-0-body').then(main);

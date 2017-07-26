@@ -4,7 +4,7 @@ describe('common / functions / dom / add', () => {
 
     it('should create div element', () => {
 
-        let el = add('div')
+        let el = add<HTMLDivElement>('div')
         expect(el.tagName).toBe('DIV')
 
     })
@@ -13,7 +13,7 @@ describe('common / functions / dom / add', () => {
     it('should create DIV element and add it to parent', () => {
 
         var parent = document.createElement('div'), 
-            el = add('div', parent);
+            el = add<HTMLDivElement>('div', parent);
 
         expect(el.parentNode).toBe(parent);
 
@@ -24,7 +24,7 @@ describe('common / functions / dom / add', () => {
 
         var el = document.createElement('div'),
             parent = document.createElement('div'),
-            sut = add(el, parent);
+            sut = add<any>(el, parent);
 
         expect(sut).toBe(el);
 

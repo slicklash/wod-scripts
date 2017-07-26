@@ -6,6 +6,8 @@ export class StorageItem {
 
     public isUsable = true;
 
+    public uses: number = 1;
+
     public isGroupItem = true;
 
     private _isConsumbale = false;

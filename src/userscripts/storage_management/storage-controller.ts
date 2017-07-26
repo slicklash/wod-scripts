@@ -3,26 +3,55 @@ import { attr } from '../../common/dom/attr'
 import { textContent } from '../../common/dom/text-content'
 import { insertAfter } from '../../common/dom/insert-after'
 import { _t } from './nls'
+import { waitFor } from '../../common/dom/wait-for'
 
 import { StorageItem } from './storage-item'
 import { ISelectionOption, SELECTION_OPTIONS } from './selection-options'
 
-export class StorageController {
+const CommitButtonSelector = '#main_content input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]';
 
-    _items: StorageItem[] = [];
+export class StorageController {
 
     _options: ISelectionOption[] = SELECTION_OPTIONS;
 
+    _items: StorageItem[] = [];
+
+    _ready: Promise<any>;
+
     $onInit() {
-        let main_content = document.querySelector('#main_content');
-        let buttons_commit = main_content ? main_content.querySelectorAll('input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]') : [];
-        let rows = this._getTableRows(main_content);
-        this._items = this._parseItems(rows);
-        this._createControls(<any>buttons_commit);
-        this._attachEvents();
+
+        this._ready = waitFor(document, 'DOMContentLoaded');
+
+        waitFor('select[name*="hero_race"]').then(this._makeClassAndRaceSelectable);
+
+        waitFor('input[type="hidden"][name="view"]').then(elem => {
+            if (elem && elem.value !== 'gear') this._createControls();
+        });
     }
 
-    _createControls(buttons_commit: HTMLInputElement[]) {
+    _makeClassAndRaceSelectable() {
+
+        let selectClass: HTMLSelectElement = <any>document.querySelector('select[name*="hero_class"]');
+        let selectRace: HTMLSelectElement = <any>document.querySelector('select[name*="hero_race"]');
+
+        if (!selectClass || !selectRace) return;
+
+        let label = selectClass.parentElement.previousElementSibling;
+
+        label.classList.add('button_minor');
+        label.setAttribute('style', 'padding: 0');
+        label.addEventListener('click', () => {
+            let form = (<any>document.forms).the_form;
+            selectClass.value = form.klasse_id.value;
+            selectRace.value = form.rasse_id.value;
+        });
+    }
+
+    _createControls() {
+
+        let buttons_commit = <any>Array.from(document.querySelectorAll(CommitButtonSelector));
+
+        if (!buttons_commit.length) return;
 
         let isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1,
             isGroupTv = window.location.href.indexOf('groupcellar') > -1 && !isGroupStorage,
@@ -46,6 +75,10 @@ export class StorageController {
         let onSelectChanged = this._onSelectChanged.bind(this);
         let onSellChanged = this._onSellChanged.bind(this);
 
+        let selectsForLocation: HTMLSelectElement[] = [];
+        let selectsForSell: HTMLSelectElement[] = [];
+        let actionButtons: HTMLInputElement[] = [];
+
         buttons_commit.forEach(commit => {
 
             let labelMove = this._makeLabel('Select'),
@@ -55,17 +88,35 @@ export class StorageController {
                 buttonEquip = this._makeButton('Equip', onEquip),
                 selectForLocation = this._makeSelect(140, onSelectChanged),
                 selectForSell = this._makeSelect(120, onSellChanged),
-                labelSellInfo = add('span');
+                labelSellInfo = add<HTMLSpanElement>('span');
+
+            actionButtons.push(buttonSplit, buttonCellar, buttonEquip);
 
             this.labelsSellInfo.push(labelSellInfo);
 
-            this._addOptions(selectForLocation, this._options);
-            this._addOptions(selectForSell, this._options.filter(x => !x.notForSell), true);
+            selectsForLocation.push(selectForLocation);
+            selectsForSell.push(selectForSell);
 
             insertAfter(commit,
                         labelMove, selectForLocation,
                         buttonSplit, buttonCellar, buttonEquip,
                         labelSell, selectForSell, labelSellInfo);
+        });
+
+        this._ready.then(() => {
+
+            let rows = this._getTableRows(document.querySelector('#main_content'));
+
+            this._items = this._parseItems(rows);
+
+            selectsForLocation.forEach(x => { this._addOptions(x, this._options); x.disabled = false; });
+
+            let sellOptions = this._options.filter(x => !x.notForSell);
+            selectsForSell.forEach(x => { this._addOptions(x, sellOptions, true); x.disabled = false; });
+
+            actionButtons.forEach(x => { x.disabled = false });
+
+            this._attachEvents();
         });
     }
 
@@ -76,9 +127,6 @@ export class StorageController {
     _onSellChanged(e) {
 
         let option = this._options.find(x => x.key === e.target.value);
-
-        if (option.key === 'none') {
-        }
 
         for (let item of this._items) {
             if (item.ctrlSellCheckbox && option.predicate(item)) {
@@ -101,7 +149,7 @@ export class StorageController {
             }
         }
 
-        let sellInfo = this.sellCount > 0 ? `&nbsp;${this.sellCount} (${this.sellSum} <img alt="" border="0" src="/wod/css//skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
+        let sellInfo = this.sellCount > 0 ? `&nbsp;${this.sellCount} (${this.sellSum} <img alt="" border="0" src="/wod/css/skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : '';
         this.labelsSellInfo.forEach(x => { x.innerHTML = sellInfo });
     }
 
@@ -167,14 +215,14 @@ export class StorageController {
 
     _makeButton(text: string, onClick: EventListenerOrEventListenerObject) {
         let btn = add<HTMLInputElement>('input');
-        attr(btn, {'type': 'button', 'class': 'button clickable', 'name': `button${text}`, 'value': `${text}`, 'style': 'margin-left: 5px'});
+        attr(btn, {'type': 'button', 'class': 'button clickable', 'name': `button${text}`, 'value': `${text}`, 'style': 'margin-left: 5px', 'disabled': 'disabled'});
         btn.addEventListener('click', onClick, false);
         return btn;
     }
 
     _makeSelect(width: number, onSelect: EventListenerOrEventListenerObject) {
         let select = add<HTMLSelectElement>('select');
-        attr(select, { 'style': `min-width: ${width}px` });
+        attr(select, { 'style': `min-width: ${width}px`, 'disabled': 'disabled' });
         select.addEventListener('change', onSelect, false);
         return select;
     }
@@ -220,7 +268,11 @@ export class StorageController {
             let item = new StorageItem();
             item.name = name;
 
-            item.isConsumable = re_uses.test(uses);
+            let m = uses.match(re_uses);
+            if (m) {
+                item.isConsumable = true;
+                item.uses = m[1];
+            }
             item.isUsable = classes.indexOf('item_unusable') === -1;
             item.isGroupItem = tooltip ? tooltip.indexOf('group item') > -1 : false;
 
@@ -251,36 +303,81 @@ export class StorageController {
             return;
         }
 
-        this._table.addEventListener('click', (e) => {
+        this._table.addEventListener('keyup', this._onKeyUp.bind(this));
+        this._table.addEventListener('click', this._onClick.bind(this));
+    }
 
-            let elem: HTMLInputElement = <any>e.target;
+    _onKeyUp(e: KeyboardEvent) {
 
-            if (elem.tagName !== 'INPUT' || elem.type !== 'checkbox') {
-                return;
+        let input: HTMLInputElement = <any>e.target;
+        let up   = e.key === 'ArrowUp' || e.keyCode === 38;
+        let down = e.key === 'ArrowDown' || e.keyCode === 40;
+
+        if (input.tagName !== 'INPUT' || input.type !== 'text' || !(up || down)) {
+            return;
+        }
+
+        let row  = input.parentElement.parentElement;
+        let nextRow: HTMLElement = up ? <any>row.previousElementSibling: <any>row.nextElementSibling;
+        let name = input.name.includes('preis') ? 'preis' : 'comment';
+        let nextInput: HTMLInputElement = nextRow ? <any>nextRow.querySelector(`input[type="text"][name*="${name}"]`) : undefined;
+
+        if (!nextRow || !nextInput) {
+            return;
+        }
+
+        if (name === 'preis' && e.ctrlKey && input.value) {
+
+            let cb: HTMLInputElement = <any>row.querySelector('input[type="checkbox"][name*="Sell"]');
+            let item = cb ? this._items.find(x => x.ctrlSellCheckbox === cb) : undefined;
+
+            cb = <any>nextRow.querySelector('input[type="checkbox"][name*="Sell"]');
+            let nextItem = cb ? this._items.find(x => x.ctrlSellCheckbox === cb): undefined;
+
+            if (item && nextItem) {
+
+                let val = Number(input.value);
+
+                val = nextItem.isConsumable ? Math.ceil(val / item.uses * nextItem.uses): val;
+
+                nextInput.value = val.toString();
+            }
+        }
+        else if (e.ctrlKey) {
+            nextInput.value = input.value;
+        }
+
+        nextInput.focus();
+    }
+
+    _onClick(e: MouseEvent) {
+
+        let elem: HTMLInputElement = <any>e.target;
+
+        if (elem.tagName !== 'INPUT' || elem.type !== 'checkbox') {
+            return;
+        }
+
+        let item: StorageItem;
+
+        if (elem.name.startsWith('Sell')) {
+            item = this._items.find(x => x.ctrlSellCheckbox === elem);
+            if (item && e.shiftKey) {
+                this._items.forEach(y => {
+                    if (y.name === item.name) y.ctrlSellCheckbox.checked = elem.checked;
+                });
             }
 
-            let name = elem.name;
-            let item: StorageItem;
-
-            if (name.startsWith('Sell')) {
-                item = this._items.find(x => x.ctrlSellCheckbox === elem);
-                if (item && e.shiftKey) {
-                    this._items.forEach(y => {
-                        if (y.name === item.name) y.ctrlSellCheckbox.checked = elem.checked;
-                    });
-                }
-
-                this._updateSellInfo();
+            this._updateSellInfo();
+        }
+        else if (elem.name.startsWith('doEquip')) {
+            item = this._items.find(x => x.ctrlLocationCheckbox === elem);
+            if (item && e.shiftKey) {
+                this._items.forEach(y => {
+                    if (y.name === item.name) y.ctrlLocationCheckbox.checked = elem.checked;
+                });
             }
-            else if (name.startsWith('doEquip')) {
-                item = this._items.find(x => x.ctrlLocationCheckbox === elem);
-                if (item) {
-                    this._items.forEach(y => {
-                        if (y.name === item.name) y.ctrlLocationCheckbox.checked = elem.checked;
-                    });
-                }
-            }
-        });
+        }
     }
 
     _getTableRows(main_content): HTMLTableRowElement[] {
