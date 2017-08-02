@@ -1,11 +1,13 @@
-import { parseHTML } from '../../common/dom/parse-html'
-import { httpFetch } from '../../common/net/http-fetch'
+import { parseHTML } from '../../../common/dom/parse-html'
+import { httpFetch } from '../../../common/net/http-fetch'
 
-import { ItemDetails, Constraints, parseItemDetails } from '../../common/parsing/parse-item-details'
-import { Modifiers, parseModifiers } from '../../common/parsing/parse-modifiers'
+import { ItemDetails, Constraints, parseItemDetails } from '../../../common/parsing/parse-item-details'
+import { Modifiers, parseModifiers } from '../../../common/parsing/parse-modifiers'
 
-import { Grid, GridOptions } from  '../../common/components/grid/grid'
-import { GridDataSourceOptions, GridRequest } from  '../../common/components/grid/grid.data-source'
+import { Grid, GridOptions } from  '../../../common/components/grid/grid'
+import { GridDataSourceOptions, GridRequest } from  '../../../common/components/grid/grid.data-source'
+
+import { log } from '../../../common/debugging/log'
 
 interface ItemInfo extends ItemDetails {
     name: string;
@@ -67,6 +69,29 @@ export class AppController {
                     jobs.forEach(x=> { this.handleCommand('parse', [x.item]); });
                 }
             });
+        }
+        else if (cmd === 'pew') {
+            log('pew')
+            let url = 'https://darkveil.world-of-dungeons.net/wod/ajax/render.php';
+            let data = {
+                wod_post_id:"r69171uc0c8rhadgv9k3aj9nen7duyyh",
+                ajax_class_name:"TradeMarketItemRequestStarter",
+                ajax_object_id:"120000",
+                action:"start",
+                page:"1",
+                start_item_name:"*",
+                ajax:"1",
+                session_hero_id:"120000",
+                session_player_id:"58287"
+            };
+            try{
+            httpFetch(url, 'POST', data).then(resp => {
+                log(resp.data);
+            });
+            }
+            catch (e) {
+                log(e);
+            }
         }
     }
 

@@ -10,9 +10,13 @@ interface HeroInfo {
    weight: number;
 }
 
-export function getInfo (rows: HTMLTableRowElement[]): HeroInfo[] {
+export function getInfo (rows: HTMLTableRowElement[], currentTime?: string): HeroInfo[] {
 
     let result: HeroInfo[] = [];
+
+    let minutes = (t) => t.split(':').reduce((acc,x) => acc > 0 ? acc + Number(x): Number(x) * 60, 0);
+    let v = x => x < 10 ? '0' + x : x.toString();
+    let formatTime = (x) => v(Math.trunc(x / 60)) + ':' + v(x % 60);
 
     for (let i = 1; i < rows.length; i++) {
 
@@ -29,7 +33,8 @@ export function getInfo (rows: HTMLTableRowElement[]): HeroInfo[] {
 
         if (dungeon) {
             let localTime = time.split('/')[0];
-            textContent(next, `${localTime} - ${dungeon}`);
+            let title = currentTime ? `${localTime} (in ${formatTime(minutes(time) - minutes(currentTime))}) - ${dungeon}` : `${localTime} - ${dungeon}`;
+            textContent(next, title);
         }
 
         let timeCell = add('td');
@@ -104,7 +109,8 @@ export function main (main_content?) {
         textContent(groupName, 'group');
         rows[0].insertBefore(groupName, rows[0].cells[4]);
 
-        let heroes = getInfo(rows);
+        let time = document.querySelector('#clock');
+        let heroes = getInfo(rows, time ? time.textContent : undefined);
         let group;
 
         let makeInput = (row, value) => {

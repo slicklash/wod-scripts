@@ -1,4 +1,4 @@
-import { parseHTML } from '../common/dom/parse-html'
+import { parseHTML } from '../../common/dom/parse-html'
 import { getInfo, getDungeonName } from './main'
 
 var GM_getValue = function () {}

@@ -1,4 +1,4 @@
-import { bootstrap } from '../common/toymvc/bootstrap'
+import { bootstrap } from '../../common/toymvc/bootstrap'
 import { AppComponent } from './app/app.component'
 
 export function main (main_content?) {

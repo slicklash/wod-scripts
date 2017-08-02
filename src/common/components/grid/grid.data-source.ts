@@ -1,4 +1,4 @@
-import { httpFetch } from '../net/http-fetch'
+import { httpFetch } from '../../net/http-fetch'
 
 export interface GridDataSourceOptions {
     url: string;

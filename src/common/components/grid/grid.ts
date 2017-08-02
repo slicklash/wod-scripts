@@ -1,4 +1,4 @@
-import { parseHTML } from '../dom/parse-html'
+import { parseHTML } from '../../dom/parse-html'
 import { GridDataSource, GridDataSourceOptions } from './grid.data-source'
 
 export interface GridOptions {

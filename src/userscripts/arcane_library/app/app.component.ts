@@ -1,6 +1,6 @@
-import { IComponent } from '../../common/toymvc/core'
+import { IComponent } from '../../../common/toymvc/core'
 import { AppController } from './app.controller'
-import { ToyComponent } from '../../common/components/toy/toy.component'
+import { ToyComponent } from '../../../common/components/toy/toy.component'
 
 export const AppComponent: IComponent = {
     controller: AppController,

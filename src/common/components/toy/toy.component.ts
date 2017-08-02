@@ -1,4 +1,4 @@
-import { IComponent } from '../toymvc/core'
+import { IComponent } from '../../toymvc/core'
 import { ToyController } from './toy.controller'
 
 export const ToyComponent: IComponent = {
