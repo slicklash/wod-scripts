@@ -83,9 +83,6 @@ export const AppComponent: IComponent = {
 
             <br/>
 
-            <toy></toy>
-            <toy />
-
         </div>
     `
 }

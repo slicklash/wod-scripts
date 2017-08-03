@@ -6,12 +6,18 @@ from tinydb import TinyDB, where
 from collections import OrderedDict
 from itertools import chain
 from operator import lt, gt, eq
+import os
 import re
+import sys
 
+
+file_dir = os.path.dirname(os.path.realpath(__file__))
+path_join = lambda *args: os.path.realpath(os.path.join(*args))
 
 api = Api()
 route = api.route
 response = api.response
+format = api.format
 
 
 def main():
@@ -22,6 +28,10 @@ def main():
     arg_parser.add_argument('-d', '--dir', help='store dir')
 
     kwargs = vars(arg_parser.parse_args())
+
+    if len(sys.argv) < 2:
+        arg_parser.print_usage()
+        sys.exit(1)
 
     path = kwargs.get('dir')
 
@@ -61,9 +71,45 @@ def main():
 
     """
 
-    api.register(ItemsResource(store), JobsResource(store))
+    api.register(ItemsResource(store), JobsResource(store), StaticResource())
     api.run(**kwargs)
 
+class StaticResource:
+
+    @route('/', 'GET')
+    def index(self, request):
+        return self.static(request, 'index.html')
+
+    @route('/static/<item>', 'GET')
+    def static(self, request, item):
+
+        if item == 'app.js':
+            item = '../../../../release/arcane_library.user.js'
+        elif item == 'aagmfunctions.js':
+            item =  '../../../../lib/' + item
+
+        path = path_join(file_dir, '../static/' + item)
+        if not os.path.exists(path):
+            return (404)
+
+        ct = 'text/html'
+
+        if item.endswith('.js'):
+            ct = 'text/javascript'
+        elif item.endswith('.css'):
+            ct = 'text/css'
+
+        with open(path, 'r') as f:
+            return (200, f.read(), {
+                'content-type': ct,
+                'Access-Control-Allow-Origin': '*'
+            })
+
+@format('text/html')
+@format('text/css')
+@format('text/javascript')
+def format_html(code, content, headers):
+    return bytes(content, 'utf-8')
 
 class ItemsResource:
 
@@ -73,7 +119,9 @@ class ItemsResource:
     @route('/items', 'GET')
     def query_items(self, request):
         print(request.query_params)
-        return response(self.store.query(request.query_params))
+        return response(self.store.query(request.query_params), 200, {
+            'Access-Control-Allow-Origin': '*'
+        })
 
     @route('/items', 'POST')
     def add_item(self, request):
@@ -83,7 +131,6 @@ class ItemsResource:
             print('Removing job:', item['name'])
             self.store.removeJob(where('item') == item['name'])
         return response()
-
 
 class JobsResource:
 

@@ -1,5 +1,5 @@
-import { parseHTML } from '../../dom/parse-html'
-import { GridDataSource, GridDataSourceOptions } from './grid.data-source'
+import { parseHTML } from '../../dom/parse-html';
+import { GridDataSource, GridDataSourceOptions } from './grid.data-source';
 
 export interface GridOptions {
     columns: GridColumn[];
@@ -44,7 +44,7 @@ export class Grid {
          this.columns = options.columns;
          this.element = document.querySelector(selector);
          this.pageSize = options.pageSize || 50;
-         this.pagination = { page: undefined, pageSize: this.pageSize, pages: undefined, total: undefined }
+         this.pagination = { page: undefined, pageSize: this.pageSize, pages: undefined, total: undefined };
          this.dataSource = new GridDataSource(dataSourceOptions);
          this._render();
     }
@@ -53,7 +53,8 @@ export class Grid {
 
         let params = { page: Math.min(Math.max(page, 1), this.pagination.pages || 1), pageSize: this.pageSize };
 
-        this.dataSource.query(params).then((response: CollectionResponse | string) => {
+        this.dataSource.query(params).then(resp => {
+            let response = resp.data;
             let data = typeof response === 'string' ? JSON.parse(response) : response;
             Object.assign(this.pagination, data._pagination);
             this._updateRows(data._list);
@@ -114,7 +115,7 @@ export class Grid {
                 return `
                 <tr class="row${i % 2}">
                     ${forEach(this.columns, (col: GridColumn) => `<td> ${this.renderCell(col, row)} </td>`)}
-                </tr>`
+                </tr>`;
             })}
             </table>
         `);
