@@ -1,5 +1,4 @@
-import { IComponent } from './core'
-import { compile } from './compile'
+import { IComponent, IComponentController } from './core'
 
 export function bootstrap (component: IComponent, parentElem?: Element) {
 
@@ -12,10 +11,11 @@ export function bootstrap (component: IComponent, parentElem?: Element) {
        tpl = tpl.replace(new RegExp(`<${x}\\s*/>|<${x}></${x}>`, 'ig'), `<div class="component-${x}"></div>`);
     }
 
-    Array.from(parentElem.querySelectorAll('.component-' + component.selector)).forEach(elem => {
-        let $ctrl = new component.controller();
-        compile($ctrl, elem, tpl);
-        if (typeof $ctrl.$onInit === 'function') $ctrl.$onInit();
+    Array.from(parentElem.querySelectorAll('.component-' + component.selector)).forEach((elem: Element) => {
+        let f: any = component.controller;
+        let $ctrl: IComponentController = new f();
+        elem.innerHTML = tpl;
+        $ctrl.$onInit(elem);
     });
 
     if (selectors.length > 1) {

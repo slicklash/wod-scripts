@@ -9,22 +9,50 @@ import { GridDataSourceOptions, GridRequest } from  '../../../common/components/
 
 import { log } from '../../../common/debugging/log'
 
+import { FormControlGroup } from '../../../common/toymvc/forms/form-control-group'
+
+import { IComponentController } from '../../../common/toymvc/core'
+
 interface ItemInfo extends ItemDetails {
     name: string;
     modifiers?: Modifiers;
 }
 
-export class AppController {
+export class AppController implements IComponentController {
 
-    filters: any = {};
+    element: Element;
+    // filters: any = {};
+    form: FormControlGroup;
 
     grid: Grid;
 
     cmd: string = 'parse:torch';
     logMsg: string;
 
-    $onInit () {
+    $onInit (element: Element) {
+
+        this.element = element;
+
         this.initGrid();
+
+        this.form = new FormControlGroup('form', this.element);
+        /*
+          _this.form = _this.fb.group('codePositions', _this.modalInstance.$element)
+                                 .reset({
+                                    actionContinue: { disabled: true, enumerable: false, writable: false },
+                                    actionCancel: { enumerable: false, writable: false },
+                                    actionMatchAll: { enumerable: false, writable: false },
+                                    actionMatch: { disabled: true, enumerable: false, writable: false, },
+                                    actionRemove: { disabled: true, enumerable: false, writable: false },
+                                    actionRemoveAll: { disabled: true, enumerable: false, writable: false },
+                                 });
+        */
+
+        this.attachEvent();
+    }
+
+    attachEvent () {
+
     }
 
     onRunCommand () {
@@ -102,15 +130,15 @@ export class AppController {
     }
 
     onGridRequest (req: GridRequest) {
-        Object.assign(req.params, this.filters);
-        let raw = this.rawFilter;
-        if (raw) {
-           let p: string[] = raw.split('&');
-           p.forEach(x => {
-               let [key, val] = x.split('=');
-               req.params[key] = val;
-           });
-        }
+        // Object.assign(req.params, this.filters);
+        // let raw = this.rawFilter;
+        // if (raw) {
+        //    let p: string[] = raw.split('&');
+        //    p.forEach(x => {
+        //        let [key, val] = x.split('=');
+        //        req.params[key] = val;
+        //    });
+        // }
         return req;
     }
 

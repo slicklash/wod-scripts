@@ -1,14 +1,15 @@
-export interface IController {
-    new (): any;
+export interface IComponentController {
+    $onInit (element: Element);
 }
 
 export interface IComponent {
     selector: string;
-    controller: IController;
+    controller: IComponentController;
     template: string;
     directives?: IComponent[];
 }
 
+/*
 export const ATTR = 'data-t';
 
 export function ensureMetadata ($ctrl) {
@@ -34,3 +35,4 @@ export function getByPath (obj, path, init = undefined): ParentAndKey {
     }
     return { parent: parent, key: key };
 }
+*/

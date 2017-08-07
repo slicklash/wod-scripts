@@ -1,13 +1,14 @@
 import { IComponent } from '../../../common/toymvc/core'
 import { AppController } from './app.controller'
-import { ToyComponent } from '../../../common/components/toy/toy.component'
+// import { ToyComponent } from '../../../common/components/toy/toy.component'
 
-export const AppComponent: IComponent = {
+export const AppComponent: IComponent = <any>{
     controller: AppController,
-    directives: [ToyComponent],
+    // directives: [ToyComponent],
     selector: 'app',
     template: `
-        <div id="app-panel">
+        <div id="app-panel"
+             data-formGroupName="form" >
 
             <div class="search_container" style="float: none">
             <table class="search_short texttoken">
