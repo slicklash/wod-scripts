@@ -22,7 +22,7 @@ export abstract class FormControlBase {
 
     private _parent: FormControlBase = undefined;
 
-    constructor(public name, public element) {
+    constructor(public name, public element: Element) {
         this._valueChanges = new EventEmitter('valueChanges');
         this._statusChanges = new EventEmitter('statusChanges');
     }

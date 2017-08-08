@@ -11,26 +11,25 @@ export interface IFormControlValueProvider {
 
 export class FormControlValueProviderFactory {
 
-    static create(element): IFormControlValueProvider {
-        let valAcc = new DefaultValueProvider();
-        valAcc.init(element);
-        return valAcc;
+    static create(element: Element): IFormControlValueProvider {
+        return new DefaultValueProvider().init(element);
     }
 }
 
 class DefaultValueProvider implements IFormControlValueProvider {
 
-    element: any;
+    element: HTMLInputElement;
     private _value: any;
 
-    init(element) {
+    init(element): DefaultValueProvider {
         this.element = element;
-        this._value = element.val();
+        this._value = element.value;
+        return this;
     }
 
     setValue(value) {
         this._value = value;
-        this.element.val(value);
+        this.element.value = value;
     }
 
     getValue() {
@@ -38,22 +37,25 @@ class DefaultValueProvider implements IFormControlValueProvider {
     }
 
     setDisabledState(isDisabled) {
-        this.element.enable(isDisabled === false);
+        this.element.disabled = isDisabled === true;
     }
 
     registerOnChange(fn) {
-        this.element.on('change', () => {
-            this._value = this.element.val();
+        this.element.addEventListener('change', () => {
+            this._value = this.element.value;
             fn(this._value);
         });
     }
 
     registerOnTouched(fn) {
-        this.element.on('blur', fn);
+        this.element.addEventListener('blur', fn);
     }
 
     setErrors(errors: ValidationErrors) {
-        throw 'Not implemented'
+
+        console.log('Error', errors);
+
+        // throw 'Not implemented'
 
         /*
         let $parent = this.element.parents('.control-group');

@@ -21,7 +21,7 @@ interface ItemInfo extends ItemDetails {
 export class AppController implements IComponentController {
 
     element: Element;
-    // filters: any = {};
+
     form: FormControlGroup;
 
     grid: Grid;
@@ -35,24 +35,22 @@ export class AppController implements IComponentController {
 
         this.initGrid();
 
-        this.form = new FormControlGroup('form', this.element);
-        /*
-          _this.form = _this.fb.group('codePositions', _this.modalInstance.$element)
-                                 .reset({
-                                    actionContinue: { disabled: true, enumerable: false, writable: false },
-                                    actionCancel: { enumerable: false, writable: false },
-                                    actionMatchAll: { enumerable: false, writable: false },
-                                    actionMatch: { disabled: true, enumerable: false, writable: false, },
-                                    actionRemove: { disabled: true, enumerable: false, writable: false },
-                                    actionRemoveAll: { disabled: true, enumerable: false, writable: false },
-                                 });
-        */
+        this.form = new FormControlGroup('form', this.element).reset({
+            actionSearch: { enumerable: false, writable: false },
+            actionCommand: { disabled: true, enumerable: false, writable: false },
+        });
+
+        this.form.valueChanges.subscribe(v => {
+
+            console.log(v);
+        });
 
         this.attachEvent();
     }
 
     attachEvent () {
 
+        (<any>this.form.controls).actionSearch.element.addEventListener('click', this.applySearch.bind(this));
     }
 
     onRunCommand () {
@@ -130,7 +128,9 @@ export class AppController implements IComponentController {
     }
 
     onGridRequest (req: GridRequest) {
-        // Object.assign(req.params, this.filters);
+
+        Object.assign(req.params, this.form.value);
+
         // let raw = this.rawFilter;
         // if (raw) {
         //    let p: string[] = raw.split('&');
