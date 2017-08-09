@@ -181,7 +181,7 @@ function showDungeonMedalInfo(profiles: IHeroProfileInfo[]) {
 
     dungeons.forEach(td => {
 
-        let key = td.textContent.trim().toLowerCase();
+        let key = td.textContent.trim().toLowerCase().replace('the treasure map', 'treasure map');
         let heroes = map[key] || [];
         let allHeroes = profiles.length && heroes.length === nonMentors.length;
 

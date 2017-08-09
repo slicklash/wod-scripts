@@ -46,6 +46,7 @@ export class AppController implements IComponentController {
         });
 
         this.attachEvent();
+        this.applySearch();
     }
 
     attachEvent () {

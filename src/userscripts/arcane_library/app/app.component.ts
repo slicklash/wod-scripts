@@ -11,24 +11,23 @@ export const AppComponent: IComponent = <any>{
              data-formGroupName="form" >
 
             <div class="search_container" style="float: none">
-            <table class="search_short texttoken">
-            <tbody>
-                <tr>
-                    <td>
-                        Name: <input type="text"
-                                     size="30"
-                                     data-formControlName="name" >
+                <table class="search_short texttoken">
+                <tbody>
+                    <tr>
+                        <td>
+                            Name: <input type="text"
+                                        size="30"
+                                        data-formControlName="name" >
 
-                        <input type="button"
-                               value="Search"
-                               class="button clickable"
-                               data-formControlName="actionSearch" />
-                    </td>
-                </tr>
-            </tbody>
-            </table>
+                            <a  class="button clickable"
+                                data-formControlName="actionSearch">Search</a>
+                        </td>
+                    </tr>
+                </tbody>
+                </table>
             </div>
-            <div style="border: thin solid #909090">
+
+                <div>
                 <table>
                 <tbody>
                     <tr>
@@ -71,6 +70,7 @@ export const AppComponent: IComponent = <any>{
                                    data-formControlName="needs" />
                         </td>
                     </tr>
+                    <!--
                     <tr>
                         <td>Raw </td>
                         <td>
@@ -78,6 +78,7 @@ export const AppComponent: IComponent = <any>{
                                    data-formControlName="rawFilter" style="width: 600px" />
                         </td>
                     </tr>
+                    -->
                     <tr>
                         <td>Consumable</td>
                         <td>
@@ -88,7 +89,14 @@ export const AppComponent: IComponent = <any>{
                     </tr>
                 </tbody>
                 </table>
-            </div>
+                </div>
+
+                <div>
+                    <table>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
 
             <div id="grid-items"></div>
 

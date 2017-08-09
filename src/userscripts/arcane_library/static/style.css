@@ -1,0 +1,70 @@
+body {
+    font-family: Arial,Helvetica,sans-serif;
+    font-size: 14px;
+    color: white;
+    background-color: #101010;
+}
+
+a {
+    color: #FFCF00;
+    text-decoration: none;
+}
+
+table, tr, td, th {
+    padding: 1mm;
+    border: 1px solid #909090;
+    border-collapse: collapse;
+}
+
+tr.row0 {
+    background-color: #101010;
+}
+
+tr.row1 {
+    background-color: #404040;
+}
+
+.header {
+    background-color: #505050;
+}
+
+.generic_yes {
+    color: #00FF00;
+}
+
+input, select {
+    font-size: 10pt;
+    background-color: #505050;
+    border-color: #816E36;
+    border-style: ridge;
+    color: #FFFFFF;
+}
+
+.button:active, a.button:link, .button {
+    font-family: Verdana, Helvetica, sans-serif;
+    font-size: 8pt;
+    background-image: url(button.jpg);
+    border-color: #6B634D;
+    border-style: groove;
+    border-width: 3px;
+    border-bottom-color: #000000;
+    border-right-color: #F0A015;
+    border-left-color: #F0A015;
+    border-top-color: #F0A015;
+    color: #000000;
+    font-weight: bold;
+    background-color: #462d28;
+    padding: 0.1em 0.8em;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+a.clickanchor:hover,
+.clickanchor:hover,
+a.button:hover,
+.button:hover             {
+     color:                   #FFFFFF;
+     background-image:        url(button_roll.jpg);
+}

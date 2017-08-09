@@ -20,6 +20,7 @@ response = api.response
 format = api.format
 
 
+
 def main():
 
     arg_parser = ArgumentParser()
@@ -98,8 +99,10 @@ class StaticResource:
             ct = 'text/javascript'
         elif item.endswith('.css'):
             ct = 'text/css'
+        elif item.endswith('.jpg'):
+            ct = 'image/jpeg'
 
-        with open(path, 'r') as f:
+        with open(path, 'rb') as f:
             return (200, f.read(), {
                 'content-type': ct,
                 'Access-Control-Allow-Origin': '*'
@@ -108,8 +111,9 @@ class StaticResource:
 @format('text/html')
 @format('text/css')
 @format('text/javascript')
+@format('image/jpeg')
 def format_html(code, content, headers):
-    return bytes(content, 'utf-8')
+    return content
 
 class ItemsResource:
 
@@ -223,7 +227,7 @@ class Store:
                 a = int(item_lvl.split()[-1])
                 b = int(test_value[1:]) if op in '<>' else int(test_value)
                 op = lt if op == '<' else gt if op == '>' else eq
-                print(op, a, b)
+                # print(op, a, b)
                 return op(a, b)
             return True
 
@@ -271,7 +275,7 @@ class Store:
                     break
 
             if should_select:
-                print(item['name'])
+                # print(item['name'])
                 items.append(select(item))
 
         return self._collection_response(query_params, items)
