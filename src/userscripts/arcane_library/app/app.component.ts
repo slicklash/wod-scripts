@@ -1,5 +1,5 @@
-import { IComponent } from '../../../common/toymvc/core'
-import { AppController } from './app.controller'
+import { IComponent } from '../../../common/toymvc/core';
+import { AppController } from './app.controller';
 // import { ToyComponent } from '../../../common/components/toy/toy.component'
 
 export const AppComponent: IComponent = <any>{
@@ -113,4 +113,4 @@ export const AppComponent: IComponent = <any>{
 
         </div>
     `
-}
+};

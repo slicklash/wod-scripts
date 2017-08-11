@@ -10,7 +10,6 @@ import os
 import re
 import sys
 
-
 file_dir = os.path.dirname(os.path.realpath(__file__))
 path_join = lambda *args: os.path.realpath(os.path.join(*args))
 
@@ -18,8 +17,6 @@ api = Api()
 route = api.route
 response = api.response
 format = api.format
-
-
 
 def main():
 
