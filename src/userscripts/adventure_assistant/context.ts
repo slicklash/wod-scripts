@@ -28,6 +28,15 @@ export function getContext () : IAdventureContext {
 
         let texts = <any>Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION'));
 
+       texts.forEach(x => {
+            let html = x.innerHTML;
+            if (html.includes('font')) {
+                x.inndexHTML = html.replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
+                                   .replace(/&lt;\/font&gt;/g, '</font>')
+                                   .replace(/<br>\s+<br>/g, '<br>');
+            }
+       });
+
         _context = {
             adventure : title.replace('adventure ', ''),
             texts: texts,
