@@ -18,6 +18,7 @@ route = api.route
 response = api.response
 format = api.format
 
+
 def main():
 
     arg_parser = ArgumentParser()
@@ -35,7 +36,6 @@ def main():
 
     store = Store(path)
 
-    """
     print('Reading items...')
     with open(path + '/items.txt', 'r') as f:
         lines = [x for x in f.read().split('\n') if x]
@@ -61,16 +61,15 @@ def main():
     print('Pending:', sum(x['status'] in ['running'] for x in store.getJobs()))
 
     with open(path + '/pending.txt', 'w') as f:
-      f.writelines('\n'.join(x['item'] for x in store.getJobs()))
+        f.writelines('\n'.join(x['item'] for x in store.getJobs()))
 
     del new_items
     del db_items
     del db_jobs
 
-    """
-
     api.register(ItemsResource(store), JobsResource(store), StaticResource())
     api.run(**kwargs)
+
 
 class StaticResource:
 
@@ -84,7 +83,7 @@ class StaticResource:
         if item == 'app.js':
             item = '../../../../release/arcane_library.user.js'
         elif item == 'aagmfunctions.js':
-            item =  '../../../../lib/' + item
+            item = '../../../../lib/' + item
 
         path = path_join(file_dir, '../static/' + item)
         if not os.path.exists(path):
@@ -105,12 +104,14 @@ class StaticResource:
                 'Access-Control-Allow-Origin': '*'
             })
 
+
 @format('text/html')
 @format('text/css')
 @format('text/javascript')
 @format('image/jpeg')
 def format_html(code, content, headers):
     return content
+
 
 class ItemsResource:
 
@@ -133,6 +134,15 @@ class ItemsResource:
             self.store.removeJob(where('item') == item['name'])
         return response()
 
+    @route('/items', 'DELETE')
+    def remove_item(self, request):
+        item = request.content
+        if item:
+            print('Removing job:', item['name'])
+            self.store.removeJob(where('item') == item['name'])
+        return response()
+
+
 class JobsResource:
 
     def __init__(self, store):
@@ -141,18 +151,22 @@ class JobsResource:
     @route('/jobs')
     def query_jobs(self, request):
 
-        jobs = self.store.getJobs(where('status') == 'new')
-        batch = jobs[:1000]
-
-        for job in batch:
-            self.store.updateJobs({'status': 'running'}, batch)
+        jobs = self.store.getJobs()
 
         print()
-        print('New batch:', [x['item'] for x in batch])
         print('Job queue:', len(jobs))
+
+        batch = jobs[:2100]
+        new = [x for x in batch if x['status'] == 'new']
+        pending = [x for x in batch if x['status'] != 'new']
+
+        self.store.updateJobs({'status': 'running'}, new)
+
+        print('New:', [x['item'] for x in new])
+        print('Pending:', [x['item'] for x in pending])
         print()
 
-        return response(batch)
+        return response([x['item'] for x in batch])
 
 
 class Store:

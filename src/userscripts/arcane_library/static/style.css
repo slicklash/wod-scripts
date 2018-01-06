@@ -1,5 +1,5 @@
 body {
-    font-family: Arial,Helvetica,sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
     color: white;
     background-color: #101010;
@@ -10,7 +10,10 @@ a {
     text-decoration: none;
 }
 
-table, tr, td, th {
+table,
+tr,
+td,
+th {
     padding: 1mm;
     border: 1px solid #909090;
     border-collapse: collapse;
@@ -32,7 +35,8 @@ tr.row1 {
     color: #00FF00;
 }
 
-input, select {
+input,
+select {
     font-size: 10pt;
     background-color: #505050;
     border-color: #816E36;
@@ -40,7 +44,9 @@ input, select {
     color: #FFFFFF;
 }
 
-.button:active, a.button:link, .button {
+.button:active,
+a.button:link,
+.button {
     font-family: Verdana, Helvetica, sans-serif;
     font-size: 8pt;
     background-image: url(button.jpg);
@@ -64,7 +70,7 @@ input, select {
 a.clickanchor:hover,
 .clickanchor:hover,
 a.button:hover,
-.button:hover             {
-     color:                   #FFFFFF;
-     background-image:        url(button_roll.jpg);
+.button:hover {
+    color: #FFFFFF;
+    background-image: url(button_roll.jpg);
 }

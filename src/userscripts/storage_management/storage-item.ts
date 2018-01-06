@@ -1,22 +1,19 @@
-import { SPECIAL_CONSUMABLES } from './special-consumables'
+import { SPECIAL_CONSUMABLES } from './special-consumables';
 
 export class StorageItem {
 
-    public name = '';
+    name = '';
+    isUsable = true;
+    uses: number = 1;
+    isGroupItem = true;
+    _isConsumbale = false;
 
-    public isUsable = true;
+    ctrlLocationSelect: HTMLSelectElement = null;
+    ctrlLocationCheckbox: HTMLInputElement = null;
+    ctrlSellCheckbox: HTMLInputElement = null;
+    ctrlGroupCheckbox: HTMLInputElement = null;
 
-    public uses: number = 1;
-
-    public isGroupItem = true;
-
-    private _isConsumbale = false;
-
-    public ctrlLocationSelect: HTMLSelectElement = null;
-    public ctrlLocationCheckbox: HTMLInputElement = null;
-    public ctrlSellCheckbox: HTMLInputElement = null;
-
-    public price: number = 0;
+    price: number = 0;
 
     get isConsumable(): boolean {
         if (this._isConsumbale) return true;

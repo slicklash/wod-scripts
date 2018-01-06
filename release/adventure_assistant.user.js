@@ -24,6 +24,11 @@ function getContext() {
         if (!title || title.indexOf('adventure') !== 0)
             return;
         var texts = Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION'));
+        texts.forEach(function (x) {
+            x.innerHTML = x.innerHTML.replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
+                .replace(/&lt;\/font&gt;/g, '</font>')
+                .replace(/<br>\s+<br>/g, '<br>');
+        });
         _context = {
             adventure: title.replace('adventure ', ''),
             texts: texts,

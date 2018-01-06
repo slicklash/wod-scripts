@@ -35,5 +35,5 @@ export const SPECIAL_CONSUMABLES = [
     'trollbeard plant',
     'wooden handle',
     'wooden log',
-    'wooden pole'
+    'wooden pole',
 ];

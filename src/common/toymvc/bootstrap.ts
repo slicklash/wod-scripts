@@ -22,3 +22,17 @@ export function bootstrap (component: IComponent, parentElem?: Element) {
         component.directives.forEach(comp => { bootstrap(comp, parentElem) });
     }
 }
+
+export abstract class Component {
+  element: Element;
+  props: any;
+  abstract render();
+}
+
+export function render (comp: Component, elem: Element) {
+  elem.innerHTML = comp.render();
+}
+
+export function html (comp: Component, props?: any): string {
+  return '';
+}

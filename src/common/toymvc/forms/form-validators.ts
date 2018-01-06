@@ -1,4 +1,4 @@
-﻿import { FormControlBase } from 'form-control-base'
+﻿import { FormControlBase } from './form-control-base';
 
 export type ValidationFunction = (control: FormControlBase) => Promise<ValidationErrors>;
 
@@ -13,7 +13,9 @@ export class FormValidators {
             return Promise.all(args.map(validateFn => validateFn(control))).then(results => {
                 for (let i = 0; i < results.length; i++) {
                     let errors = results[i];
-                    if (errors) return Promise.resolve(<any>errors);
+                    if (errors) {
+                      return Promise.resolve(<any>errors);
+                    }
                 }
                 return Promise.resolve(null);
             });
@@ -22,27 +24,36 @@ export class FormValidators {
 
     static required(message: string): ValidationFunction {
 
-        if (!message) throw 'FormValidators: message is required';
+        if (!message) {
+          throw 'FormValidators: message is required';
+        }
 
         return function (control: FormControlBase) {
             return isEmptyInputValue(control.value) ? Promise.resolve({ required: message }) : Promise.resolve(null);
-        }
+        };
     }
 
     static pattern(pattern: string | RegExp, message: string): ValidationFunction {
 
-        if (!message) throw 'FormValidators: message is required';
+        if (!message) {
+          throw 'FormValidators: message is required';
+        }
 
-        if (!pattern) return FormValidators.nullValidator;
+        if (!pattern) {
+          return FormValidators.nullValidator;
+        }
 
         var regex: RegExp;
 
         if (typeof pattern === 'string') {
-            if (!(<string>pattern).startsWith('^')) pattern = '^' + pattern;
-            if (!(<string>pattern).endsWith('$')) pattern += '$';
+            if (!(<string>pattern).startsWith('^')) {
+              pattern = '^' + pattern;
+            }
+            if (!(<string>pattern).endsWith('$')) {
+              pattern += '$';
+            }
             regex = new RegExp(<string>pattern);
-        }
-        else {
+        } else {
             regex = <RegExp>pattern;
         }
 

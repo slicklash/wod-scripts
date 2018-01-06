@@ -1,7 +1,7 @@
-export function cssClass (elem, name: string, toggleOn?: boolean) {
+export function cssClass(elem, name: string, toggleOn?: boolean) {
 
-    let classNames = elem.className.split(' '),
-        has = classNames.some(x => x === name);
+    const classNames = elem.className.split(' ');
+    const has = classNames.some(x => x === name);
 
     if (typeof toggleOn !== 'boolean') return has;
 

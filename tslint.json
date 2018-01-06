@@ -1,0 +1,19 @@
+{
+  "defaultSeverity": "error",
+  "extends": [
+    "tslint:recommended"
+    ],
+    "jsRules": {},
+    "rules": {
+      "arrow-parens": [true, "ban-single-arg-parens"],
+      "curly": [true, "ignore-same-line"],
+      "variable-name": [true, "ban-keywords", "allow-leading-underscore"],
+      "max-line-length": [true, 240],
+      "member-access": [true, "no-public"],
+      "no-angle-bracket-type-assertion": false,
+      "object-literal-sort-keys": false,
+      "ordered-imports": false,
+      "quotemark": ["single"]
+    },
+    "rulesDirectory": []
+}

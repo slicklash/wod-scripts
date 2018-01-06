@@ -2,34 +2,58 @@
   "name": "wod-scripts",
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
+  "dependencies": {
+    "typescript": "^2.6.2"
+  },
   "devDependencies": {
-    "del": "^2.2.2",
+    "@types/es6-shim": "^0.31.35",
+    "@types/greasemonkey": "0.0.28",
+    "@types/jest": "^22.0.1",
     "gulp": "^3.9.1",
     "gulp-concat-util": "^0.5.5",
-    "gulp-jshint": "^2.0.4",
-    "gulp-replace": "^0.5.4",
-    "gulp-sourcemaps": "^1.12.0",
-    "gulp-typescript": "^3.2.1",
-    "http-server": "^0.8.5",
-    "jasmine-core": "^2.6.4",
-    "jasmine-data_driven_tests": "^1.0.0",
+    "gulp-jshint": "^2.1.0",
+    "gulp-replace": "^0.6.1",
+    "gulp-typescript": "^3.2.3",
+    "http-server": "^0.11.1",
+    "jest": "^22.0.6",
     "jshint": "^2.9.5",
-    "karma": "^0.13.22",
-    "karma-chrome-launcher": "^0.2.3",
-    "karma-coverage": "^0.5.5",
-    "karma-jasmine": "^0.3.8",
-    "karma-phantomjs-launcher": "^1.0.4",
-    "karma-spec-reporter": "0.0.24",
-    "merge2": "^0.3.7",
-    "phantomjs-prebuilt": "^2.1.14",
-    "remap-istanbul": "^0.5.1",
-    "run-sequence": "^1.2.2"
+    "merge2": "^1.2.0",
+    "run-sequence": "^2.2.1",
+    "ts-jest": "^22.0.1",
+    "tslint": "^5.9.1"
   },
   "scripts": {
-    "start": "http-server -c-1 -o -p 8000 ./release"
+    "start": "http-server -c-1 -o -p 8000 ./release",
+    "test": "jest",
+    "coverage": "jest --coverage"
   },
   "author": "slicklash@gmail.com",
   "license": "BSD-2-Clause",
+  "jest": {
+    "roots": [
+      "<rootDir>/src"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "moduleDirectories": [
+      "node_modules",
+      "src/"
+    ],
+    "moduleNameMapper": {
+      "@common/(.*)": "<rootDir>/src/common/$1"
+    },
+    "coverageReporters": ["html"]
+  },
   "jshintrc": {
     "bitwise": true,
     "browser": true,
@@ -58,10 +82,5 @@
       "GM_getValue": false,
       "GM_setValue": false
     }
-  },
-  "dependencies": {
-    "gulp-typescript": "^2.14.1",
-    "typescript": "^2.4.2",
-    "update": "^0.7.4"
   }
 }

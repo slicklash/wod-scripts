@@ -1,9 +1,9 @@
 
 export const Quests = {
-    RescuingFatherWuel : 'Rescuing Father Wuel',
+    IngenuityTest : 'Ingenuity Test',
     Passingtime : 'Passingtime',
-    IngenuityTest : 'Ingenuity Test'
-}
+    RescuingFatherWuel : 'Rescuing Father Wuel',
+};
 
 export interface IAdventureContext {
     idHero: string;
@@ -15,18 +15,20 @@ export interface IAdventureContext {
     isQuest?: boolean;
 }
 
-let _context : IAdventureContext;
+let _context: IAdventureContext;
 
-export function getContext () : IAdventureContext {
+export function getContext(): IAdventureContext {
 
     if (!_context) {
 
-        let h1 = document.querySelector('h1'),
-            title = h1 ? h1.textContent : '';
+        const h1 = document.querySelector('h1');
+        const title = h1 ? h1.textContent : '';
 
-        if (!title || title.indexOf('adventure') !== 0) return;
+        if (!title || title.indexOf('adventure') !== 0) {
+          return;
+        }
 
-        let texts = <any>Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION'));
+        const texts = <any> Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION'));
 
         texts.forEach(x => {
             x.innerHTML = x.innerHTML.replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
@@ -36,11 +38,11 @@ export function getContext () : IAdventureContext {
 
         _context = {
             adventure : title.replace('adventure ', ''),
-            texts: texts,
-            text: texts.map(x => x.innerHTML.trim()).join(' '),
+            idHero : (<any> document.querySelector('[href*="session_hero_id"]')).href.match(/session_hero_id=([\d]+)/)[1],
             place : (document.querySelector('#smarttabs__level_inner h3 > a') || { textContent: '*' }).textContent.trim(),
-            idHero : (<any>document.querySelector('[href*="session_hero_id"]')).href.match(/session_hero_id=([\d]+)/)[1],
-            world: document.location.hostname.split('.')[0]
+            text: texts.map(x => x.innerHTML.trim()).join(' '),
+            texts,
+            world: document.location.hostname.split('.')[0],
         };
 
         _context.isQuest = Object.keys(Quests).some(x => _context.adventure.indexOf(Quests[x]) > -1);

@@ -1,5 +1,5 @@
-import { bootstrap } from '../../common/toymvc/bootstrap'
-import { AppComponent } from './app/app.component'
+import { bootstrap, render } from '../../common/toymvc/bootstrap';
+import { AppComponent } from './app/app.component';
 
 export function main (main_content?) {
 
@@ -12,12 +12,13 @@ export function main (main_content?) {
             div.setAttribute('class', 'component-app');
             h1.parentNode.insertBefore(div, h1.nextSibling);
             bootstrap(AppComponent);
-        }
-        catch (x) {
-            debugger
+        } catch (x) {
+            // debugger
             console.log(x);
         }
     }
 }
 
-if (!(<any>window).__karma__) document.addEventListener('DOMContentLoaded', () => main());
+if (!(<any>window).__karma__) {
+  document.addEventListener('DOMContentLoaded', () => main());
+}

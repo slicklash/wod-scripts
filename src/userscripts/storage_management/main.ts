@@ -1,3 +1,3 @@
-import { StorageController } from './storage-controller'
+import { StorageController } from './storage-controller';
 
 new StorageController().$onInit();

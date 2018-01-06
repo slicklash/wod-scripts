@@ -1,9 +1,9 @@
-import { titleCase } from '../text/title-case'
-import { attr } from '../dom/attr'
-import { textContent } from '../dom/text-content'
-import { textNormalized } from '../dom/text-normalized'
-import { cssClass } from '../dom/css-class'
-import { parseHTML } from '../dom/parse-html'
+import { attr } from '../dom/attr';
+import { cssClass } from '../dom/css-class';
+import { parseHTML } from '../dom/parse-html';
+import { textContent } from '../dom/text-content';
+import { textNormalized } from '../dom/text-normalized';
+import { titleCase } from '../text/title-case';
 
 export interface ItemDetails {
     heroClasses: Constraints | string;

@@ -1,27 +1,27 @@
 import { parseHTML } from '../../dom/parse-html';
 import { GridDataSource, GridDataSourceOptions } from './grid.data-source';
 
-export interface GridOptions {
-    columns: GridColumn[];
+export interface IGridOptions {
+    columns: IGridColumn[];
     pageSize?: number;
 }
 
-interface GridColumn {
+interface IGridColumn {
     header: string;
     field: string;
     render?: (row: any) => string;
 }
 
-interface Pagination {
+interface IPagination {
     page: number;
     pageSize: number;
     pages: number;
     total: number;
 }
 
-interface CollectionResponse {
+interface ICollectionResponse {
     _list: any[];
-    _pagination: Pagination;
+    _pagination: IPagination;
 }
 
 let forEach = (xs: any[], fn) => xs.map(fn).join('');
@@ -31,18 +31,18 @@ export class Grid {
     element: Element;
     tbody: HTMLTableSectionElement;
     paginationInfo: HTMLSpanElement;
-    columns: GridColumn[];
+    columns: IGridColumn[];
     rows: any[] = [];
-    options: GridOptions;
+    options: IGridOptions;
     pageSize: number;
-    pagination: Pagination;
+    pagination: IPagination;
     dataSource: GridDataSource;
     inputPageSize: HTMLInputElement;
 
-    init (selector: string, options: GridOptions, dataSourceOptions: GridDataSourceOptions) {
+    init (element: Element, options: IGridOptions, dataSourceOptions: GridDataSourceOptions) {
          this.options = options;
          this.columns = options.columns;
-         this.element = document.querySelector(selector);
+         this.element = element;
          this.pageSize = options.pageSize || 50;
          this.pagination = { page: undefined, pageSize: this.pageSize, pages: undefined, total: undefined };
          this.dataSource = new GridDataSource(dataSourceOptions);
@@ -114,7 +114,7 @@ export class Grid {
             ${forEach(this.rows, (row,i) => {
                 return `
                 <tr class="row${i % 2}">
-                    ${forEach(this.columns, (col: GridColumn) => `<td> ${this.renderCell(col, row)} </td>`)}
+                    ${forEach(this.columns, (col: IGridColumn) => `<td> ${this.renderCell(col, row)} </td>`)}
                 </tr>`;
             })}
             </table>
@@ -127,7 +127,7 @@ export class Grid {
         }
     }
 
-    renderCell (col: GridColumn, row) {
+    renderCell (col: IGridColumn, row) {
         return col.render ? col.render(row) : row[col.field] || '';
     }
 }
