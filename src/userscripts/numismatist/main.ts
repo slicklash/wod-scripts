@@ -1,23 +1,21 @@
-import { parseHTML } from '../../common/dom/parse-html'
-import { add } from '../../common/dom/add'
-import { attr } from '../../common/dom/attr'
-import { httpFetch } from '../../common/net/http-fetch'
-import { log } from '../../common/debugging/log'
+import { parseHTML } from '@common/dom/parse-html';
+import { add } from '@common/dom/add';
+import { attr } from '@common/dom/attr';
+import { httpFetch } from '@common/net/http-fetch';
+import { log } from '@common/debugging/log';
 
-export function main (main_content?) {
+export function main(main_content?) {
 
-    let isDungeonList = location.pathname.includes('dungeonlist');
-    let idGroup = (<any>document.forms).the_form.gruppe_id.value;
+    const isDungeonList = location.pathname.includes('dungeonlist');
+    const idGroup = (<any> document.forms).the_form.gruppe_id.value;
 
-    let p = getGroupHeroes(idGroup).then(getHeroProfiles.bind(null, isDungeonList));
+    const p = getGroupHeroes(idGroup).then(getHeroProfiles.bind(null, isDungeonList));
 
     if (isDungeonList) {
         p.then(showDungeonMedalInfo);
-    }
-    else if (location.pathname.includes('title_list')) {
+    } else if (location.pathname.includes('title_list')) {
         p.then(showFameMedalInfo);
-    }
-    else {
+    } else {
         p.then(showLevelUpMedalInfo);
     }
 }
@@ -40,8 +38,8 @@ function getGroupHeroes(idGroup: string): Promise<IHero[]> {
 
         httpFetch(`/wod/spiel/dungeon/group.php?id=${idGroup}`).catch(reject).then(resp => {
 
-            let groupHeroes = (Array.from((parseHTML<HTMLElement>(resp.data, true)).querySelectorAll('.main_content tbody .content_table_mainline a')) as HTMLAnchorElement[])
-                                    .map(x => { return { name: x.textContent, profileUrl: x.getAttribute('href') } });
+            const groupHeroes = (Array.from((parseHTML<HTMLElement>(resp.data, true)).querySelectorAll('.main_content tbody .content_table_mainline a')) as HTMLAnchorElement[])
+                                    .map(x => ({ name: x.textContent, profileUrl: x.getAttribute('href') }) );
 
             resolve(groupHeroes);
         });
@@ -49,7 +47,7 @@ function getGroupHeroes(idGroup: string): Promise<IHero[]> {
 }
 
 function getHeroProfiles(includeMedals: boolean, groupHeroes: IHero[]): Promise<IHeroProfileInfo[]> {
-    return <any>Promise.all(groupHeroes.map(hero => parseProfile(includeMedals, hero)));
+    return <any> Promise.all(groupHeroes.map(hero => parseProfile(includeMedals, hero)));
 }
 
 function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfileInfo> {
@@ -58,19 +56,17 @@ function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfile
 
         httpFetch(hero.profileUrl).catch(reject).then(resp => {
 
-            let html = parseHTML<HTMLElement>(resp.data, true);
-            let profile: IHeroProfileInfo =  { name: hero.name, profileUrl: hero.profileUrl, isMentor: true };
+            const html = parseHTML<HTMLElement>(resp.data, true);
+            const profile: IHeroProfileInfo =  { name: hero.name, profileUrl: hero.profileUrl, isMentor: true };
 
-            let rows = (Array.from(html.querySelectorAll('.content_table tr'))) as HTMLTableRowElement[];
+            const rows = (Array.from(html.querySelectorAll('.content_table tr'))) as HTMLTableRowElement[];
 
             rows.forEach(x => {
                 if (x.cells[0].textContent.trim() === 'class') {
                     profile.isMentor = x.cells[1].textContent.trim().includes('Mentor');
-                }
-                else if (x.cells[0].textContent.trim() === 'fame') {
+                } else if (x.cells[0].textContent.trim() === 'fame') {
                     profile.fame = Number(x.cells[1].textContent.replace(/ /g, ''));
-                }
-                else if (x.cells[0].textContent.trim().includes('gained')) {
+                } else if (x.cells[0].textContent.trim().includes('gained')) {
                     profile.exp = Number(x.cells[1].textContent.replace(/ /g, ''));
                 }
             });
@@ -80,7 +76,7 @@ function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfile
                 return;
             }
 
-            let medalsUrl = (Array.from(html.querySelectorAll('#smarttabs__details_inner a')) as HTMLAnchorElement[])
+            const medalsUrl = (Array.from(html.querySelectorAll('#smarttabs__details_inner a')) as HTMLAnchorElement[])
                                   .map(x => x.getAttribute('href'))
                                   .find(x => x && x.includes('goallist'));
 
@@ -97,25 +93,25 @@ function parseProfile(includeMedals: boolean, hero: IHero): Promise<IHeroProfile
 
 function showLevelUpMedalInfo(profiles: IHeroProfileInfo[]) {
 
-    let rows: HTMLTableRowElement[] = <any>Array.from(document.querySelectorAll('.content_table tr'));
+    const rows: HTMLTableRowElement[] = <any> Array.from(document.querySelectorAll('.content_table tr'));
 
-    let nonMentors = profiles.filter(x => !x.isMentor);
+    const nonMentors = profiles.filter(x => !x.isMentor);
 
     rows.forEach((tr, i) => {
 
-        let td = tr.cells[0];
+        const td = tr.cells[0];
         td.setAttribute('style', 'min-width: 50px');
 
         if (i > 2) {
 
-            let requiredExp = parseInt(tr.cells[2].textContent.replace(/\s/g, ''));
-            let notObtained = nonMentors.filter(x => x.exp < requiredExp).map(x => `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`).sort();
+            const requiredExp = parseInt(tr.cells[2].textContent.replace(/\s/g, ''), 10);
+            const notObtained = nonMentors.filter(x => x.exp < requiredExp)
+                                          .map(x => `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`).sort();
 
             if (notObtained.length) {
                 addMedalIcon(false, td, 'left');
                 tr.setAttribute('title', `Exp deficit (${notObtained.length}):\n\n${notObtained.join('\n')}`);
-            }
-            else {
+            } else {
                 addMedalIcon(true, td, 'left');
             }
         }
@@ -124,36 +120,33 @@ function showLevelUpMedalInfo(profiles: IHeroProfileInfo[]) {
 
 function showFameMedalInfo(profiles: IHeroProfileInfo[]) {
 
-    let rows: HTMLTableRowElement[] = <any>Array.from(document.querySelectorAll('.content_table tr'));
-
-    let medals = ['pin', 'oak leaf', 'shamrock', 'laurel'];
-
-    let nonMentors = profiles.filter(x => !x.isMentor);
+    const rows: HTMLTableRowElement[] = <any> Array.from(document.querySelectorAll('.content_table tr'));
+    const medals = ['pin', 'oak leaf', 'shamrock', 'laurel'];
+    const nonMentors = profiles.filter(x => !x.isMentor);
 
     rows.forEach((tr, i) => {
 
-        let td = add<HTMLTableCellElement>('td');
+        const td = add<HTMLTableCellElement>('td');
         td.setAttribute('style', 'min-width: 210px');
 
         if (i > 0) {
-            let name = `${i > 4 ? 'large ': ''}${medals[(i - 1) % medals.length]}${i > 12 ? ' of honor' : i > 8 ? ' and ribbon' : ''}`;
-            let a = add<HTMLAnchorElement>('a', td);
+            const name = `${i > 4 ? 'large' : ''}${medals[(i - 1) % medals.length]}${i > 12 ? ' of honor' : i > 8 ? ' and ribbon' : ''}`;
+            const a = add<HTMLAnchorElement>('a', td);
             a.href = `/wod/spiel/hero/item.php?name=${name.replace(/ /g, '+')}&is_popup=1`;
             a.target = '_blank';
             a.textContent = name;
 
-            let requiredFame = parseInt(tr.cells[0].textContent.replace(/\d+. title/, ''));
-            let notObtained = nonMentors.filter(x => x.fame < requiredFame).map(x => `${x.name} (${(requiredFame - x.fame).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`).sort();
+            const requiredFame = parseInt(tr.cells[0].textContent.replace(/\d+. title/, ''), 10);
+            const notObtained = nonMentors.filter(x => x.fame < requiredFame)
+                                          .map(x => `${x.name} (${(requiredFame - x.fame).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`).sort();
 
             if (notObtained.length) {
                 addMedalIcon(false, td);
                 tr.setAttribute('title', `Fame deficit (${notObtained.length}):\n\n${notObtained.join('\n')}`);
-            }
-            else {
+            } else {
                 addMedalIcon(true, td);
             }
-        }
-        else {
+        } else {
             td.innerHTML = '<strong>medal</strong>';
         }
 
@@ -163,30 +156,30 @@ function showFameMedalInfo(profiles: IHeroProfileInfo[]) {
 
 function showDungeonMedalInfo(profiles: IHeroProfileInfo[]) {
 
-    let map: { [x: string]: string[] } = profiles.reduce((acc, x) => {
+    const map: { [x: string]: string[] } = profiles.reduce((acc, x) => {
 
         x.medals.forEach(m => {
-            let key = m.toLowerCase();
+            const key = m.toLowerCase();
             if (!Array.isArray(acc[key])) acc[key] = [];
             acc[key].push(x.name);
         });
 
         return acc;
 
-    }, <any>{});
+    }, <any> {});
 
-    let dungeons = Array.from(document.querySelectorAll('#main_content .content_table tbody tr td:nth-child(2)'));
+    const dungeons = Array.from(document.querySelectorAll('#main_content .content_table tbody tr td:nth-child(2)'));
 
-    let nonMentors = profiles.filter(x => !x.isMentor);
+    const nonMentors = profiles.filter(x => !x.isMentor);
 
     dungeons.forEach(td => {
 
-        let key = td.textContent.trim().toLowerCase();
-        let heroes = map[key] || [];
-        let allHeroes = profiles.length && heroes.length === nonMentors.length;
+        const key = td.textContent.trim().toLowerCase().replace('the treasure map', 'treasure map');
+        const heroes = map[key] || [];
+        const allHeroes = profiles.length && heroes.length === nonMentors.length;
 
         if (!allHeroes) {
-            let notObtained = profiles.filter(x => heroes.indexOf(x.name) < 0).map(x => x.name).sort();
+            const notObtained = profiles.filter(x => heroes.indexOf(x.name) < 0).map(x => x.name).sort();
             td.setAttribute('title', `Missing medal (${notObtained.length}):\n\n${notObtained.join('\n')}`);
         }
 
@@ -196,11 +189,10 @@ function showDungeonMedalInfo(profiles: IHeroProfileInfo[]) {
 
 function addMedalIcon(isAchieved: boolean, elem: Element, position: string = 'right') {
 
-    let img: HTMLImageElement = add<HTMLImageElement>('img', elem);
+    const img: HTMLImageElement = add<HTMLImageElement>('img', elem);
 
     img.src = `/wod/css/icons/common/${isAchieved ? 'medal_big' : 'medal_big_gray' }.png`;
     attr(img, 'style', 'width: 24px; float: ' + position);
 }
 
-
-if (!(<any>window).__karma__) document.addEventListener('DOMContentLoaded', () => main());
+if (!(<any> window).__karma__) document.addEventListener('DOMContentLoaded', () => main());

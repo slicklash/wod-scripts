@@ -1,11 +1,11 @@
-import { getItemInfo, main } from './main'
-import { parseHTML } from '../common/dom/parse-html'
+import { getItemInfo, main } from './main';
+import { parseHTML } from '@common/dom/parse-html';
 
 describe('tidy_trade', () => {
 
     it('should parse item info', () => {
 
-        let table = parseHTML(`
+        const table = parseHTML(`
             <table>
                 <tbody>
                     <tr>
@@ -51,18 +51,18 @@ describe('tidy_trade', () => {
             </table>
         `);
 
-        let [items, sums] = getItemInfo(table),
-            item1 = items[0];
+        const [items, sums] = getItemInfo(table);
+        const  item1 = items[0];
 
         expect(items.length).toBe(3);
         expect(item1.name).toBe('bubbling brew of magic resistance');
         expect(sums[item1.name]).toBe(12);
 
-    })
+    });
 
     it('should find tables', () => {
 
-        let main_content = parseHTML(`
+        const main_content = parseHTML(`
             <div id="main_content">
                <h1>Trade with</h1>
                <table></table>
@@ -71,10 +71,10 @@ describe('tidy_trade', () => {
             </div>
         `);
 
-        let sut = main(main_content);
+        const sut = main(main_content);
 
         expect(sut).toBe(true);
 
-    })
+    });
 
-})
+});

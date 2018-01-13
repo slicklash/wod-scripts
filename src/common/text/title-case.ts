@@ -1,3 +1,3 @@
-export function titleCase (x) {
-    return  x ? x[0].toUpperCase() + x.slice(1).toLowerCase() : '';
+export function titleCase(text) {
+    return text ? text[0].toUpperCase() + text.slice(1).toLowerCase() : '';
 }

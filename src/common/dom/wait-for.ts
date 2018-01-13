@@ -7,7 +7,7 @@ export function waitFor(selectorOrElement: string | Element | Document, eventNam
 
             const fn = () => {
 
-                let elem = document.querySelector(selectorOrElement);
+                const elem = document.querySelector(selectorOrElement);
 
                 if (elem || document.readyState === 'complete') resolve(elem);
 
@@ -15,8 +15,7 @@ export function waitFor(selectorOrElement: string | Element | Document, eventNam
             };
 
             fn();
-        }
-        else {
+        } else {
             selectorOrElement.addEventListener(eventName, resolve);
         }
     });

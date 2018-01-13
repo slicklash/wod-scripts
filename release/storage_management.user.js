@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.3.0
+// @version        1.3.1
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/trade/trade.php*
@@ -110,7 +110,7 @@ var SPECIAL_CONSUMABLES = [
     'trollbeard plant',
     'wooden handle',
     'wooden log',
-    'wooden pole'
+    'wooden pole',
 ];
 var StorageItem = (function () {
     function StorageItem() {
@@ -122,6 +122,7 @@ var StorageItem = (function () {
         this.ctrlLocationSelect = null;
         this.ctrlLocationCheckbox = null;
         this.ctrlSellCheckbox = null;
+        this.ctrlGroupCheckbox = null;
         this.price = 0;
     }
     Object.defineProperty(StorageItem.prototype, "isConsumable", {
@@ -170,36 +171,88 @@ var SELECTION_OPTIONS = [
     { key: 'itm_group', title: 'group', pick: true, predicate: function (x) { return x.isGroupItem && !x.isConsumable; }, notForSell: true, count: 0, countSell: 0 },
     { key: 'itm_non_group', title: 'non-group', pick: true, predicate: function (x) { return !x.isGroupItem && !x.isConsumable; }, notForSell: true, count: 0, countSell: 0 },
 ];
+function getItems(elem) {
+    var table = getTable(elem);
+    var rows = table ? Array.from(table.querySelectorAll('tr')) : [];
+    var items = parseItems(rows);
+    return { items: items, table: table };
+}
+function getTable(main_content) {
+    var scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]');
+    if (!scope || !scope.length)
+        scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_KELLER_DO_SORT"][class*="table_h"]');
+    if (!scope || !scope.length)
+        scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_GROUPCELLAR_DO_SORT"][class*="table_h"]');
+    try {
+        scope = scope[0].parentNode.parentNode.parentNode.parentNode.querySelector('tbody');
+    }
+    catch (ex) {
+        scope = null;
+    }
+    return scope;
+}
+function parseItems(rows) {
+    var re_uses = /\(([0-9]+)\/[0-9]+\)/;
+    return rows.reduce(function (acc, row) {
+        if (!row || !row.cells || row.cells.length < 2)
+            return acc;
+        var cells = row.cells;
+        var link = cells[1].querySelector('a');
+        var name = textContent(link).replace(/!$/, '');
+        var uses = textContent(cells[1]).replace(name, '').trim();
+        var tooltip = link ? attr(link, 'onmouseover') : false;
+        var classes = link ? attr(link, 'class') : '';
+        var ctrl_location = cells.length > 2 ? cells[2].querySelector('select') : null;
+        var ctrl_select = cells.length > 2 ? cells[2].querySelector('input[type="checkbox"][name^="doEquip"]') : null;
+        var ctrl_sell = cells.length > 3 ? cells[3].querySelector('input[type="checkbox"][name^="Sell"]') : null;
+        var price = cells.length > 3 ? Number(cells[3].textContent.trim()) : 0;
+        var ctrl_group = cells.length > 6 ? cells[6].querySelector('input[type="checkbox"][name^="SetGrpItem"]') : null;
+        if (!ctrl_sell && cells.length > 4) {
+            ctrl_sell = cells[4].querySelector('input[type="checkbox"]');
+            price = Number(cells[4].textContent.trim());
+        }
+        var item = new StorageItem();
+        item.name = name;
+        var m = uses.match(re_uses);
+        if (m) {
+            item.isConsumable = true;
+            item.uses = m[1];
+        }
+        item.isUsable = classes.indexOf('item_unusable') === -1;
+        item.isGroupItem = tooltip ? tooltip.indexOf('group item') > -1 : false;
+        item.ctrlLocationSelect = ctrl_location;
+        item.ctrlLocationCheckbox = ctrl_select;
+        item.ctrlSellCheckbox = ctrl_sell;
+        item.ctrlGroupCheckbox = ctrl_group;
+        item.price = price;
+        for (var _i = 0, SELECTION_OPTIONS_1 = SELECTION_OPTIONS; _i < SELECTION_OPTIONS_1.length; _i++) {
+            var option = SELECTION_OPTIONS_1[_i];
+            if (option.predicate && option.predicate(item)) {
+                if (item.ctrlLocationSelect)
+                    option.count = (option.count || 0) + 1;
+                if (item.ctrlSellCheckbox)
+                    option.countSell = (option.countSell || 0) + 1;
+            }
+        }
+        acc.push(item);
+        return acc;
+    }, []);
+}
 var CommitButtonSelector = '#main_content input[type="submit"][name="ok"][value*="' + _t('Commit') + '"]';
 var StorageController = (function () {
     function StorageController() {
-        this._options = SELECTION_OPTIONS;
-        this._items = [];
         this.labelsSellInfo = [];
         this.sellCount = 0;
         this.sellSum = 0;
+        this._options = SELECTION_OPTIONS;
+        this._items = [];
     }
     StorageController.prototype.$onInit = function () {
         var _this = this;
         this._ready = waitFor(document, 'DOMContentLoaded');
-        waitFor('select[name*="hero_race"]').then(this._makeClassAndRaceSelectable);
         waitFor('input[type="hidden"][name="view"]').then(function (elem) {
             if (elem && elem.value !== 'gear')
                 _this._createControls();
-        });
-    };
-    StorageController.prototype._makeClassAndRaceSelectable = function () {
-        var selectClass = document.querySelector('select[name*="hero_class"]');
-        var selectRace = document.querySelector('select[name*="hero_race"]');
-        if (!selectClass || !selectRace)
-            return;
-        var label = selectClass.parentElement.previousElementSibling;
-        label.classList.add('button_minor');
-        label.setAttribute('style', 'padding: 0');
-        label.addEventListener('click', function () {
-            var form = document.forms.the_form;
-            selectClass.value = form.klasse_id.value;
-            selectRace.value = form.rasse_id.value;
         });
     };
     StorageController.prototype._createControls = function () {
@@ -207,7 +260,10 @@ var StorageController = (function () {
         var buttons_commit = Array.from(document.querySelectorAll(CommitButtonSelector));
         if (!buttons_commit.length)
             return;
-        var isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1, isGroupTv = window.location.href.indexOf('groupcellar') > -1 && !isGroupStorage, go_tv = isGroupTv ? '-go_group' : 'go_group', go_gs = isGroupStorage ? '-go_group_2' : 'go_group_2';
+        var isGroupStorage = window.location.href.indexOf('groupcellar_2') > -1;
+        var isGroupTv = window.location.href.indexOf('groupcellar') > -1 && !isGroupStorage;
+        var go_tv = isGroupTv ? '-go_group' : 'go_group';
+        var go_gs = isGroupStorage ? '-go_group_2' : 'go_group_2';
         var moveItemToCellar = function (x) { x.ctrlLocationSelect.value = 'go_keller'; };
         var splitItem = function (x) { x.ctrlLocationSelect.value = !x.isConsumable ? go_tv : go_gs; if (!x.ctrlLocationSelect.value)
             moveItemToCellar(x); };
@@ -226,7 +282,14 @@ var StorageController = (function () {
         var selectsForSell = [];
         var actionButtons = [];
         buttons_commit.forEach(function (commit) {
-            var labelMove = _this._makeLabel('Select'), labelSell = _this._makeLabel('Selll'), buttonSplit = _this._makeButton('Split', onSplit), buttonCellar = _this._makeButton('Cellar', onCellar), buttonEquip = _this._makeButton('Equip', onEquip), selectForLocation = _this._makeSelect(140, onSelectChanged), selectForSell = _this._makeSelect(120, onSellChanged), labelSellInfo = add('span');
+            var labelMove = _this._makeLabel('Select');
+            var labelSell = _this._makeLabel('Selll');
+            var buttonSplit = _this._makeButton('Split', onSplit);
+            var buttonCellar = _this._makeButton('Cellar', onCellar);
+            var buttonEquip = _this._makeButton('Equip', onEquip);
+            var selectForLocation = _this._makeSelect(140, onSelectChanged);
+            var selectForSell = _this._makeSelect(120, onSellChanged);
+            var labelSellInfo = add('span');
             actionButtons.push(buttonSplit, buttonCellar, buttonEquip);
             _this.labelsSellInfo.push(labelSellInfo);
             selectsForLocation.push(selectForLocation);
@@ -234,14 +297,22 @@ var StorageController = (function () {
             insertAfter(commit, labelMove, selectForLocation, buttonSplit, buttonCellar, buttonEquip, labelSell, selectForSell, labelSellInfo);
         });
         this._ready.then(function () {
-            var rows = _this._getTableRows(document.querySelector('#main_content'));
-            _this._items = _this._parseItems(rows);
+            var _a = getItems(document.querySelector('#main_content')), table = _a.table, items = _a.items;
+            _this._table = table;
+            _this._items = items;
             selectsForLocation.forEach(function (x) { _this._addOptions(x, _this._options); x.disabled = false; });
             var sellOptions = _this._options.filter(function (x) { return !x.notForSell; });
             selectsForSell.forEach(function (x) { _this._addOptions(x, sellOptions, true); x.disabled = false; });
             actionButtons.forEach(function (x) { x.disabled = false; });
             _this._attachEvents();
         });
+    };
+    StorageController.prototype._attachEvents = function () {
+        if (!this._table) {
+            return;
+        }
+        this._table.addEventListener('keyup', this._onKeyUp.bind(this));
+        this._table.addEventListener('click', this._onClick.bind(this));
     };
     StorageController.prototype._onSellChanged = function (e) {
         var option = this._options.find(function (x) { return x.key === e.target.value; });
@@ -279,7 +350,8 @@ var StorageController = (function () {
         var predicate = _a.predicate, handler = _a.handler;
         if (!this._items.length)
             return;
-        var onlySelected = false, tmp = [];
+        var onlySelected = false;
+        var tmp = [];
         for (var _i = 0, _b = this._items; _i < _b.length; _i++) {
             var item = _b[_i];
             if (predicate(item)) {
@@ -317,13 +389,13 @@ var StorageController = (function () {
     };
     StorageController.prototype._makeButton = function (text, onClick) {
         var btn = add('input');
-        attr(btn, { 'type': 'button', 'class': 'button clickable', 'name': "button" + text, 'value': "" + text, 'style': 'margin-left: 5px', 'disabled': 'disabled' });
+        attr(btn, { type: 'button', class: 'button clickable', name: "button" + text, value: "" + text, style: 'margin-left: 5px', disabled: 'disabled' });
         btn.addEventListener('click', onClick, false);
         return btn;
     };
     StorageController.prototype._makeSelect = function (width, onSelect) {
         var select = add('select');
-        attr(select, { 'style': "min-width: " + width + "px", 'disabled': 'disabled' });
+        attr(select, { style: "min-width: " + width + "px", disabled: 'disabled' });
         select.addEventListener('change', onSelect, false);
         return select;
     };
@@ -336,50 +408,6 @@ var StorageController = (function () {
         else {
             select.appendChild(op);
         }
-    };
-    StorageController.prototype._parseItems = function (rows) {
-        var _this = this;
-        var re_uses = /\(([0-9]+)\/[0-9]+\)/;
-        return rows.reduce(function (acc, row) {
-            if (!row || !row.cells || row.cells.length < 2)
-                return acc;
-            var cells = row.cells, link = cells[1].querySelector('a'), name = textContent(link).replace(/!$/, ''), uses = textContent(cells[1]).replace(name, '').trim(), tooltip = link ? attr(link, 'onmouseover') : false, classes = link ? attr(link, 'class') : '', ctrl_location = cells.length > 2 ? cells[2].querySelector('select') : null, ctrl_select = cells.length > 2 ? cells[2].querySelector('input[type="checkbox"][name^="doEquip"]') : null, ctrl_sell = cells.length > 3 ? cells[3].querySelector('input[type="checkbox"][name^="Sell"]') : null, price = cells.length > 3 ? Number(cells[3].textContent.trim()) : 0;
-            if (!ctrl_sell && cells.length > 4) {
-                ctrl_sell = cells[4].querySelector('input[type="checkbox"]');
-                price = Number(cells[4].textContent.trim());
-            }
-            var item = new StorageItem();
-            item.name = name;
-            var m = uses.match(re_uses);
-            if (m) {
-                item.isConsumable = true;
-                item.uses = m[1];
-            }
-            item.isUsable = classes.indexOf('item_unusable') === -1;
-            item.isGroupItem = tooltip ? tooltip.indexOf('group item') > -1 : false;
-            item.ctrlLocationSelect = ctrl_location;
-            item.ctrlLocationCheckbox = ctrl_select;
-            item.ctrlSellCheckbox = ctrl_sell;
-            item.price = price;
-            for (var _i = 0, _a = _this._options; _i < _a.length; _i++) {
-                var option = _a[_i];
-                if (option.predicate && option.predicate(item)) {
-                    if (item.ctrlLocationSelect)
-                        option.count = (option.count || 0) + 1;
-                    if (item.ctrlSellCheckbox)
-                        option.countSell = (option.countSell || 0) + 1;
-                }
-            }
-            acc.push(item);
-            return acc;
-        }, []);
-    };
-    StorageController.prototype._attachEvents = function () {
-        if (!this._table) {
-            return;
-        }
-        this._table.addEventListener('keyup', this._onKeyUp.bind(this));
-        this._table.addEventListener('click', this._onClick.bind(this));
     };
     StorageController.prototype._onKeyUp = function (e) {
         var input = e.target;
@@ -416,43 +444,25 @@ var StorageController = (function () {
         if (elem.tagName !== 'INPUT' || elem.type !== 'checkbox') {
             return;
         }
-        var item;
+        var prop;
         if (elem.name.startsWith('Sell')) {
-            item = this._items.find(function (x) { return x.ctrlSellCheckbox === elem; });
-            if (item && e.shiftKey) {
-                this._items.forEach(function (y) {
-                    if (y.name === item.name)
-                        y.ctrlSellCheckbox.checked = elem.checked;
-                });
-            }
-            this._updateSellInfo();
+            prop = 'ctrlSellCheckbox';
         }
         else if (elem.name.startsWith('doEquip')) {
-            item = this._items.find(function (x) { return x.ctrlLocationCheckbox === elem; });
-            if (item && e.shiftKey) {
-                this._items.forEach(function (y) {
-                    if (y.name === item.name)
-                        y.ctrlLocationCheckbox.checked = elem.checked;
-                });
-            }
+            prop = 'ctrlLocationCheckbox';
         }
-    };
-    StorageController.prototype._getTableRows = function (main_content) {
-        var scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]');
-        if (!scope || !scope.length)
-            scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_KELLER_DO_SORT"][class*="table_h"]');
-        if (!scope || !scope.length)
-            scope = main_content.querySelectorAll('input[type="submit"][name^="ITEMS_GROUPCELLAR_DO_SORT"][class*="table_h"]');
-        try {
-            scope = scope[0].parentNode.parentNode.parentNode.parentNode.querySelector('tbody');
+        else if (elem.name.startsWith('SetGrpItem')) {
+            prop = 'ctrlGroupCheckbox';
         }
-        catch (ex) {
-            scope = null;
+        if (!prop)
+            return;
+        var item = this._items.find(function (x) { return x[prop] === elem; });
+        if (item && e.shiftKey) {
+            this._items.forEach(function (y) {
+                if (y.name === item.name)
+                    y[prop].checked = elem.checked;
+            });
         }
-        if (!scope)
-            return [];
-        this._table = scope;
-        return Array.from(scope.querySelectorAll('tr'));
     };
     return StorageController;
 }());

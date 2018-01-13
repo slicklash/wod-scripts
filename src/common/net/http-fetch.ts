@@ -1,25 +1,26 @@
 export interface IResponse {
-    data?: any
+    data?: any;
 }
 
-export function httpFetch (url, method = 'GET', data = undefined): Promise<IResponse> {
+export function httpFetch(url, method = 'GET', data?): Promise<IResponse> {
 
    return new Promise((resolve, reject) => {
-        let request: any = {
-            method: method,
-            url: url,
+        const request: any = {
+            method,
+            url,
             headers: { Cookie: document.cookie },
-            onload: (request) => {
-                if (request.readyState !== 4) return;
-                if (request.status >= 200 && request.status < 300)
+            onload: req => {
+                if (req.readyState !== 4) return;
+                if (req.status >= 200 && request.status < 300) {
                     resolve({
-                        data: request.responseText
+                        data: req.responseText,
                     });
-                else
+                } else {
                     reject({
-                        data: request.responseText
+                        data: req.responseText,
                     });
-            }
+                }
+            },
         };
         if (typeof data === 'object') {
             request.data = JSON.stringify(data);

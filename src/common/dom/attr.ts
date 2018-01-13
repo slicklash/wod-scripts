@@ -1,15 +1,12 @@
-export function attr (elem, nameOrMap: string | Object, value?, remove?: boolean) {
+export function attr(elem, nameOrMap: string | object, value?, remove?: boolean) {
 
     if (remove) {
         elem.removeAttribute(nameOrMap);
-    }
-    else if (typeof nameOrMap === 'object') {
+    } else if (typeof nameOrMap === 'object') {
         Object.keys(nameOrMap).forEach(key => { elem.setAttribute(key, nameOrMap[key]); });
-    }
-    else if (value) {
+    } else if (value) {
         elem.setAttribute(nameOrMap, value);
-    }
-    else {
+    } else {
         return elem.getAttribute(nameOrMap);
     }
 

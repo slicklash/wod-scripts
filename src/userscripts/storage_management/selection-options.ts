@@ -1,16 +1,16 @@
-import { StorageItem } from  './storage-item'
+import { StorageItem } from './storage-item';
 
 export interface ISelectionOption {
     key: string;
     title: string;
     pick?: boolean;
-    predicate?(item: StorageItem): boolean;
     notForSell?: boolean;
     count?: number;
     countSell?: number;
+    predicate?(item: StorageItem): boolean;
 }
 
-export var SELECTION_OPTIONS: ISelectionOption[] = [
+export const SELECTION_OPTIONS: ISelectionOption[] = [
     { key: 'none', title: 'none', pick: false, predicate: () => true },
     { key: '---', title: 'All' },
     { key: 'all', title: 'all', pick: true, predicate: () => true, count: 0, countSell: 0 },

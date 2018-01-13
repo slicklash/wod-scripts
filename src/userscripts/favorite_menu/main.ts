@@ -1,91 +1,90 @@
-import { add } from '../../common/dom/add'
-import { attr } from '../../common/dom/attr'
-import { cssClass } from '../../common/dom/css-class'
-import { waitFor } from '../../common/dom/wait-for'
+import { add } from '@common/dom/add';
+import { attr } from '@common/dom/attr';
+import { cssClass } from '@common/dom/css-class';
+import { waitFor } from '@common/dom/wait-for';
 
 // --- Main
 
 const MENU_NAME        = 'Favorites';
 
-let MENU_LAYOUT = {
-   'my_heroes': [
+const MENU_LAYOUT = {
+   my_heroes: [
         'My Heroes', {
-            'hero_attributes'       : 'Attributes',
-            'hero_skills'           : 'Skills',
-            'hero_gear'             : 'Equipment',
-            'hero_storage'          : 'Storage',
-            'hero_cellar'           : 'Cellar',
-            'hero_skillconf'        : 'Settings',
-            'arena'                 : 'Arena',
-            'hero_profiles'         : 'Profile',
-            'hero_events'           : 'Adventures'
-        }
+            hero_attributes       : 'Attributes',
+            hero_skills           : 'Skills',
+            hero_gear             : 'Equipment',
+            hero_storage          : 'Storage',
+            hero_cellar           : 'Cellar',
+            hero_skillconf        : 'Settings',
+            arena                 : 'Arena',
+            hero_profiles         : 'Profile',
+            hero_events           : 'Adventures',
+        },
     ],
-    'group': [
+    group: [
         'My Group', {
-            'dungeon'               : 'Dungeon',
-            'reports'               : 'Reports',
-            'hero_group_cellar'     : 'GS',
-            'hero_group_treasure'   : 'TV',
-            'group_cashbox'         : 'Funds'
-        }
+            dungeon               : 'Dungeon',
+            reports               : 'Reports',
+            hero_group_cellar     : 'GS',
+            hero_group_treasure   : 'TV',
+            group_cashbox         : 'Funds',
+        },
     ],
-    'trade_exchange': [
+    trade_exchange: [
         'Trade', {
-            'trade_market'          : 'Marketplace',
-            'trade_auction'         : 'Auctions',
-            'trade_bids'            : 'Offers'
-        }
+            trade_market          : 'Marketplace',
+            trade_auction         : 'Auctions',
+            trade_bids            : 'Offers',
+        },
     ],
-    'recruite_ranking': [
+    recruite_ranking: [
         'Leaderboard', {
-            'duells_ranking_groups' : 'Groups',
-            'duells_ranking_clans'  : 'Clans'
-        }
-    ]
+            duells_ranking_groups : 'Groups',
+            duells_ranking_clans  : 'Clans',
+        },
+    ],
 };
 
 function main(verticalMenu: HTMLElement) {
 
     if (!verticalMenu) return;
 
-    let match_skin = (<any>document.querySelector('link[href*="skin"]')).href.match(/skin[0-9\-]+/i),
-        skin = match_skin ? match_skin[0] : '',
-        font_render_url = `${window.location.protocol}//fonts.neise-games.de/java_font_renderer/render?skin=${skin}`,
-        fav_menu = add<HTMLDivElement>('div'),
-        caption = add<HTMLAnchorElement>('a', fav_menu),
-        supports_img = skin !== 'skin-1';
+    const match_skin = (<any> document.querySelector('link[href*="skin"]')).href.match(/skin[0-9\-]+/i);
+    const skin = match_skin ? match_skin[0] : '';
+    const font_render_url = `${window.location.protocol}//fonts.neise-games.de/java_font_renderer/render?skin=${skin}`;
+    const fav_menu = add<HTMLDivElement>('div');
+    const caption = add<HTMLAnchorElement>('a', fav_menu);
+    const supports_img = skin !== 'skin-1';
 
-    attr(fav_menu, { 'class': 'menu-1', id: 'menu_my_menu' });
-    attr(caption, { 'class': 'menu-1-caption alink selected', 'onclick': "return menuOnClick(this,'','','');" });
+    attr(fav_menu, { class: 'menu-1', id: 'menu_my_menu' });
+    attr(caption, { class: 'menu-1-caption alink selected', onclick: "return menuOnClick(this,'','','');" });
 
     if (supports_img) {
-        attr(add('img', caption), { 'class': 'font_menu-1', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1&text=' + MENU_NAME });
-        attr(add('img', caption), { 'class': 'font_menu-1-hovered', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-hovered&text=' + MENU_NAME });
-        attr(add('img', caption), { 'class': 'font_menu-1-selected', 'alt': MENU_NAME, 'src' : font_render_url + '&profil=font_menu-1-selected&text=' + MENU_NAME });
-    }
-    else {
+        attr(add('img', caption), { class: 'font_menu-1', alt: MENU_NAME, src : font_render_url + '&profil=font_menu-1&text=' + MENU_NAME });
+        attr(add('img', caption), { class: 'font_menu-1-hovered', alt: MENU_NAME, src : font_render_url + '&profil=font_menu-1-hovered&text=' + MENU_NAME });
+        attr(add('img', caption), { class: 'font_menu-1-selected', alt: MENU_NAME, src : font_render_url + '&profil=font_menu-1-selected&text=' + MENU_NAME });
+    } else {
         caption.textContent = MENU_NAME;
     }
 
     attr(add('span', caption), 'class', 'menu-1-arrow open');
 
-    let menu0 = add('div', fav_menu),
-        menu_body = add('div', menu0),
-        menu_items = {},
-        open_links = {};
+    const menu0 = add('div', fav_menu);
+    const menu_body = add('div', menu0);
+    const menu_items = {};
+    const open_links = {};
 
-    attr(menu0, { 'class': 'menu-1-body', 'style' : 'display: block' });
+    attr(menu0, { class: 'menu-1-body', style : 'display: block' });
     attr(menu_body, 'class', 'menu-2');
 
-    let match_name,
-    menu1 = Array.from(verticalMenu.querySelectorAll('.menu-1'));
+    let match_name;
+    const menu1 = Array.from(verticalMenu.querySelectorAll('.menu-1'));
 
     menu1.forEach(open_menu => {
 
         if (cssClass(open_menu, 'open')) {
 
-            let tmp = open_menu.querySelectorAll('a');
+            const tmp = open_menu.querySelectorAll('a');
 
             for (let j = 0, c2 = tmp.length; j < c2; j++) {
                 match_name = attr(tmp[j], 'onclick').match(/'([a-z_ ]+)',''\);$/i);
@@ -94,11 +93,11 @@ function main(verticalMenu: HTMLElement) {
         }
     });
 
-    let links = verticalMenu.querySelectorAll('.menu-2 a');
+    const links = verticalMenu.querySelectorAll('.menu-2 a');
 
     for (let i = 0, cnt = links.length; i < cnt; i++) {
 
-        let link = links[i];
+        const link = links[i];
 
         match_name = attr(link, 'onclick').match(/'([a-z_ ]+)',''\);$/i);
 
@@ -115,22 +114,22 @@ function main(verticalMenu: HTMLElement) {
 
         if (!link) {
             link = add('a');
-            attr(link, { 'href':'#', 'class': 'menu-2-caption' });
+            attr(link, { href: '#', class: 'menu-2-caption' });
         }
 
         attr(link, 'onclick', null, true);
 
-        let menu_item = MENU_LAYOUT[key];
+        const menu_item = MENU_LAYOUT[key];
 
         if (typeof menu_item === 'string') {
 
             link.innerHTML = menu_item;
 
-            let open_menu = open_links[key];
+            const open_menu = open_links[key];
 
             if (open_menu) {
 
-                let arrow = open_menu.querySelector('.menu-1-arrow');
+                const arrow = open_menu.querySelector('.menu-1-arrow');
 
                 cssClass(open_menu, 'open', false);
 
@@ -139,27 +138,26 @@ function main(verticalMenu: HTMLElement) {
                     cssClass(arrow, 'closed', true);
                 }
             }
-        }
-        else {
+        } else {
 
             link.textContent = menu_item[0];
 
-            let submenu_items = menu_item[1];
+            const submenu_items = menu_item[1];
 
             submenu = add('div');
 
-            attr(submenu, { 'class': 'menu-2-body', 'style': 'padding-top: 0px' });
+            attr(submenu, { class: 'menu-2-body', style: 'padding-top: 0px' });
 
             Object.keys(submenu_items).forEach(subkey => {
 
-                let sublink = menu_items[subkey];
+                const sublink = menu_items[subkey];
 
                 if (sublink) {
 
                     attr(sublink, 'onclick', null, true);
 
-                    let menu3 = add<HTMLDivElement>('div', submenu),
-                        menu3_cap = add<HTMLAnchorElement>(sublink, menu3);
+                    const menu3 = add<HTMLDivElement>('div', submenu);
+                    const menu3_cap = add<HTMLAnchorElement>(sublink, menu3);
 
                     attr(menu3, 'class', 'menu-3');
                     cssClass(menu3_cap, 'menu-2-caption', false);
@@ -167,11 +165,11 @@ function main(verticalMenu: HTMLElement) {
 
                     menu3_cap.innerHTML = submenu_items[subkey];
 
-                    let open_menu = open_links[subkey];
+                    const open_menu = open_links[subkey];
 
                     if (open_menu) {
 
-                        let arrow = open_menu.querySelector('.menu-1-arrow');
+                        const arrow = open_menu.querySelector('.menu-1-arrow');
 
                         cssClass(open_menu, 'open', false);
 
@@ -184,13 +182,13 @@ function main(verticalMenu: HTMLElement) {
             });
         }
 
-        let new_menu = add('div', menu_body);
+        const new_menu = add('div', menu_body);
         attr(new_menu, 'class', 'menu-2 open');
         add(link, new_menu);
         if (submenu) add(submenu, new_menu);
     });
 
-    let menu_between = add<HTMLDivElement>('div');
+    const menu_between = add<HTMLDivElement>('div');
     attr(menu_between, 'class', 'menu-between');
     verticalMenu.insertBefore(menu_between, verticalMenu.firstChild);
     verticalMenu.insertBefore(fav_menu, verticalMenu.firstChild);
