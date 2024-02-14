@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        1.0.11
+// @version        1.0.12
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -417,7 +417,16 @@ class Hero {
         this.bonus_defence = {};
     }
     generateBBCode() {
-        this.skills.sort((a, b) => b.effective_rank - a.effective_rank);
+        this.skills.sort((a, b) => {
+            let cmp = b.effective_rank - a.effective_rank;
+            if (cmp === 0)
+                cmp = b.rank - a.rank;
+            if (cmp === 0)
+                cmp = Number(b.training_cost_ep.replaceAll(" ", "")) - Number(a.training_cost_ep.replaceAll(" ", ""));
+            if (cmp === 0)
+                cmp = a.name.localeCompare(b.name);
+            return cmp;
+        });
         return toBBCode(this);
     }
     parse(attrPageHtml, withItems = false) {
@@ -654,7 +663,7 @@ const exportProfile = function () {
                 const h1 = frmSkills.querySelector("h1");
                 const d = new Date();
                 const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.11[/size]`;
+                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.12[/size]`;
                 const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
                 attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
                 txtExport.innerHTML = bbcode;
