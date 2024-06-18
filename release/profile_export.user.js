@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        1.0.12
+// @version        1.0.13
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -18,19 +18,29 @@ function add(tag, parent, innerHTML) {
     return elem;
 }
 function attr(elem, nameOrMap, value, remove) {
-    if (remove) { elem.removeAttribute(nameOrMap); }
-    else if (typeof nameOrMap === "object") { Object.keys(nameOrMap).forEach((key) => { elem.setAttribute(key, nameOrMap[key]); }); }
-    else if (value) { elem.setAttribute(nameOrMap, value); }
-    else { return elem.getAttribute(nameOrMap); }
+    if (remove) {
+        elem.removeAttribute(nameOrMap);
+    }
+    else if (typeof nameOrMap === "object") {
+        Object.keys(nameOrMap).forEach((key) => { elem.setAttribute(key, nameOrMap[key]); });
+    }
+    else if (value) {
+        elem.setAttribute(nameOrMap, value);
+    }
+    else {
+        return elem.getAttribute(nameOrMap);
+    }
     return elem;
 }
 function textContent(elem, value) {
-    if (!elem) return "";
+    if (!elem)
+        return "";
     return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
 function parseEffectiveValue(str) {
     const b = str.replace(/[a-z:,\s\n]+/gi, "").match(/([0-9]+)(\[([0-9-]+)\])?/);
-    if (b === null) return [0, 0];
+    if (b === null)
+        return [0, 0];
     return b[3] ? [Number(b[1]), Number(b[3])] : [Number(b[1]), Number(b[1])];
 }
 const SEC_COSTS = "0,40,120,400,960,1880,3320,5360,8120,11720,16240,21840,28600,36680,46160,57160,69840,84280,100640,119000,139520,162280,187440,215120,245480,278600,314600,353640,395840,441320,490200,542640,598760,658680,722520,79440,862560,939000,1019920,1105440,195680".split(",");
@@ -68,7 +78,11 @@ class HeroSkill {
         this.onDone = null;
     }
     roll() {
-        const res = { attack: "", defence: "", effect: "" };
+        const res = {
+            attack: "",
+            defence: "",
+            effect: "",
+        };
         return res;
     }
     fetchInfo(data) {
@@ -333,21 +347,22 @@ const skills = (hero) => {
         "[/table]  [size=10]1 - in one position[/size]");
 };
 const gear = (hero) => {
-    if (!hero.gear)
-        return "";
     const items = [...Object.entries(hero.gear)];
+    if (!items.length)
+        return "";
     return ("[h1]Equipment[/h1][table][tr][td valign=top][table border=1][tr][th align=left]Slot[/th][th]Item[/th][/tr]" +
         items
             .filter((x) => !x[0].includes("pocket"))
-            .map(([key, item]) => {
+            .map(([key, itm]) => {
+            const [item, enchant] = itm || [null, null];
             const slot = key[0].toUpperCase() + key.substring(1);
-            return `[tr][td]${slot}[/td][td]${item ? "[item:" + item + "]" : ""}[/td][/tr]`;
+            return `[tr][td]${slot}[/td][td]${item ? "[item:" + item + "]" + enchant : ""}[/td][/tr]`;
         })
             .join("") +
         "[/table][/td][td valign=top][table border=1][tr][th align=left]Pocket items[/th][/tr]" +
         items
-            .filter((x) => x[0].includes("pocket") && x[1])
-            .map(([, item]) => `[tr][td]${item ? "[item:" + item + "]" : ""}[/td][/tr]`)
+            .filter(([slot, item]) => slot.includes("pocket") && item && item[0])
+            .map(([, item]) => `[tr][td]${"[item:" + item[0] + "]" + item[1]}[/td][/tr]`)
             .join("") +
         "[/table][/table]");
 };
@@ -608,7 +623,14 @@ class Hero {
                     if (re_upper_coin.test(itm)) {
                         upperCoins += 1;
                     }
-                    gear[slot.innerHTML] = !re_uses.test(itm) ? itm : "";
+                    let enchanting = "&nbsp;";
+                    let n = ctrl === null || ctrl === void 0 ? void 0 : ctrl.nextElementSibling;
+                    let m;
+                    while ((n === null || n === void 0 ? void 0 : n.tagName) === "IMG" && (m = n.src.match(/gem_(.+)\./))) {
+                        enchanting += (n.src.includes("mgem") ? ":m" : ":g") + m[1] + ":";
+                        n = n.nextElementSibling;
+                    }
+                    gear[slot.innerHTML] = !re_uses.test(itm) ? [itm, enchanting] : undefined;
                 }
                 if (upperCoins === 5) {
                     this.hasUpperCoins = true;
@@ -663,7 +685,7 @@ const exportProfile = function () {
                 const h1 = frmSkills.querySelector("h1");
                 const d = new Date();
                 const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.12[/size]`;
+                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.13[/size]`;
                 const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
                 attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
                 txtExport.innerHTML = bbcode;
