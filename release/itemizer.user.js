@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Itemizer
 // @description    Scripts improves items found page
-// @version        1.0.1
+// @version        1.0.2
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/*dungeon/report.php*
@@ -24,7 +24,7 @@ function textContent(elem, value) {
 function main() {
     let tables = Array.from(document.querySelectorAll("table")).filter((x) => { var _a; return ((_a = x.previousElementSibling) === null || _a === void 0 ? void 0 : _a.tagName) === "H2" && !x.className; });
     showSummary(parseHeros(tables));
-    tables = Array.from(document.querySelectorAll(".navigation.levels")).filter((x) => { var _a; return ((_a = x.previousElementSibling) === null || _a === void 0 ? void 0 : _a.tagName) === "TABLE"; }).map((x) => x.previousElementSibling);
+    tables = Array.from(document.querySelectorAll("table")).filter(x => !x.id && !x.className && x.querySelector(".rep_initiative"));
     showLevel(parseRounds(tables));
 }
 function parseHeros(tables) {
@@ -44,7 +44,7 @@ function parseHeros(tables) {
         const foundItems = parseItems(heroName, tbl_found);
         const hero = {
             name: heroName,
-            itemsUsed: groupUsed(ownItems.filter((x) => x.used !== 0)),
+            itemsUsed: groupUsed(ownItems).filter((x) => x.used !== 0),
             itemsLost: isKnockedOut ? foundItems : [],
             itemsFound: !isKnockedOut ? foundItems : [],
             itemsDamaged: ownItems.filter((x) => x.damaged !== 0),
@@ -87,8 +87,10 @@ function parseItems(heroName, table) {
     }, []);
 }
 function parseRounds(tables) {
+    const seenHeroes = [];
     return []
         .concat(...tables.map((table) => {
+        const room = table.parentElement.children[0].textContent.match(/room (\d+)/);
         const tds = [...table.querySelectorAll("tr td:nth-child(2)")];
         const regex = /(.+)uses (.+) on/;
         return tds.reduce((acc, td) => {
@@ -103,18 +105,23 @@ function parseRounds(tables) {
             let [skill, item] = buff.split("/");
             skill = skill.substr(0, skill.lastIndexOf("(")).trim();
             item = item.slice(0, -1);
+            const heroName = hero.trim();
+            if (!seenHeroes.includes(heroName))
+                seenHeroes.push(heroName);
             acc.push({
-                heroName: hero.trim(),
+                heroName,
                 name: item,
+                count: 1,
                 html: td.querySelector('[href*="item"]').outerHTML,
                 skill,
                 skillHtml: td.querySelector('[href*="skill"]').outerHTML,
                 mpHtml: (_a = td.querySelector(".rep_mana_cost")) === null || _a === void 0 ? void 0 : _a.outerHTML,
+                room: room ? Number(room[1]) : undefined,
             });
             return acc;
         }, []);
     }))
-        .sort((a, b) => a.heroName.localeCompare(b.heroName));
+        .sort((a, b) => seenHeroes.indexOf(a.heroName) - seenHeroes.indexOf(b.heroName));
 }
 function groupUsed(items) {
     const seen = new Map();
@@ -126,6 +133,7 @@ function groupUsed(items) {
             existing.calc();
         }
         else {
+            item.html = item.html.replace("item_destroyed", "");
             seen.set(item.name, item);
             item.calc();
             acc.push(item);
@@ -154,16 +162,40 @@ function showLevel(items) {
     if (!items.length)
         return;
     add("table", document.querySelector(".rep_round_headline").previousElementSibling, tr([
-        table("Items used", ["heroName", "skillHtml", "mpHtml", "html"], items),
+        table("Items used", ["heroName", (item) => `${item.skillHtml}${item.count > 1 ? ` x ${item.count}` : ""}`, "mpHtml", "html"], compress(items)),
     ]));
 }
 function table(title, columns, items) {
+    const format = (col, item) => typeof col === "function" ? col(item) : item[col];
     return (`<h2>${title} (${items.length})</h2><table class="content_table" style="font-size:14px;font-weight:normal" >` +
         items
             .sort(sortItems)
-            .map((item, i) => `<tr class="row${i % 2}">${columns.map((x) => '<td style="text-align: left">' + item[x] + "</td>").join("")}</tr>`)
+            .sort((a, b) => (a.room ? a.room - b.room : 0))
+            .map((item, i, arr) => {
+            const str = `<tr class="row${i % 2}">${columns.map((col) => '<td style="text-align: left">' + format(col, item) + "</td>").join("")}</tr>`;
+            if ((i > 0 && arr[i - 1].room !== item.room) || (i === 0 && item.room))
+                return `<tr><td colspan="${columns.length}">Room ${item.room}</td></tr>${str}`;
+            return str;
+        })
             .join("") +
         "</table>");
+}
+function compress(items) {
+    const seen = new Map();
+    let lastKey = "";
+    return items.reduce((acc, item) => {
+        const key = `${item.room},${item.heroName},${item.skill},${item.name}`;
+        if (key === lastKey && seen.has(key)) {
+            const existing = seen.get(key);
+            existing.count++;
+        }
+        else {
+            seen.set(key, item);
+            acc.push(item);
+        }
+        lastKey = key;
+        return acc;
+    }, []);
 }
 function sortItems(a, b) {
     let cmp = b.isUnique - a.isUnique;
