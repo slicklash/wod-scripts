@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        1.0.13
+// @version        1.0.14
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -347,7 +347,7 @@ const skills = (hero) => {
         "[/table]  [size=10]1 - in one position[/size]");
 };
 const gear = (hero) => {
-    const items = [...Object.entries(hero.gear)];
+    const items = [...Object.entries((hero === null || hero === void 0 ? void 0 : hero.gear) || {})];
     if (!items.length)
         return "";
     return ("[h1]Equipment[/h1][table][tr][td valign=top][table border=1][tr][th align=left]Slot[/th][th]Item[/th][/tr]" +
@@ -685,7 +685,7 @@ const exportProfile = function () {
                 const h1 = frmSkills.querySelector("h1");
                 const d = new Date();
                 const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.13[/size]`;
+                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.14[/size]`;
                 const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
                 attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
                 txtExport.innerHTML = bbcode;
