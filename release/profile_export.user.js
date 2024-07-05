@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        1.0.14
+// @version        1.0.15
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -43,13 +43,15 @@ function parseEffectiveValue(str) {
         return [0, 0];
     return b[3] ? [Number(b[1]), Number(b[3])] : [Number(b[1]), Number(b[1])];
 }
-const SEC_COSTS = "0,40,120,400,960,1880,3320,5360,8120,11720,16240,21840,28600,36680,46160,57160,69840,84280,100640,119000,139520,162280,187440,215120,245480,278600,314600,353640,395840,441320,490200,542640,598760,658680,722520,79440,862560,939000,1019920,1105440,195680".split(",");
-const EXC_COSTS = "0,50,150,500,1300,2700,4850,7950,12200,17800,24950,33850,44700,57750,73200,91250,112150,136100,163350,194150,228750,267350,320200,357550,409650,466750,529100,596950,670550,750150,836050,928450,1027650,1133900,1247450,1368600,1497600,1634700,1780200,1934400,2097500".split(",");
-const TAL_COSTS = "0,1440,3240,5440,8080,11200,14840,19040,23840,29280,35400,42240,49840,58240,67480,77600,88640,100640,113640,127680,142800,159040,176440,195040,214880,236000,258440,282240,307440,334080,362200,391840,423040,455840,490280,526400,564240,603840,645240,688480,733600".split(",");
+const SEC_COSTS = [0, 40, 120, 400, 960, 1880, 3320, 5360, 8120, 11720, 16240, 21840, 28600, 36680, 46160, 57160, 69840, 84280, 100640, 119000, 139520, 162280, 187440, 215120, 245480, 278600, 314600, 353640, 395840, 441320, 490200, 542640, 598760, 658680, 722520, 79440, 862560, 939000, 1019920, 1105440, 195680];
+const EXC_COSTS = [0, 50, 150, 500, 1300, 2700, 4850, 7950, 12200, 17800, 24950, 33850, 44700, 57750, 73200, 91250, 112150, 136100, 163350, 194150, 228750, 267350, 320200, 357550, 409650, 466750, 529100, 596950, 670550, 750150, 836050, 928450, 1027650, 1133900, 1247450, 1368600, 1497600, 1634700, 1780200, 1934400, 2097500];
+const TAL_COSTS = [0, 1440, 3240, 5440, 8080, 11200, 14840, 19040, 23840, 29280, 35400, 42240, 49840, 58240, 67480, 77600, 88640, 100640, 113640, 127680, 142800, 159040, 176440, 195040, 214880, 236000, 258440, 282240, 307440, 334080, 362200, 391840, 423040, 455840, 490280, 526400, 564240, 603840, 645240, 688480, 733600];
 class HeroSkill {
     constructor() {
         this.name = "";
         this.type = "";
+        this.can_undo = false;
+        this.initial_rank = 0;
         this.rank = 0;
         this.effective_rank = 0;
         this.primary = false;
@@ -70,8 +72,8 @@ class HeroSkill {
         this.attack_attr = "";
         this.defence_attr = "";
         this.effect_attr = "";
-        this.training_cost_ep = "";
-        this.training_cost_gold = "";
+        this.training_cost_ep = 0;
+        this.training_cost_gold = 0;
         this.url = "";
         this.color = "";
         this.hero = null;
@@ -191,6 +193,9 @@ class HeroSkill {
                 this.rank = rank[0];
                 this.effective_rank = rank[1];
                 this.url = link.href;
+                if (!this.can_undo && this.rank === 1) {
+                    this.initial_rank = 1;
+                }
                 if (!this.talent) {
                     switch (attr(link, "class")) {
                         case "skill_primary":
@@ -208,7 +213,8 @@ class HeroSkill {
                             break;
                     }
                 }
-                this.calculateCost();
+                if (!(this.rank === 1 && this.initial_rank === 1))
+                    this.calculateCost();
             }
         }
         catch (error) {
@@ -225,16 +231,16 @@ class HeroSkill {
                 cost = 40;
         }
         else if (this.secondary) {
-            cost = SEC_COSTS[this.rank] ? Number(SEC_COSTS[this.rank]) : 0;
+            cost = SEC_COSTS[this.rank] || 0;
         }
         else if (this.exceptional) {
-            cost = EXC_COSTS[this.rank] ? Number(EXC_COSTS[this.rank]) : 0;
+            cost = EXC_COSTS[this.rank] || 0;
         }
         else if (this.talent) {
-            cost = TAL_COSTS[this.rank] ? Number(TAL_COSTS[this.rank]) : 0;
+            cost = TAL_COSTS[this.rank] || 0;
         }
-        this.training_cost_ep = ("" + cost).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1 ");
-        this.training_cost_gold = ("" + cost * 0.9).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1 ");
+        this.training_cost_ep = cost;
+        this.training_cost_gold = cost * 0.9;
         return this;
     }
 }
@@ -267,13 +273,16 @@ function httpFetch(url, method = "GET", data) {
         }
     });
 }
+function formatNumber(number) {
+    return number ? ("" + number).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1 ") : "0";
+}
 const table = (props, rows) => `[table ${props}]${rows.join("")}[/table]`;
 const row = (props, cells) => `[tr ${props}]${cells.join("")}[/tr]`;
 const td = (props = "", content = "") => `[td ${props}]${content}[/td]`;
 const title = (hero) => `[size=12][hero:${hero.name}]${hero.title && ", [i]" + hero.title + "[/i]"} - [class:${hero.race}] [class:${hero.char_class}] - Level ${hero.level}[/size]`;
 const bbcode_attr = (a) => {
     const efval = a.effective_value !== a.value ? " [" + a.effective_value + "]" : "";
-    return `[tr][td][size=12]${a.name}[/size][/td][td align=center][size=12]${a.value}[url=" "]${efval}[/url][/size][/td][td align=right][size=12]${a.training_cost}[/size][/td][/tr]`;
+    return `[tr][td][size=12]${a.name}[/size][/td][td align=center][size=12]${a.value}[url=" "]${efval}[/url][/size][/td][td align=right][size=12]${formatNumber(a.training_cost)}[/size][/td][/tr]`;
 };
 const characteristics = (hero) => `[h1]Characteristics[/h1][table][tr][td][table border=1]
 [tr][th]Attribute[/th][th]Value[/th][th]Spent :ep:[/th][/tr]
@@ -290,13 +299,17 @@ ${Object.values(hero.attributes).slice(0, 8).map(bbcode_attr).join("")}
 [tr][td colspan=2][size=12]Initiative[/size][/td][td colspan=2][size=12]${hero.attributes.ini.value} [url=" "][${hero.attributes.ini.effective_value}][/url][/size][/td][/tr]
 [tr][td colspan=2][size=12]Reset points[/size][/td][td colspan=2][size=12]${hero.reset_points}[/size][/td][/tr]
 [tr][td colspan=2][size=12]Gender[/size][/td][td colspan=2][size=12]${hero.gender}[/size][/td][/tr]
-[tr][td colspan=2][size=12]Fame[/size][/td][td colspan=2][size=12]${hero.fame} :fame:[/size][/td][/tr]
+[tr][td colspan=2][size=12]Fame[/size][/td][td colspan=2][size=12]${formatNumber(hero.fame)} :fame:[/size][/td][/tr]
+[tr][td colspan=2][size=12]:ep: used[/size][/td][td colspan=2][size=12]≈ ${formatNumber(hero.ep_used)}[/size][/td][/tr]
 [/table][/td][/tr][/table]`;
+const mod = (val) => val === 0 ? "0" : val > 0 ? `[color=mediumseagreen]+${val}[/color]` : `[color=tomato]${val}[/color]`;
 const bbcode_arm = (hero) => Object.entries(hero.armor)
     .map(([dmg_type, arm]) => Object.entries(arm)
-    .filter(([, val]) => val[0] > 0 || val[1] > 0 || val[2] > 0)
+    .filter(([, val]) => Math.abs(val[0]) > 0 ||
+    Math.abs(val[1]) > 0 ||
+    Math.abs(val[2]) > 0)
     .map(([atk_type, val]) => `[tr][td][size=12]${dmg_type}[/size][/td][td align=center][size=12]${atk_type}[/size][/td]
-[td align=center][size=12]${val[0] > 0 ? "[color=mediumseagreen]+" + val[0] + "[/color]" : "0"} / ${val[1] > 0 ? "[color=mediumseagreen]+" + val[1] + "[/color]" : "0"} / ${val[2] > 0 ? "[color=mediumseagreen]+" + val[2] + "[/color]" : "0"} [/size][/td][/tr]`)
+[td align=center][size=12]${mod(val[0])} / ${mod(val[1])} / ${mod(val[2])} [/size][/td][/tr]`)
     .join(""))
     .join("");
 const armor = (hero) => `[table][tr][td valign=top][h1]Armor[/h1][table border=1]
@@ -340,8 +353,8 @@ const skills = (hero) => {
 [td align=center][size=12]${skill.rank} [url=" "]${erank}[/url][/size][/td]
 [td align=center][size=12][color=dodgerblue]${mp}[/color][/size][/td]
 [td align=center][size=12][color=${color_affect}]${skill.max_affected}${pos_mark}[/color][/size][/td]
-[td align=right]${skill.training_cost_gold}[/td]
-[td align=right]${skill.training_cost_ep}[/td][/tr]`;
+[td align=right]${formatNumber(skill.training_cost_gold)}[/td]
+[td align=right]${formatNumber(skill.training_cost_ep)}[/td][/tr]`;
         })
             .join("") +
         "[/table]  [size=10]1 - in one position[/size]");
@@ -370,7 +383,7 @@ function toBBCode(hero) {
     return [
         title,
         characteristics,
-        (h) => table("", [row("", [td("", armor(h)), td(), td(), td("", parries(h))])]),
+        (h) => table("", [row("", [td("", armor(h)), td(), td(), td("valign=top", parries(h))])]),
         initiative,
         skills,
         gear,
@@ -381,16 +394,13 @@ function toBBCode(hero) {
 const RE_ATTR = /^(Strength|Constitution|Intelligence|Dexterity|Charisma|Agility|Perception|Willpower)/;
 const RE_RACE = /(Borderlander|Dinturan|Gnome|Halfling|Kargashian|Kerasi|Mag Mor|Targeshian|Partan|Tirem Ag|Woodlander) \(/;
 const RE_CLASS = /(Adventurer|Alchemist|Apprentice|Archer|Barbarian|Bard|Cloud Raider|Cloudraider|Conjuror|Draclin|Drifter|Engineer|Fighter|Gladiator|Hunter|Juggler|Knight|Lightbringer|Mage|Muse|Nieri|Paladin|Priest|Scholar|Shadow Seeker|Shaman|Star Kinder|Warlock|Warlord|Zealot) \(/;
-const ATTR_COSTS = "0,0,100,500,1300,2800,5100,8500,13200,19400,27400,37400,49700,64500,82100,102800,126800,154400,185900,221600,261800,306800,356800,412200,473300,540400,613800,693800,780800,875000,976800".split(",");
+const ATTR_COSTS = [0, 0, 100, 500, 1300, 2800, 5100, 8500, 13200, 19400, 27400, 37400, 49700, 64500, 82100, 102800, 126800, 154400, 185900, 221600, 261800, 306800, 356800, 412200, 473300, 540400, 613800, 693800, 780800, 875000, 976800];
 class HeroAttribute {
     constructor(name) {
         this.name = name;
         this.value = 0;
         this.effective_value = 0;
         this.training_cost = 0;
-    }
-    static getCost(value) {
-        return ATTR_COSTS[value] ? ("" + Number(ATTR_COSTS[value])).replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1 ") : 0;
     }
 }
 class Hero {
@@ -431,13 +441,18 @@ class Hero {
         this.bonus_attack = {};
         this.bonus_defence = {};
     }
+    get ep_used() {
+        const skill_cost = this.skills.reduce((acc, s) => acc + s.training_cost_ep, 0);
+        const attr_cost = Object.values(this.attributes).reduce((acc, a) => acc + a.training_cost, 0);
+        return skill_cost + attr_cost;
+    }
     generateBBCode() {
         this.skills.sort((a, b) => {
             let cmp = b.effective_rank - a.effective_rank;
             if (cmp === 0)
                 cmp = b.rank - a.rank;
             if (cmp === 0)
-                cmp = Number(b.training_cost_ep.replaceAll(" ", "")) - Number(a.training_cost_ep.replaceAll(" ", ""));
+                cmp = b.training_cost_ep - a.training_cost_ep;
             if (cmp === 0)
                 cmp = a.name.localeCompare(b.name);
             return cmp;
@@ -467,7 +482,7 @@ class Hero {
                         const efval = parseEffectiveValue(textContent(val.cells[1]));
                         attr.value = efval[0];
                         attr.effective_value = efval[1];
-                        attr.training_cost = HeroAttribute.getCost(attr.value);
+                        attr.training_cost = ATTR_COSTS[attr.value] || 0;
                     }
                 }
                 else {
@@ -685,7 +700,7 @@ const exportProfile = function () {
                 const h1 = frmSkills.querySelector("h1");
                 const d = new Date();
                 const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.14[/size]`;
+                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.15[/size]`;
                 const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
                 attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
                 txtExport.innerHTML = bbcode;
@@ -693,7 +708,9 @@ const exportProfile = function () {
             }
         };
         for (let i = 0; i < skillRows.length; i++) {
-            const skill = new HeroSkill().parse(skillRows[i]);
+            const skill = new HeroSkill();
+            skill.can_undo = Boolean(skillRows[i].querySelector('input[name*="undo"]'));
+            skill.parse(skillRows[i]);
             if (skill.rank > 0) {
                 pendingCount++;
                 httpFetch(skill.url).then((resp) => {
