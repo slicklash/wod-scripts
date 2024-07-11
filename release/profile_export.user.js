@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        1.0.15
+// @version        2.0.0
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -50,9 +50,9 @@ class HeroSkill {
     constructor() {
         this.name = "";
         this.type = "";
+        this.rank = 0;
         this.can_undo = false;
         this.initial_rank = 0;
-        this.rank = 0;
         this.effective_rank = 0;
         this.primary = false;
         this.secondary = false;
@@ -360,22 +360,32 @@ const skills = (hero) => {
         "[/table]  [size=10]1 - in one position[/size]");
 };
 const gear = (hero) => {
-    const items = [...Object.entries((hero === null || hero === void 0 ? void 0 : hero.gear) || {})];
-    if (!items.length)
+    if (!hero.items.length)
         return "";
+    const counter = {};
+    const oneItem = (itm) => {
+        let slot = itm.slot[0].toUpperCase() + itm.slot.substring(1);
+        if (["medal", "ring", "pocket"].some((x) => itm.slot.includes(x))) {
+            const n = (counter[itm.slot] = (counter[itm.slot] || 0) + 1);
+            slot = `${slot} #${n}`;
+        }
+        const enchant = itm.enchanting.length ? " &nbsp;" + itm.enchanting.join("") : "";
+        const item = itm.name && itm.isUnique
+            ? `[i][item:"${itm.name}" color=#22CC22][/i]`
+            : itm.name
+                ? "[item:" + itm.name + "]"
+                : "";
+        return `[tr][td]${slot}[/td][td]${item + itm.uses + enchant}[/td][/tr]`;
+    };
     return ("[h1]Equipment[/h1][table][tr][td valign=top][table border=1][tr][th align=left]Slot[/th][th]Item[/th][/tr]" +
-        items
-            .filter((x) => !x[0].includes("pocket"))
-            .map(([key, itm]) => {
-            const [item, enchant] = itm || [null, null];
-            const slot = key[0].toUpperCase() + key.substring(1);
-            return `[tr][td]${slot}[/td][td]${item ? "[item:" + item + "]" + enchant : ""}[/td][/tr]`;
-        })
+        hero.items
+            .filter((x) => !x.slot.includes("pocket"))
+            .map(oneItem)
             .join("") +
         "[/table][/td][td valign=top][table border=1][tr][th align=left]Pocket items[/th][/tr]" +
-        items
-            .filter(([slot, item]) => slot.includes("pocket") && item && item[0])
-            .map(([, item]) => `[tr][td]${"[item:" + item[0] + "]" + item[1]}[/td][/tr]`)
+        hero.items
+            .filter((x) => x.slot.includes("pocket"))
+            .map(oneItem)
             .join("") +
         "[/table][/table]");
 };
@@ -435,7 +445,7 @@ class Hero {
             act: new HeroAttribute("Actions"),
         };
         this.armor = {};
-        this.gear = {};
+        this.items = [];
         this.modifiers = {};
         this.bonus_damage = {};
         this.bonus_attack = {};
@@ -544,9 +554,8 @@ class Hero {
             }
             this.parseTables(tables);
             if (withItems) {
-                return this.fetchGear();
+                return this.fetchItems();
             }
-            delete this.gear;
             return Promise.resolve();
         }
         catch (ex) {
@@ -615,43 +624,61 @@ class Hero {
             this.bonus_defence[attack_type] = value.trim();
         }
     }
-    fetchGear() {
-        let eq_url = location.href
+    fetchItems() {
+        const eq_url = location.href
             .replace("skills.php", "items.php")
-            .replace("menukey=hero_skills", "menukey=hero_gear");
-        if (eq_url.indexOf("view=gear") < 0)
-            eq_url += "&view=gear";
+            .replace("menukey=hero_skills", "menukey=hero_storage");
         return httpFetch(eq_url).then((resp) => {
-            const gear_html = add("div"), gear = {};
             const gearHtml = (resp && resp.data) || "";
             if (/\d+ items were found in the dungeon. You may carry up to/.test(gearHtml)) {
                 alert("You have too much items in your backpack, your current gear won't be shown.");
             }
-            gear_html.innerHTML = gearHtml;
-            const items = Array.from(gear_html.querySelectorAll('div[id="main_content"] form td[class="texttoken"]')), re_uses = /\(([0-9]+)\/[0-9]+\)/, re_upper_coin = /(Six of coins|Seven of coins|Eight of coins|Nine of coins|Ten of coins)/;
+            const gear_html = add("div", null, gearHtml);
+            const items = [];
+            const re_upper_coin = /(Six of coins|Seven of coins|Eight of coins|Nine of coins|Ten of coins)/;
+            const re_uses = /\(([0-9]+)\/[0-9]+\)/;
             let upperCoins = 0;
-            if (items) {
-                for (let i = 0, cnt = items.length; i < cnt; i++) {
-                    const slot = items[i], row = slot.parentNode, ctrl = row.querySelector("select"), itm = ctrl
-                        ? ctrl.options[ctrl.selectedIndex].text.replace(/!$/, "")
-                        : "";
-                    if (re_upper_coin.test(itm)) {
-                        upperCoins += 1;
-                    }
-                    let enchanting = "&nbsp;";
-                    let n = ctrl === null || ctrl === void 0 ? void 0 : ctrl.nextElementSibling;
+            const slots = ["head", "ears", "face", "neck", "torso", "belt", "cloak", "shoulders", "arms", "gloves", "both hands", "right hand", "left hand", "legs", "feet", "medal", "ring", "pocket"];
+            const used = new Set(slots);
+            Array.from(gear_html.querySelectorAll('input[name*="ITEMS_EQUIPPED_PAGE"], input[name*="ITEMS_TASCHE_PAGE"], input[name*="ITEMS_ORDEN_PAGE"]'))
+                .map((x) => x.nextElementSibling)
+                .forEach((table) => {
+                for (const row of Array.from(table.querySelectorAll("tr"))) {
+                    const select = row.querySelector('select[name*="EquipItem"]');
+                    if (!select)
+                        continue;
+                    const a = row.querySelector('a[class*="item"]');
+                    const enchanting = [];
+                    let n = a === null || a === void 0 ? void 0 : a.nextElementSibling;
                     let m;
                     while ((n === null || n === void 0 ? void 0 : n.tagName) === "IMG" && (m = n.src.match(/gem_(.+)\./))) {
-                        enchanting += (n.src.includes("mgem") ? ":m" : ":g") + m[1] + ":";
+                        enchanting.push((n.src.includes("mgem") ? ":m" : ":g") + m[1] + ":");
                         n = n.nextElementSibling;
                     }
-                    gear[slot.innerHTML] = !re_uses.test(itm) ? [itm, enchanting] : undefined;
+                    let name = a.parentElement.textContent.trim().replace(/!$/, "");
+                    const uses = name.match(re_uses);
+                    if (uses) {
+                        name = name.replace(re_uses, "").trim();
+                    }
+                    const item = {
+                        name,
+                        uses: uses ? " " + uses[0] : "",
+                        slot: select.options[select.selectedIndex].text,
+                        enchanting,
+                        isUnique: a.className.includes("item_unique"),
+                    };
+                    items.push(item);
+                    used.delete(item.slot);
+                    if (re_upper_coin.test(item.name)) {
+                        upperCoins += 1;
+                    }
                 }
-                if (upperCoins === 5) {
-                    this.hasUpperCoins = true;
-                }
+            });
+            used.forEach((slot) => items.push({ name: "", slot, enchanting: [], isUnique: false, uses: "" }));
+            this.items = items.sort((a, b) => slots.indexOf(a.slot) - slots.indexOf(b.slot));
+            if (upperCoins === 5) {
+                this.hasUpperCoins = true;
             }
-            this.gear = gear;
         });
     }
     addUpperCoinsArmor() {
@@ -682,7 +709,7 @@ function cssClass(elem, name, toggleOn) {
     return elem;
 }
 const frmSkills = document.querySelector("#main_content form");
-let btnExport, chkboxGear, imgLoader;
+let btnExport, chkboxItems, imgLoader;
 const exportProfile = function () {
     attr(btnExport, "disabled", "true");
     cssClass(btnExport, "button clickable", false);
@@ -692,19 +719,24 @@ const exportProfile = function () {
         const skillRows = Array.from(frmSkills.querySelectorAll(".row0")).concat(Array.from(frmSkills.querySelectorAll(".row1")));
         let pendingCount = 0;
         const hero = new Hero();
-        hero.parse((resp && resp.data) || "", chkboxGear.checked);
+        const p = hero.parse((resp && resp.data) || "", chkboxItems.checked);
         const onSkillParseComplete = function () {
             pendingCount--;
             if (pendingCount <= 0) {
-                hero.addUpperCoinsArmor();
-                const h1 = frmSkills.querySelector("h1");
-                const d = new Date();
-                const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 1.0.15[/size]`;
-                const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
-                attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
-                txtExport.innerHTML = bbcode;
-                attr(imgLoader, "style", "display: none");
+                p.then(() => {
+                    hero.addUpperCoinsArmor();
+                    const h1 = frmSkills.querySelector("h1");
+                    const d = new Date();
+                    const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
+                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.0[/size]`;
+                    const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
+                    attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
+                    txtExport.innerHTML = bbcode;
+                    attr(imgLoader, "style", "display: none");
+                    attr(btnExport, "disabled", "true");
+                    cssClass(btnExport, "button clickable", true);
+                    cssClass(btnExport, "button_disabled", false);
+                });
             }
         };
         for (let i = 0; i < skillRows.length; i++) {
@@ -730,17 +762,17 @@ if (frmSkills &&
     const button = Array.from(frmSkills.querySelectorAll("tbody .button")).find((b) => b.value === "Show Details");
     if (button) {
         btnExport = add("input");
-        chkboxGear = add("input");
-        const label_gear = add("label");
-        label_gear.innerHTML = "Equipment";
+        chkboxItems = add("input");
+        const label_items = add("label");
+        label_items.innerHTML = "Equipment";
         attr(btnExport, { type: "button", class: "button clickable", value: "Export", style: "margin-left: 4px" });
-        attr(chkboxGear, { type: "checkbox", id: "export-gear", style: "margin-left: 4px" });
-        attr(label_gear, { for: "export-gear" });
+        attr(chkboxItems, { type: "checkbox", id: "export-items", style: "margin-left: 4px" });
+        attr(label_items, { for: "export-items" });
         btnExport.addEventListener("click", exportProfile, false);
-        button.parentNode.insertBefore(label_gear, button.nextSibling);
-        button.parentNode.insertBefore(chkboxGear, label_gear);
-        button.parentNode.insertBefore(btnExport, chkboxGear);
-        button.parentNode.insertBefore(add("br"), label_gear.nextSibling);
+        button.parentNode.insertBefore(label_items, button.nextSibling);
+        button.parentNode.insertBefore(chkboxItems, label_items);
+        button.parentNode.insertBefore(btnExport, chkboxItems);
+        button.parentNode.insertBefore(add("br"), label_items.nextSibling);
         imgLoader = attr(add("img", add("div")), { src: `${location.protocol}//${location.host}/wod/css/img/ajax-loader.gif`, style: "display: none", });
         button.parentNode.insertBefore(imgLoader, button.parentNode.firstChild);
     }
