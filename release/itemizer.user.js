@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Itemizer
 // @description    Scripts improves items found page
-// @version        1.0.2
+// @version        1.0.3
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/*dungeon/report.php*
@@ -60,22 +60,28 @@ function parseItems(heroName, table) {
     return Array.from(table.querySelectorAll("tr"))
         .slice(1)
         .reduce((acc, tr) => {
-        var _a, _b;
+        var _a, _b, _c;
         const tds = Array.from(tr.querySelectorAll("td"));
         if (tds.length < 3)
             return acc;
         const item = tds[1];
         const damaged = (((_a = tds[3]) === null || _a === void 0 ? void 0 : _a.textContent) || "").trim().match(/-\d+/);
-        const uses = (((_b = tds[4]) === null || _b === void 0 ? void 0 : _b.textContent) || "").trim().match(/-?\d+/gm);
-        const used = uses && uses.length > 2 ? Number(uses[2]) : 0;
-        const remaining = uses && uses.length > 1 ? Number(uses[0]) : 1;
+        const uses = (_c = (((_b = tds[4]) === null || _b === void 0 ? void 0 : _b.textContent) || "").trim().match(/-?\d+/gm)) === null || _c === void 0 ? void 0 : _c.map(Number);
+        let used = 0;
+        let remaining = 1;
+        if (uses) {
+            if (uses.length > 2 && uses[0] < uses[1])
+                used = uses[2];
+            remaining = uses[0];
+        }
         acc.push({
             heroName,
             name: textContent(item).trim(),
             html: item.innerHTML,
             isUnique: item.innerHTML.includes("item_unique"),
-            isConsumable: uses && uses.length > 1,
+            isConsumable: Boolean(uses && uses.length > 1),
             used,
+            uses,
             usedHtml: used,
             remaining,
             damaged: damaged ? Number(damaged[0]) : 0,
@@ -88,23 +94,25 @@ function parseItems(heroName, table) {
 }
 function parseRounds(tables) {
     const seenHeroes = [];
+    const regex_uses = /(.+)uses (.+) on/;
+    const regex_skill = /skill\.php\?name=(.+)&/;
+    const regex_item = /item\.php\?name=(.+)&/;
     return []
         .concat(...tables.map((table) => {
         const room = table.parentElement.children[0].textContent.match(/room (\d+)/);
         const tds = [...table.querySelectorAll("tr td:nth-child(2)")];
-        const regex = /(.+)uses (.+) on/;
         return tds.reduce((acc, td) => {
             var _a;
             const t = td.textContent.replace(/\n/g, " ");
-            const m = t.match(regex);
+            let m = t.match(regex_uses);
             if (!m)
                 return acc;
-            const [, hero, buff] = m;
-            if (!buff.includes("/"))
+            const [, hero] = m;
+            m = td.innerHTML.match(regex_item);
+            if (!m)
                 return acc;
-            let [skill, item] = buff.split("/");
-            skill = skill.substr(0, skill.lastIndexOf("(")).trim();
-            item = item.slice(0, -1);
+            const item = m[1];
+            const skill = td.innerHTML.match(regex_skill)[1];
             const heroName = hero.trim();
             if (!seenHeroes.includes(heroName))
                 seenHeroes.push(heroName);
@@ -112,10 +120,10 @@ function parseRounds(tables) {
                 heroName,
                 name: item,
                 count: 1,
-                html: td.querySelector('[href*="item"]').outerHTML,
+                html: Array.from(td.querySelectorAll('[href*="item"]')).map((x) => x.outerHTML).join(", "),
                 skill,
                 skillHtml: td.querySelector('[href*="skill"]').outerHTML,
-                mpHtml: (_a = td.querySelector(".rep_mana_cost")) === null || _a === void 0 ? void 0 : _a.outerHTML,
+                mpHtml: ((_a = td.querySelector(".rep_mana_cost")) === null || _a === void 0 ? void 0 : _a.outerHTML) || "",
                 room: room ? Number(room[1]) : undefined,
             });
             return acc;
@@ -133,7 +141,6 @@ function groupUsed(items) {
             existing.calc();
         }
         else {
-            item.html = item.html.replace("item_destroyed", "");
             seen.set(item.name, item);
             item.calc();
             acc.push(item);
@@ -149,13 +156,14 @@ function showSummary(heroes) {
     const damaged = [].concat(...heroes.map((x) => x.itemsDamaged));
     const found = [].concat(...heroes.map((x) => x.itemsFound));
     const lost = [].concat(...heroes.map((x) => x.itemsLost));
+    const uses = (x) => { var _a; return ((_a = x.uses) === null || _a === void 0 ? void 0 : _a.length) ? ` (${x.uses[0]}/${x.uses[1]})` : ""; };
     add("table", document.querySelector('[name="the_form"] h2'), tr([
         table("Consumables used", ["html", "usedHtml", "heroName"], used),
         table("Items damaged", ["html", "damaged", "heroName"], damaged),
     ]) +
         tr([
-            table("Items found", ["html", "heroName"], found),
-            table("Items lost", ["html"], lost),
+            table("Items found", [(x) => `${x.html}${uses(x)}`, "heroName"], found),
+            table("Items lost", [(x) => `${x.html}${uses(x)}`], lost),
         ]));
 }
 function showLevel(items) {
