@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.0.1
+// @version        1.0.2
+// @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/help/dungeonlist.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/title_list.php?menukey=hero_titles*
@@ -95,13 +96,18 @@ var Store = {
     get: GX_getValue,
     set: GX_setValue,
 };
+const normalize = (text) => text
+    .replace("swamp dragons", "swamp dragon")
+    .replace(" revival", "")
+    .replace("an awesome", "")
+    .replace(/the /g, "")
+    .trim();
 const hash = (text) => Math.abs(text.padEnd(11, "0").split("").map((x) => x.charCodeAt(0)).reduce((a, x) => (a + ((a << 7) + (a << 3))) ^ x)).toString(4 * 4);
 const getLastReportKey = () => httpFetch("/wod/spiel/dungeon/report.php?menukey=reports").then((resp) => {
     if (!resp)
         return "none";
     const html = parseHtml(resp.data, true);
     const last = html.querySelector("#main_content .row0").textContent.trim();
-    console.log(last);
     return hash(last);
 });
 function buildCache() {
@@ -189,7 +195,7 @@ function parseProfile(hero) {
                 .then((resp2) => {
                 if (!resp2)
                     return;
-                profile.medals = Array.from(parseHtml(resp2.data, true).querySelectorAll(".details.earned .label")).map((x) => hash(x.innerHTML.trim().toLowerCase()));
+                profile.medals = Array.from(parseHtml(resp2.data, true).querySelectorAll(".details.earned .label")).map((x) => hash(normalize(x.innerHTML.trim().toLowerCase())));
                 resolve(profile);
             });
         });
@@ -259,11 +265,7 @@ function showDungeonMedalInfo(profiles) {
     }, {});
     const dungeons = Array.from(document.querySelectorAll("#main_content .content_table tbody tr td:nth-child(2)"));
     dungeons.forEach((td) => {
-        const key = td.textContent
-            .trim()
-            .toLowerCase()
-            .replace("the treasure map", "treasure map")
-            .replace("swamp dragons", "swamp dragon");
+        const key = normalize(td.textContent.trim().toLowerCase());
         const heroes = map[hash(key)] || [];
         const allHeroes = profiles.length && heroes.length === profiles.length;
         if (!allHeroes) {
