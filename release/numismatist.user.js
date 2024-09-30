@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.0.2
+// @version        1.0.3
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/help/dungeonlist.php*
@@ -114,10 +114,12 @@ function buildCache() {
     return __awaiter(this, void 0, void 0, function* () {
         const groupHeroes = yield getGroupHeroes(document.forms.the_form.gruppe_id.value);
         const profiles = yield getHeroProfiles(groupHeroes);
-        yield Store.set("numismatist", JSON.stringify({
+        const cache = {
             key: yield getLastReportKey(),
             heroes: profiles.filter((x) => !x.isMentor),
-        }));
+        };
+        yield Store.set("numismatist", JSON.stringify(cache));
+        return cache;
     });
 }
 function main() {
@@ -126,9 +128,9 @@ function main() {
         if (!idGroup)
             return;
         const key = yield getLastReportKey();
-        const cache = JSON.parse(yield Store.get("numismatist", "{}"));
+        let cache = JSON.parse(yield Store.get("numismatist", "{}"));
         if (cache.key !== key) {
-            yield buildCache();
+            cache = yield buildCache();
         }
         const heroes = cache.heroes || [];
         if (location.pathname.includes("dungeonlist")) {
@@ -210,8 +212,12 @@ function showLevelUpMedalInfo(profiles) {
             const requiredExp = parseInt(tr.cells[2].textContent.replace(/\s/g, ""), 10);
             const notObtained = profiles
                 .filter((x) => x.exp < requiredExp)
-                .map((x) => `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`)
-                .sort();
+                .map((x) => ({
+                name: `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`,
+                missing: requiredExp - x.exp,
+            }))
+                .sort((a, b) => a.missing - b.missing)
+                .map((x) => x.name);
             if (notObtained.length) {
                 addMedalIcon(false, td, "left");
                 tr.setAttribute("title", `Exp deficit (${notObtained.length}):\n\n${notObtained.join("\n")}`);
