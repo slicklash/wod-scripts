@@ -1,7 +1,8 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.4.0
+// @version        1.5.0
+// @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/trade/trade.php*
@@ -261,7 +262,7 @@ class StorageController {
             this._attachEvents();
         };
     }
-    $onInit() {
+    init() {
         waitFor('input[type="hidden"][name="view"]').then((elem) => {
             if (elem && elem.value !== "gear") {
                 this._createControls();
@@ -421,6 +422,11 @@ class StorageController {
         select.addEventListener("change", onSelect, false);
         return select;
     }
+    _makeInputt() {
+        const input = add("input");
+        attr(input, { size: 20 });
+        return input;
+    }
     _makeSelectOption(select, option, sellable, option_group) {
         const op = add("option");
         attr(op, "value", option.key).innerHTML =
@@ -534,6 +540,6 @@ class StorageController {
         }
     }
 }
-new StorageController().$onInit();
+new StorageController().init();
 
 })();

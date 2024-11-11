@@ -1,20 +1,21 @@
 {
   "compilerOptions": {
     "module": "amd",
-    "target": "es5",
+    "target": "es6",
     "noImplicitAny": false,
     "removeComments": true,
     "sourceMap": false,
     "moduleResolution": "node",
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@common/*": ["common/*"],
-      "@toymvc/*": ["common/toymvc/*"]
+      "@common/*": ["src/common/*"],
+      "@toymvc/*": ["src/common/toymvc/*"]
     }
   },
   "exclude": [
     "node_modules",
     "build",
-    "release"
+    "release",
+     "**/*.spec.ts"
   ]
 }

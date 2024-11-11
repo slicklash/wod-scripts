@@ -1,88 +1,177 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.2.0
+// @version        1.2.2
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
 // @run-at         document-start
-// @grant          none
+// @grant          GM.getValue
+// @grant          GM.setValue
+// @grant          GM_getValue
+// @grant          GM_setValue
 // ==/UserScript==
 
 (function() {
 'use strict';
-var _context;
+var Quests = {
+    IngenuityTest: "Ingenuity Test",
+    Passingtime: "Passingtime",
+    RescuingFatherWuel: "Rescuing Father Wuel",
+};
+let _context;
 function getContext() {
     if (!_context) {
-        var h1 = document.querySelector('h1'), title = h1 ? h1.textContent : '';
-        if (!title || title.indexOf('adventure') !== 0)
+        const h1 = document.querySelector("h1");
+        const title = h1 ? h1.textContent : "";
+        if (!title || title.indexOf("adventure") !== 0) {
             return;
+        }
+        const texts = (Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION")));
+        texts.forEach((x) => {
+            x.innerHTML = x.innerHTML
+                .replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
+                .replace(/&lt;\/font&gt;/g, "</font>")
+                .replace(/<br>\s+<br>/g, "<br>");
+        });
         _context = {
-            adventure: title.replace('adventure ', ''),
-            texts: Array.from(document.querySelectorAll('form > p, .REP_LVL_DESCRIPTION')),
-            place: (document.querySelector('#smarttabs__level_inner h3 > a') || { textContent: '*' }).textContent,
-            idHero: document.querySelector('[href*="session_hero_id"]').href.match(/session_hero_id=([\d]+)/)[1],
+            adventure: title.replace("adventure ", ""),
+            idHero: (document.querySelector('[href*="session_hero_id"]')).href.match(/session_hero_id=([\d]+)/)[1],
+            place: (document.querySelector("#smarttabs__level_inner h3 > a") || {
+                textContent: "*",
+            }).textContent.trim(),
+            text: texts.map((x) => x.innerHTML.trim()).join(" "),
+            texts,
+            world: document.location.hostname.split(".")[0],
         };
+        _context.isQuest = Object.keys(Quests).some((x) => _context.adventure.indexOf(Quests[x]) > -1);
     }
     return _context;
 }
-var RescuingFatherWuel = 'Rescuing Father Wuel';
-var Passingtime = 'Passingtime';
-var IngenuityTest = 'Ingenuity Test';
 function initHighlights(context) {
-    var adventure = context.adventure, place = context.place, adventures = {};
-    adventures[RescuingFatherWuel] = getWuelHighlights;
-    adventures[Passingtime] = getPassingtimeHighlights;
-    adventures[IngenuityTest] = getIngenuityTestHighlights;
-    if (!(adventure in adventures))
+    if (!context || !context.isQuest) {
         return;
-    var highlights = adventures[adventure]()[place];
-    if (!highlights)
+    }
+    const { adventure, place } = context;
+    const adventures = {};
+    adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
+    adventures[Quests.Passingtime] = getPassingtimeHighlights;
+    adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
+    if (!(adventure in adventures)) {
         return;
-    var texts = context.texts.map(function (x) { return x.innerHTML; });
-    highlights.forEach(function (x) {
-        var start = x.indexOf('_'), end = x.indexOf('_', start + 1), search = new RegExp(start > -1 ? x.replace(/_/g, '') : x, 'g'), highlight = start > -1 ? x.substring(0, start) + "<span style=\"color:orchid\">" + x.substring(start + 1, end) + "</span>" + x.substring(end + 1) : "<span style=\"color:orchid\">" + x + "</span>";
-        texts.forEach(function (x, i) { texts[i] = x.replace(search, highlight); });
+    }
+    const highlights = adventures[adventure]()[place] || [];
+    const texts = context.texts.map((x) => x.innerHTML);
+    highlights.forEach((x) => {
+        const start = x.indexOf("_");
+        const end = x.indexOf("_", start + 1);
+        const search = new RegExp(start > -1 ? x.replace(/_/g, "") : x, "g");
+        const highlight = start > -1
+            ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}`
+            : `<span style="color:orchid">${x}</span>`;
+        texts.forEach((y, i) => {
+            texts[i] = y.replace(search, highlight);
+        });
     });
-    context.texts.forEach(function (x, i) { x.innerHTML = texts[i]; });
+    const re_html = /&lt;(.+)&gt;(.+)&lt;\/\1&gt;/g;
+    context.texts.forEach((x, i) => {
+        x.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
+    });
 }
 function getPassingtimeHighlights() {
     return {
-        '*': ['bejeweled necklace'],
-        'Grandfather answers': ['stonemasonry', 'carpenters']
+        "*": ["bejeweled necklace"],
+        "Grandfather answers": ["stonemasonry", "carpenters", "cobblers", "bakers"],
     };
 }
 function getWuelHighlights() {
     return {
-        '*': ['juicy fruits', 'food in layers', 'nutty things', 'fish with arms', 'things that zap',
-            'lavendar-colored wand', 'the _mayor_ here', 'taken _all the classes_', 'an unusual _iridescent one_',
-            'fine _electric eel_', 'fine _octopus_', 'fine _lantern fish_', 'fine _puffer fish_', 'fine _mackerel_', 'fine _piranha_',
-            'other _gear for mages_', 'other _ranged weapons_', 'other _armors_', 'other _melee weapons_', 'herbs, incense and poisons', 'other enhanced _jewelry_', 'instruments and parchments', 'other _exotic items_'],
-        'Kotko: church': ['enchanted band'],
-        'Kotko: woman with red feather': ['peanuts', 'eggplant', 'banana', 'sandwich', 'orange', 'fried chicken']
+        "*": [
+            "juicy fruits",
+            "food in layers",
+            "nutty things",
+            "fish with arms",
+            "things that zap",
+            "things that are purple",
+            "things that glow in the dark",
+            "fishes with sharp teeth",
+            "lavendar-colored wand",
+            "the _mayor_ here",
+            "taken _all the classes_",
+            "an unusual _iridescent one_",
+            "fine _electric eel_",
+            "fine _octopus_",
+            "fine _lantern fish_",
+            "fine _puffer fish_",
+            "fine _mackerel_",
+            "fine _piranha_",
+            "other _gear for mages_",
+            "other _ranged weapons_",
+            "other _armors_",
+            "other _melee weapons_",
+            "herbs, incense and poisons",
+            "other enhanced _jewelry_",
+            "instruments and parchments",
+            "other _exotic items_",
+        ],
+        "Kotko: church": ["enchanted band"],
+        "Kotko: woman with red feather": [
+            "peanuts",
+            "eggplant",
+            "banana",
+            "sandwich",
+            "orange",
+            "fried chicken",
+        ],
     };
 }
 function getIngenuityTestHighlights() {
     return {
-        '*': ['bejeweled necklace', 'blue key', 'Large', 'Medium', 'Small', 'Tiny'],
-        'Middle of the River : Chatting': ['red key', 'crescent', 'rectangle', 'circle', 'heart', 'diamond', 'plus-sign', 'oval', 'star', 'triangle', 'square'],
-        'Freshwater Spring': ['under _the water_'],
-        'The Fairytale Princess': ['pink hair ribbons'],
-        "Rialb's Ghost": ['purple key'],
-        'The Hut': ['Turquoise', 'Yellow', 'Green', 'Red', 'Magenta', 'Black', 'Blue', 'Purple', 'Orange', 'White']
+        "*": ["bejeweled necklace", "blue key", "Large", "Medium", "Small", "Tiny", "pair of fairy wings"],
+        "Freshwater Spring": ["under _the water_"],
+        "Middle of the River : Chatting": [
+            "red key",
+            "crescent",
+            "rectangle",
+            "circle",
+            "heart",
+            "diamond",
+            "plus-sign",
+            "oval",
+            "star",
+            "triangle",
+            "square",
+        ],
+        "Rialb's Ghost": ["purple key"],
+        "The Fairytale Princess": ["pink hair ribbons"],
+        "The Hut": [
+            "Turquoise",
+            "Yellow",
+            "Green",
+            "Red",
+            "Magenta",
+            "Black",
+            "Blue",
+            "Purple",
+            "Orange",
+            "White",
+        ],
     };
 }
 function initHotKeys() {
-    var buttons = Array.from(document.querySelectorAll('a, input[type="submit"]')), buttonNext, buttonMore;
+    const buttons = Array.from(document.querySelectorAll('a, input[type="submit"]'));
+    let buttonNext;
+    let buttonMore;
     if (buttons.length) {
-        buttons.forEach(function (button) {
-            if (button.innerHTML === 'Next' || (button.value && button.value.trim() === 'Ok')) {
+        buttons.forEach((button) => {
+            if (button.innerHTML === "Next" ||
+                (button.value && button.value.trim() === "Ok")) {
                 buttonNext = button;
-                addHotkeyFor(buttonNext.parentNode, 'n');
+                addHotkeyFor(buttonNext.parentNode, "n");
             }
-            else if (button.innerHTML === 'More adventures') {
+            else if (button.innerHTML === "More adventures") {
                 buttonMore = button;
-                addHotkeyFor(buttonMore.parentNode, 'm');
+                addHotkeyFor(buttonMore.parentNode, "m");
             }
         });
         if (buttonNext) {
@@ -92,62 +181,377 @@ function initHotKeys() {
             buttonMore.focus();
         }
     }
-    var choices = Array.from(document.querySelectorAll('input[type="radio"]')), choiceMap = {};
+    const choices = (Array.from(document.querySelectorAll('input[type="radio"]')));
+    const choiceMap = {};
     if (choices.length) {
-        var HOT_KEYS = '123456789qwertyuiop';
-        choices.forEach(function (choice, i) {
-            var labelElem = choice.parentNode, hotkey = HOT_KEYS[i], keyCode = hotkey.toUpperCase().charCodeAt(0);
+        const HOT_KEYS = "123456789qwertyuiop";
+        choices.forEach((choice, i) => {
+            const labelElem = choice.parentNode;
+            const hotkey = HOT_KEYS[i];
+            const keyCode = hotkey.toUpperCase().charCodeAt(0);
             choiceMap[keyCode] = choice;
             addHotkeyFor(labelElem, hotkey);
         });
     }
     if (choices.length || buttonNext || buttonMore) {
-        var normalizeKey = function (key) { return key >= 96 && key <= 105 ? key - 48 : key; };
-        document.onkeyup = function (e) {
-            var activeElem = document.activeElement;
-            if (activeElem && activeElem.tagName.toLowerCase() === 'input' && activeElem.getAttribute('type') === 'text') {
+        const normalizeKey = (key) => (key >= 96 && key <= 105 ? key - 48 : key);
+        document.onkeyup = (e) => {
+            const activeElem = document.activeElement;
+            if (activeElem &&
+                activeElem.tagName.toLowerCase() === "input" &&
+                activeElem.getAttribute("type") === "text") {
                 return;
             }
-            var keyCode = normalizeKey(e.which);
+            const keyCode = normalizeKey(e.which);
             if (buttonMore && keyCode === 77) {
                 buttonMore.focus();
             }
-            else if (buttonNext && (keyCode === 78 || keyCode === 48)) {
+            else if (buttonNext &&
+                (keyCode === 78 || keyCode === 48)) {
                 buttonNext.focus();
             }
-            else if (choiceMap.hasOwnProperty(keyCode)) {
-                var choice = choiceMap[keyCode];
+            else if (Object.prototype.hasOwnProperty.call(choiceMap, keyCode)) {
+                const choice = choiceMap[keyCode];
                 choice.checked = true;
                 choice.focus();
+                publishChoiceEvent(choice);
                 return false;
             }
         };
     }
 }
+function publishChoiceEvent(choice) {
+    const event = new CustomEvent("adventure.choiceSelected", {
+        detail: choice.nextSibling.textContent.trim(),
+    });
+    window.dispatchEvent(event);
+}
 function addHotkeyFor(elem, text) {
     if (elem) {
-        var span = document.createElement('span');
-        span.innerHTML = "<sup style=\"padding: 1px 3px; border: 1px solid #666; font-size: 10px\">" + text + "</sup>";
+        const span = document.createElement("span");
+        span.innerHTML = `<sup style="padding: 1px 3px; border: 1px solid #666; font-size: 10px">${text}</sup>`;
         elem.appendChild(span);
     }
 }
-var crafting = [], appointments = [];
+function GX_getValue(key, defaultValue) {
+    if (typeof GM === "object")
+        return GM.getValue(key, defaultValue);
+    return Promise.resolve(GM_getValue(key));
+}
+function GX_setValue(key, value) {
+    if (typeof GM === "object")
+        return GM.setValue(key, value);
+    return Promise.resolve(GM_setValue(key, value));
+}
+var Store = {
+    get: GX_getValue,
+    set: GX_setValue,
+};
+function initQuestLog(context) {
+    if (!context || !context.isQuest) {
+        return;
+    }
+    const questLog = new QuestLog(context);
+    let choice;
+    if (!questLog.isSupported) {
+        return;
+    }
+    window.addEventListener("adventure.choiceSelected", (e) => {
+        choice = e.detail;
+    });
+    const form = document.forms.the_form;
+    if (form) {
+        form.addEventListener("submit", () => {
+            if (choice) {
+                questLog.onChoice(choice);
+            }
+        });
+    }
+}
+class QuestLog {
+    constructor(_context) {
+        this._context = _context;
+        this.isSupported = true;
+        const { adventure, place } = _context;
+        const adventures = {};
+        adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
+        adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
+        adventures[Quests.Passingtime] = this.getPassingTimeInfo;
+        if (!(adventure in adventures)) {
+            this.isSupported = false;
+            return;
+        }
+        this._info = adventures[adventure]();
+        this._placeOptions = this._info[place];
+        this._id = `${_context.world}_${_context.idHero}_${_context.adventure.replace(/ /g, "").toLowerCase()}`;
+        this.load().then(() => {
+            if (this._placeOptions) {
+                this.checkPlace();
+            }
+            console.log("questlog:", this._data);
+            console.log("context:", _context.place, _context.texts);
+            this.display();
+        });
+    }
+    onChoice(choice) {
+        if (!this._placeOptions) {
+            return;
+        }
+        this.pickItem(choice);
+        this.save();
+        console.log("on submit", choice, this._data);
+    }
+    pickItem(item) {
+        const op = this._placeOptions;
+        if (op.pickSingle) {
+            const itm = (op.pickSingleTransform ? op.pickSingleTransform(item) : item).trim();
+            if (itm && op.pickSingle.indexOf(itm) > -1) {
+                this._data.itemsPicked = this._data.itemsPicked.filter((x) => op.pickSingle.indexOf(x) < 0);
+                this._data.itemsPicked.push(itm);
+            }
+        }
+    }
+    checkPlace() {
+        const op = this._placeOptions;
+        let isChanged = false;
+        const text = this._context.text;
+        if (op.reset && text.indexOf(op.reset) > -1) {
+            this.reset();
+            return;
+        }
+        if (op.collect) {
+            op.collect.forEach((x) => {
+                if (text.indexOf(x.match) > -1) {
+                    x.found.forEach((itm) => {
+                        if (this._data.itemsFound.indexOf(itm) < 0) {
+                            this._data.itemsFound.push(itm);
+                            isChanged = true;
+                        }
+                    });
+                }
+            });
+        }
+        if (op.use) {
+            op.use.forEach((x) => {
+                if (text.indexOf(x.match) > -1) {
+                    if (x.found)
+                        this._data.itemsFound = this._data.itemsFound.filter((itm) => x.found.indexOf(itm) < 0);
+                    if (x.picked)
+                        this._data.itemsPicked = this._data.itemsPicked.filter((itm) => x.picked.indexOf(itm) < 0);
+                    isChanged = true;
+                }
+            });
+        }
+        if (op.do) {
+            op.do.forEach((x) => {
+                if (text.indexOf(x.match) > -1) {
+                    x.done.forEach((task) => {
+                        if (this._data.tasksDone.indexOf(task) < 0) {
+                            this._data.tasksDone.push(task);
+                            isChanged = true;
+                        }
+                    });
+                }
+            });
+        }
+        if (isChanged)
+            this.save();
+    }
+    display() {
+        const h1 = document.querySelector("h1");
+        if (!h1)
+            return;
+        const toText = (title, items) => {
+            if (!items || !items.length)
+                return "";
+            items.sort();
+            return title + "\n" + items.join("\n");
+        };
+        const data = this._data;
+        const text = [
+            toText("backpack:", data.itemsPicked.concat(data.itemsFound)),
+            toText("done:", data.tasksDone),
+        ].join("\n\n");
+        h1.setAttribute("title", text);
+    }
+    load() {
+        const empty = {
+            itemsPicked: [],
+            itemsFound: [],
+            tasksDone: [],
+        };
+        return new Promise((resolve) => {
+            Store.get(this._id).then((value) => {
+                const loaded = value ? JSON.parse(value) : {};
+                Object.keys(loaded).forEach((x) => {
+                    if (!empty[x])
+                        delete loaded[x];
+                });
+                this._data = Object.assign(empty, loaded);
+                resolve();
+            });
+        });
+    }
+    save() {
+        Store.set(this._id, JSON.stringify(this._data));
+    }
+    reset() {
+        this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
+        Store.set(this._id, undefined);
+    }
+    getPassingTimeInfo() {
+        return {};
+    }
+    getRescueFatherWuelInfo() {
+        return {
+            "*": {
+                collect: [
+                    { match: "unusual iridescent one", found: ["iridescent rock"] },
+                    { match: "fine electric eel", found: ["electric eel"] },
+                    { match: "fine octopus", found: ["octopus"] },
+                    { match: "fine lantern", found: ["lantern fish"] },
+                    { match: "fine puffer", found: ["puffer fish"] },
+                    { match: "fine mackerel", found: ["mackerel"] },
+                    { match: "fine piranha", found: ["piranha"] },
+                ],
+            },
+            "Pekkerin Fen: Mel's School for Adventurers": {
+                do: [
+                    { match: "Welcome to class #1", done: ["Adventure class #1"] },
+                    { match: "Welcome to class #2", done: ["Adventure class #2"] },
+                    { match: "Welcome to class #3", done: ["Adventure class #3"] },
+                    { match: "Welcome to class #4", done: ["Adventure class #4"] },
+                ],
+            },
+            "Town Hall: Mayor's Office": { reset: "Father Wuel, welcome" },
+        };
+    }
+    getIngenuityTestInfo() {
+        return {
+            "*": {
+                collect: [
+                    {
+                        match: "You find a sparkly bejeweled necklace",
+                        found: ["bejeweled necklace"],
+                    },
+                    { match: "you see a blue key", found: ["blue key"] },
+                    { match: "You thank them for the wings", found: ["wings"] },
+                ],
+                use: [
+                    {
+                        match: "it doesn't last forever",
+                        picked: ["bunch of driftwood", "limburger cheese"],
+                    },
+                    { match: "You put a shell in", picked: ["bunch of tiny shells"] },
+                ],
+                do: [{ match: "River mini-game done", done: ["River mini-game"] }],
+            },
+            "The Fairytale Princess": {
+                collect: [
+                    {
+                        match: "hands you some pink hair ribbons",
+                        found: ["pink hair ribbons"],
+                    },
+                ],
+            },
+            "Rialb's Ghost": {
+                collect: [{ match: "purple key", found: ["purple key"] }],
+            },
+            Dwarf: {
+                use: [
+                    {
+                        match: "He drinks it all down",
+                        found: ["water"],
+                        picked: ["bananas"],
+                    },
+                ],
+            },
+            "Rickety Shed : Pick ...": {
+                pickSingle: ["coil of rope", "grass skirt", "boat oars"],
+            },
+            "Sheltered Beach : Pick ...": {
+                pickSingle: ["iridescent rock", "bunch of driftwood", "large carapace"],
+            },
+            "Middle of the River : Pick ...": {
+                pickSingle: [
+                    "leaf lettuce",
+                    "pumpkin",
+                    "bananas",
+                    "deck of playing cards",
+                    "carrots",
+                    "rainbow trout",
+                    "corn",
+                    "limburger cheese",
+                    "suspenders",
+                ],
+                pickSingleTransform: (x) => x.indexOf("Buy ") === 0 ? x.replace("Buy ", "") : "",
+            },
+            "Middle of the River : Chatting": {
+                collect: [{ match: "red key", found: ["red key"] }],
+            },
+            "Rocky Shore, at a River": {
+                collect: [
+                    { match: "decent rowboat here", found: ["rowboat with oars"] },
+                ],
+            },
+            "Waves Beach : Pick ...": {
+                pickSingle: ["bunch of tiny shells", "bulbaroose shell", "conch shell"],
+            },
+            "Freshwater Spring": {
+                collect: [{ match: "the water", found: ["water"] }],
+            },
+            "The Upside-Down Carnival Machine": {
+                do: [
+                    {
+                        match: "Carnival Machine mini-game done",
+                        done: ["Carnival Machine mini-game"],
+                    },
+                ],
+            },
+            "Up on a Ledge": {
+                do: [{ match: "Thief mini-game done", done: ["Thief mini-game"] }],
+            },
+            "Copious Cutouts": {
+                do: [
+                    {
+                        match: "Copious Cutouts mini-game done",
+                        done: ["Copious Cutouts mini-game"],
+                    },
+                ],
+            },
+            "Back at the Guild": { reset: "Across the bridge" },
+        };
+    }
+}
+const crafting = [];
+const appointments = [];
 function initTabs() {
-    if (document.querySelector('.paginator_row')) {
-        var appList = ['The Adventurers\' Guild', 'Passingtime', 'Rescuing Father Wuel', 'The Fortunes of Madame', 'Ingenuity Test'];
-        var isAppointment = function (title) { return appList.some(function (x) { return title.indexOf(x) > -1; }); };
-        var invertClass = function (className) { return className === 'row0' ? 'row1' : 'row0'; };
-        var titleOf = function (node) { return (node.querySelector('h3') || { innerHTML: '' }).innerHTML; };
-        var adventures = Array.from(document.querySelectorAll('.row0, .row1')), craftClass = 'row1', appClass = 'row1';
-        var guild = adventures.filter(function (x) { return titleOf(x) === appList[0]; }).pop();
+    if (document.querySelector(".paginator_row")) {
+        const appList = [
+            "The Adventurers' Guild",
+            "Passingtime",
+            "Rescuing Father Wuel",
+            "The Fortunes of Madame",
+            "Ingenuity Test",
+            "Haiku medal",
+            "Old Training Grounds",
+            "Trading Post",
+        ];
+        const isAppointment = (title) => appList.some((x) => title.indexOf(x) > -1);
+        const invertClass = (className) => (className === "row0" ? "row1" : "row0");
+        const titleOf = (node) => (node.querySelector("h3") || { innerHTML: "" }).innerHTML;
+        const adventures = Array.from(document.querySelectorAll(".row0, .row1"));
+        let craftClass = "row1";
+        let appClass = "row1";
+        const guild = adventures.filter((x) => titleOf(x) === appList[0]).pop();
         if (guild) {
             guild.parentNode.insertBefore(guild, guild.parentNode.childNodes[0]);
             adventures.splice(adventures.indexOf(guild), 1);
             adventures.splice(0, 0, guild);
         }
-        for (var _i = 0; _i < adventures.length; _i++) {
-            var adventure = adventures[_i];
-            var className = adventure.className, title = titleOf(adventure);
+        for (const adventure of adventures) {
+            const className = adventure.className;
+            const title = titleOf(adventure);
             if (!title)
                 continue;
             if (isAppointment(title)) {
@@ -159,7 +563,7 @@ function initTabs() {
                     appClass = className;
                 }
                 appointments.push(adventure);
-                adventure.style.display = 'none';
+                adventure.style.display = "none";
             }
             else {
                 if (craftClass === className) {
@@ -173,66 +577,82 @@ function initTabs() {
             }
             hideDescription(adventure);
         }
-        var tabCrafting = makeTab('Crafting', true);
-        var tabAppointments = makeTab('Appointments', false);
-        var menu = document.createElement('ul');
+        const tabCrafting = makeTab("Crafting", true);
+        const tabAppointments = makeTab("Appointments", false);
+        const menu = document.createElement("ul");
         menu.innerHTML = '<li class="label">Adventures</li>';
         menu.appendChild(tabCrafting);
         menu.appendChild(tabAppointments);
-        var bar = document.createElement('div');
-        bar.className = 'bar';
-        var content = document.createElement('div');
-        content.className = 'content';
-        var div = document.createElement('div');
-        div.className += 'tab';
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const content = document.createElement("div");
+        content.className = "content";
+        const div = document.createElement("div");
+        div.className += "tab";
         div.appendChild(menu);
         div.appendChild(bar);
         div.appendChild(content);
-        var h1 = document.getElementsByTagName('h1')[0];
-        var p = h1.parentNode;
+        const h1 = document.getElementsByTagName("h1")[0];
+        const p = h1.parentNode;
         p.replaceChild(div, h1);
     }
 }
 function hideDescription(row) {
-    var td = row.querySelector('td'), descriptionNodes = Array.from(td.childNodes).filter(function (x) { return x.nodeName !== 'TABLE'; }), div = document.createElement('div'), header = td.children[0];
-    div.style.display = 'none';
+    const td = row.querySelector("td");
+    const descriptionNodes = Array.from(td.childNodes).filter((x) => x.nodeName !== "TABLE");
+    const div = document.createElement("div");
+    const header = td.children[0];
+    div.style.display = "none";
     td.insertBefore(div, header.nextSibling);
-    descriptionNodes.forEach(function (x) { return div.appendChild(x); });
-    header.style.cursor = 'pointer';
-    var title = header.querySelector('h3');
-    title.style.display = 'inline';
-    var im = document.createElement('img');
-    im.src = '/wod/css/icons/common/more_text.png';
-    im.style.paddingLeft = '10px';
+    descriptionNodes.forEach((x) => div.appendChild(x));
+    header.style.cursor = "pointer";
+    const title = header.querySelector("h3");
+    title.style.display = "inline";
+    const im = document.createElement("img");
+    im.src = "/wod/css/icons/common/more_text.png";
+    im.style.paddingLeft = "10px";
     title.parentNode.appendChild(im);
-    title.parentElement.style.paddingBottom = '5px';
-    td.style.paddingBottom = '5px';
-    header.addEventListener('click', function () {
+    title.parentElement.style.paddingBottom = "5px";
+    td.style.paddingBottom = "5px";
+    header.addEventListener("click", () => {
         if (div.style.display) {
-            div.style.display = '';
-            im.src = im.src.replace('more', 'less');
+            div.style.display = "";
+            im.src = im.src.replace("more", "less");
         }
         else {
-            div.style.display = 'none';
-            im.src = im.src.replace('less', 'more');
+            div.style.display = "none";
+            im.src = im.src.replace("less", "more");
         }
     });
 }
 function makeTab(title, selected) {
-    var action = document.createElement('a');
-    action.setAttribute('href', '#');
+    const action = document.createElement("a");
+    action.setAttribute("href", "#");
     action.innerHTML = title;
-    action.addEventListener('click', selectTab);
-    var tab = document.createElement('li');
-    tab.className = selected ? 'selected' : 'not_selected';
+    action.addEventListener("click", selectTab);
+    const tab = document.createElement("li");
+    tab.className = selected ? "selected" : "not_selected";
     tab.appendChild(action);
     return tab;
 }
 function selectTab(e) {
-    var max = Math.max(crafting.length, appointments.length), isApp = e.target.innerHTML === 'Appointments', selectedTab = e.target.parentNode, options = isApp ? { otherTab: selectedTab.previousSibling, displayApp: '', displayCraft: 'none' } : { otherTab: selectedTab.nextSibling, displayApp: 'none', displayCraft: '' };
-    selectedTab.className = 'selected';
-    options.otherTab.className = 'not_selected';
-    for (var i = 0; i < max; i++) {
+    const max = Math.max(crafting.length, appointments.length);
+    const isApp = e.target.innerHTML === "Appointments";
+    const selectedTab = e.target.parentNode;
+    const options = isApp
+        ? {
+            otherTab: selectedTab.previousSibling,
+            displayApp: "",
+            displayCraft: "none",
+        }
+        : {
+            otherTab: selectedTab.nextSibling,
+            displayApp: "none",
+            displayCraft: "",
+        };
+    selectedTab.className = "selected";
+    options.otherTab.className = "not_selected";
+    for (let i = 0; i < max; i++) {
         if (i < crafting.length)
             crafting[i].style.display = options.displayCraft;
         if (i < appointments.length)
@@ -241,10 +661,11 @@ function selectTab(e) {
 }
 function main() {
     initTabs();
-    var context = getContext();
+    const context = getContext();
     initHighlights(context);
     initHotKeys();
+    initQuestLog(context);
 }
-document.addEventListener('DOMContentLoaded', main);
+document.addEventListener("DOMContentLoaded", () => main());
 
 })();

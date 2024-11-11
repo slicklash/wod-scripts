@@ -2,85 +2,35 @@
   "name": "wod-scripts",
   "version": "0.9.0",
   "description": "Collection of scripts for world-of-dungeons.net",
-  "dependencies": {
-    "typescript": "^2.6.2"
-  },
-  "devDependencies": {
-    "@types/es6-shim": "^0.31.35",
-    "@types/greasemonkey": "0.0.28",
-    "@types/jest": "^22.0.1",
-    "gulp": "^3.9.1",
-    "gulp-concat-util": "^0.5.5",
-    "gulp-jshint": "^2.1.0",
-    "gulp-replace": "^0.6.1",
-    "gulp-typescript": "^3.2.3",
-    "http-server": "^0.11.1",
-    "jest": "^22.0.6",
-    "jshint": "^2.9.5",
-    "merge2": "^1.2.0",
-    "run-sequence": "^2.2.1",
-    "ts-jest": "^22.0.1",
-    "tslint": "^5.9.1"
-  },
+  "author": "slicklash@gmail.com",
+  "license": "BSD-2-Clause",
   "scripts": {
-    "start": "http-server -c-1 -o -p 8000 ./release",
+    "re:favmenu": "tsc --project src/favorite_menu/tsconfig.json && node ./scripts/bundle.js favorite_menu && eslint ./release/favorite_menu.user.js",
+    "re:hero": "npx tsc --project src/hero_list/tsconfig.json && node ./scripts/bundle.js hero_list && eslint ./release/hero_list.user.js",
+    "re:num": "npx tsc --project src/numismatist/tsconfig.json && node ./scripts/bundle.js numismatist && eslint ./release/numismatist.user.js",
+    "re:tidy": "npx tsc --project src/tidy_trade/tsconfig.json && node ./scripts/bundle.js tidy_trade && eslint ./release/tidy_trade.user.js",
+    "re:storage": "npx tsc --project src/storage_management/tsconfig.json && node ./scripts/bundle.js storage_management && eslint ./release/storage_management.user.js",
+    "re:adventure": "npx tsc --project src/adventure_assistant/tsconfig.json && node ./scripts/bundle.js adventure_assistant && eslint ./release/adventure_assistant.user.js",
+    "re:profile": "npx tsc --project src/profile_export/tsconfig.json && node ./scripts/bundle.js profile_export && eslint ./release/profile_export.user.js",
+    "re:itemizer": "npx tsc --project src/itemizer/tsconfig.json && node ./scripts/bundle.js itemizer && eslint ./release/itemizer.user.js",
+    "re": "npm run re:favmenu && npm run re:hero && npm run re:num && npm run re:tidy && npm run re:storage && npm run re:adventure && npm run re:profile && npm run re:itemizer",
     "test": "jest",
     "coverage": "jest --coverage"
   },
-  "author": "slicklash@gmail.com",
-  "license": "BSD-2-Clause",
-  "jest": {
-    "roots": [
-      "<rootDir>/src"
-    ],
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "moduleDirectories": [
-      "node_modules",
-      "src/"
-    ],
-    "moduleNameMapper": {
-      "@common/(.*)": "<rootDir>/src/common/$1"
-    },
-    "coverageReporters": ["html"]
+  "dependencies": {
+    "typescript": "4.3.5"
   },
-  "jshintrc": {
-    "bitwise": true,
-    "browser": true,
-    "esnext": true,
-    "eqeqeq": true,
-    "camelcase": false,
-    "maxlen": 2000,
-    "newcap": false,
-    "strict": false,
-    "forin": true,
-    "latedef": false,
-    "noarg": true,
-    "noempty": true,
-    "undef": true,
-    "unused": true,
-    "jasmine": true,
-    "globals": {
-      "console": false,
-      "$": false,
-      "alert": false,
-      "define": false,
-      "jasmine": false,
-      "module": false,
-      "require": false,
-      "GM_xmlhttpRequest": false,
-      "GM_getValue": false,
-      "GM_setValue": false
-    }
+  "devDependencies": {
+    "@types/greasemonkey": "0.0.28",
+    "@types/jest": "^23.0.0",
+    "@types/node": "^12.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "jest": "^23.0.0",
+    "jest-environment-jsdom": "^23.0.0",
+    "ts-jest": "^23.0.0",
+    "ts-node": "^10.9.1"
   }
 }

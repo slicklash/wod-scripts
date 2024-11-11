@@ -1,10 +1,13 @@
 // ==UserScript==
 // @name           Hero List
 // @description    Scripts adds functionality to order your heroes
-// @version        1.2.0
+// @version        1.2.2
 // @author         Never
-// @include        http*://*.world-of-dungeons.*/wod/spiel/settings/heroes.php*
+// @include        https://*.world-of-dungeons.*/wod/spiel/settings/heroes.php*
 // @run-at         document-start
+// @grant          GM.getValue
+// @grant          GM.setValue
+// @grant          GM.xmlHttpRequest
 // @grant          GM_getValue
 // @grant          GM_setValue
 // @grant          GM_xmlhttpRequest
@@ -12,19 +15,18 @@
 
 (function() {
 'use strict';
-function add(tag, parentNode) {
-    var elem = typeof tag === 'string' ? document.createElement(tag) : tag;
-    if (parentNode && parentNode.nodeType) {
-        parentNode.appendChild(elem);
-    }
+function add(tag, parent, innerHTML) {
+    const elem = typeof tag === "string" ? document.createElement(tag) : tag;
+    parent && parent.nodeType && parent.appendChild(elem);
+    innerHTML && (elem.innerHTML = innerHTML);
     return elem;
 }
 function attr(elem, nameOrMap, value, remove) {
     if (remove) {
         elem.removeAttribute(nameOrMap);
     }
-    else if (typeof nameOrMap === 'object') {
-        Object.keys(nameOrMap).forEach(function (key) { elem.setAttribute(key, nameOrMap[key]); });
+    else if (typeof nameOrMap === "object") {
+        Object.keys(nameOrMap).forEach((key) => { elem.setAttribute(key, nameOrMap[key]); });
     }
     else if (value) {
         elem.setAttribute(nameOrMap, value);
@@ -36,134 +38,197 @@ function attr(elem, nameOrMap, value, remove) {
 }
 function textContent(elem, value) {
     if (!elem)
-        return '';
-    if (typeof value === 'undefined') {
-        return elem.textContent;
-    }
-    elem.textContent = value;
+        return "";
+    return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
-function insertAfter(node) {
-    var elems = [];
-    for (var _i = 1; _i < arguments.length; _i++) {
-        elems[_i - 1] = arguments[_i];
-    }
-    var parent = node.parentNode;
-    elems.forEach(function (elem) {
+function insertAfter(node, ...elems) {
+    const parent = node.parentNode;
+    elems.forEach((elem) => {
         parent.insertBefore(elem, node.nextSibling);
         node = elem;
     });
 }
-function httpFetch(url, method, data) {
-    if (method === void 0) { method = 'GET'; }
-    if (data === void 0) { data = undefined; }
-    return new Promise(function (resolve, reject) {
-        var request = {
-            method: method,
-            url: url,
+function httpFetch(url, method = "GET", data) {
+    return new Promise((resolve, reject) => {
+        const request = {
+            method,
+            url,
             headers: { Cookie: document.cookie },
-            onload: function (request) {
-                if (request.readyState !== 4)
+            onload: (resp) => {
+                if (resp.readyState !== 4)
                     return;
-                if (request.status >= 200 && request.status < 300)
-                    resolve({
-                        data: request.responseText
-                    });
-                else
-                    reject({
-                        data: request.responseText
-                    });
-            }
+                if (resp.status >= 200 && resp.status < 300) {
+                    resolve({ data: resp.responseText });
+                }
+                else {
+                    reject({ data: resp.responseText });
+                }
+            },
         };
-        if (typeof data === 'object') {
+        if (typeof data === "object") {
             request.data = JSON.stringify(data);
-            request.headers = { 'Content-Type': 'application/json' };
+            request.headers = { "Content-Type": "application/json" };
         }
-        GM_xmlhttpRequest(request);
+        if (typeof GM === "object") {
+            GM.xmlHttpRequest(request);
+        }
+        else {
+            GM_xmlhttpRequest(request);
+        }
     });
 }
-function getInfo(rows) {
-    var result = [];
-    for (var i = 1; i < rows.length; i++) {
-        var row = rows[i], cells = row.cells, hid = Number(cells[0].querySelector('input').value).toString(), level = Number(textContent(cells[2])), next = cells[4], dungeon = getDungeonName(next), time = textContent(cells[4]).trim(), value = GM_getValue(hid), info = value ? JSON.parse(value) : {}, weight = info.weight || (level === 0 ? 100 : level);
-        if (dungeon) {
-            var localTime = time.split('/')[0];
-            textContent(next, localTime + " - " + dungeon);
-        }
-        var timeCell = add('td');
-        textContent(timeCell, time);
-        result.push({ 'weight': Number(weight), row: row, group: info.group || 'no group' });
-    }
-    return result.sort(function (a, b) { return a.weight - b.weight; });
+function GX_getValue(key, defaultValue) {
+    if (typeof GM === "object")
+        return GM.getValue(key, defaultValue);
+    return Promise.resolve(GM_getValue(key));
+}
+function GX_setValue(key, value) {
+    if (typeof GM === "object")
+        return GM.setValue(key, value);
+    return Promise.resolve(GM_setValue(key, value));
+}
+var Store = {
+    get: GX_getValue,
+    set: GX_setValue,
+};
+const leadingZero = (x) => (x < 10 ? "0" + x : x.toString());
+const formatTime = (x) => `${leadingZero(Math.trunc(x / 60))}:${leadingZero(x % 60)}`;
+const minutes = (t) => t
+    .split(":")
+    .reduce((acc, x) => (acc > 0 ? acc + Number(x) : Number(x) * 60), 0);
+function parseHeroTable([, ...rows], currentTime) {
+    return new Promise((resolve) => {
+        const formatDungeonTitle = (dungeon, time) => {
+            const minutesToWait = time.includes("tomorrow")
+                ? minutes(time.replace("tomorrow", "").trim()) + 1440
+                : minutes(time);
+            const localTime = time.split("/")[0];
+            const title = currentTime
+                ? `${localTime} (in ${formatTime(minutesToWait - minutes(currentTime))}) - ${dungeon}`
+                : `${localTime} - ${dungeon}`;
+            return title;
+        };
+        Promise.all(rows.map((x) => getHeroInfo(formatDungeonTitle, x))).then((result) => {
+            resolve(result.sort((a, b) => a.weight - b.weight));
+        });
+    });
+}
+function getHeroInfo(formatDungeonTitle, row) {
+    return new Promise((resolve) => {
+        const cells = row.cells;
+        const hid = Number(cells[0].querySelector("input").value).toString();
+        const level = Number(textContent(cells[2]));
+        const next = cells[4];
+        const dungeon = getDungeonName(next);
+        const time = textContent(cells[4]).trim();
+        Store.get(hid).then((value) => {
+            let info;
+            try {
+                info = value ? JSON.parse(value) : {};
+            }
+            catch (_a) {
+                info = {};
+            }
+            const weight = info.weight || (level === 0 ? 100 : level);
+            if (dungeon) {
+                textContent(next, formatDungeonTitle(dungeon, time));
+            }
+            const timeCell = add("td");
+            textContent(timeCell, time);
+            resolve({ weight: Number(weight), row, group: info.group || "no group" });
+        });
+    });
 }
 function getDungeonName(td) {
-    var tooltip = attr(td, 'onmouseover') || '';
-    var n = tooltip.lastIndexOf('left;\'>');
+    let tooltip = attr(td, "onmouseover") || "";
+    const n = tooltip.lastIndexOf("left;'>");
     if (n > -1)
         tooltip = tooltip.slice(n);
-    return tooltip.replace(/.+\(this,'(.+)'\);/, '$1').replace(/.+>(.+)<\/th.+/i, '$1');
+    return tooltip
+        .replace(/.+\(this,'(.+)'\);/, "$1")
+        .replace(/.+>(.+)<\/th.+/i, "$1");
 }
 function saveWeights(rows) {
-    var promises = [];
-    var _loop_1 = function(i) {
-        var row = rows[i], cells = row.cells, hid = Number(cells[0].querySelector('input').value).toString(), weight = Number(cells[6].querySelector('input').value);
+    const promises = [];
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.cells;
+        const hid = Number(cells[0].querySelector("input").value).toString();
+        let weight = Number(cells[6].querySelector("input").value);
         if (isNaN(weight))
             weight = 0;
-        var p = httpFetch('/wod/spiel/hero/profile.php?id=' + hid);
-        p.then(function (resp) {
-            var data = resp.data, n = data.indexOf('group:'), group = data.slice(n, n + 200).split('<a')[1].split(/[><]/)[1];
-            GM_setValue(hid, JSON.stringify({ weight: weight, group: group }));
+        const p = httpFetch("/wod/spiel/hero/profile.php?id=" + hid);
+        p.then((resp) => {
+            const data = resp.data;
+            const n = data.indexOf("group:");
+            const group = data
+                .slice(n, n + 200)
+                .split("<a")[1]
+                .split(/[><]/)[1];
+            return Store.set(hid, JSON.stringify({ weight, group }));
         });
         promises.push(p);
-    };
-    for (var i = 1; i < rows.length; i++) {
-        _loop_1(i);
     }
-    Promise.all(promises).then(function () {
-        var form = document.forms.the_form;
+    Promise.all(promises).then(() => {
+        const form = document.forms.the_form;
         if (form)
             form.submit();
     });
 }
 function main(main_content) {
-    var table = (main_content || document.querySelector('#main_content')).querySelector('form table'), rows = table ? Array.from(table.querySelectorAll('tr')) : undefined;
+    const table = (main_content || document.querySelector("#main_content")).querySelector("form table");
+    const rows = table
+        ? Array.from(table.querySelectorAll("tr"))
+        : undefined;
     if (rows) {
-        var newTable = add('table'), newTbody_1 = add('tbody', newTable);
-        attr(newTable, 'class', 'content_table');
-        var headerWeight = add('th'), label = add('span', headerWeight), buttonSave = add('input', headerWeight);
-        label.innerHTML = 'weight<br/>';
-        attr(buttonSave, { 'type': 'button', 'value': 'Update', 'class': 'button clickable' });
-        buttonSave.addEventListener('click', function () { saveWeights(rows); }, false);
+        const newTable = add("table");
+        const newTbody = add("tbody", newTable);
+        attr(newTable, "class", "content_table");
+        const headerWeight = add("th");
+        const label = add("span", headerWeight);
+        const buttonSave = add("input", headerWeight);
+        label.innerHTML = "weight<br/>";
+        attr(buttonSave, {
+            type: "button",
+            value: "Update",
+            class: "button clickable",
+        });
+        buttonSave.addEventListener("click", () => {
+            saveWeights(rows);
+        }, false);
         rows[0].appendChild(headerWeight);
-        newTbody_1.appendChild(rows[0]);
-        var groupName = add('th');
-        textContent(groupName, 'group');
+        newTbody.appendChild(rows[0]);
+        const groupName = add("th");
+        textContent(groupName, "group");
         rows[0].insertBefore(groupName, rows[0].cells[4]);
-        var heroes = getInfo(rows);
-        var group_1;
-        var makeInput_1 = function (row, value) {
-            var colWeight = add('td', row), txt = add('input');
-            attr(txt, { 'type': 'text', 'style': 'width: 30px', 'value': value });
-            attr(colWeight, 'align', 'center');
+        const time = document.querySelector("#clock");
+        let group;
+        const makeInput = (row, value) => {
+            const colWeight = add("td", row);
+            const txt = add("input");
+            attr(txt, { type: "text", style: "width: 30px", value });
+            attr(colWeight, "align", "center");
             add(txt, colWeight);
         };
-        var color_1 = 0;
-        heroes.forEach(function (hero, i) {
-            var row = hero.row;
-            makeInput_1(row, hero.weight);
-            attr(row, 'class', 'row' + (color_1++ % 2));
-            var c = add('td');
-            c.innerHTML = "<a href=\"/wod/spiel/dungeon/group.php?name=" + hero.group + "\" target=\"_blank\" />" + hero.group + "</a>";
-            row.insertBefore(c, row.cells[4]);
-            if (i > 0 && group_1 !== hero.group) {
-                group_1 = hero.group;
-            }
-            add(hero.row, newTbody_1);
+        let color = 0;
+        parseHeroTable(rows, time ? time.textContent : undefined).then((heroes) => {
+            heroes.forEach((hero, i) => {
+                const row = hero.row;
+                makeInput(row, hero.weight);
+                attr(row, "class", "row" + (color++ % 2));
+                const c = add("td");
+                c.innerHTML = `<a href="/wod/spiel/dungeon/group.php?name=${hero.group}" target="_blank" />${hero.group}</a>`;
+                row.insertBefore(c, row.cells[4]);
+                if (i > 0 && group !== hero.group) {
+                    group = hero.group;
+                }
+                add(hero.row, newTbody);
+            });
+            insertAfter(table, newTable);
+            table.parentNode.removeChild(table);
         });
-        insertAfter(table, newTable);
-        table.parentNode.removeChild(table);
     }
 }
-if (!window.__karma__)
-    document.addEventListener('DOMContentLoaded', function () { return main(); });
+document.addEventListener("DOMContentLoaded", () => main());
 
 })();

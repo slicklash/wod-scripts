@@ -27,7 +27,7 @@ export interface Constraints {
     exclude: string[];
 }
 
-export const parseItemDetails = (elem: Element) : ItemDetails => { return new ItemDetailsParser().parse(elem); };
+export const parseItemDetails = (elem: Element): ItemDetails => new ItemDetailsParser().parse(elem);
 
 class ItemDetailsParser {
 
@@ -46,13 +46,14 @@ class ItemDetailsParser {
     remarks: string;
     set: string;
 
-    parse (elem): ItemDetails {
+    parse(elem): ItemDetails {
 
-        let rows: HTMLTableRowElement[] = elem ? <any>Array.from(elem.querySelectorAll('.row0, .row1')) : [];
+        const rows: HTMLTableRowElement[] = elem ? <any> Array.from(elem.querySelectorAll('.row0, .row1')) : [];
 
-        for (let row of rows) {
-            let values = row.cells[1],
-                key = textNormalized(row.cells[0].childNodes[0]) || textNormalized(row.cells[0]);
+        for (const row of rows) {
+            const values = row.cells[1];
+            let key = textNormalized(row.cells[0].childNodes[0]) || textNormalized(row.cells[0]);
+            if (key) key = key.replace(' including bonuses', '');
             this.tryParse(key, values);
         }
 
@@ -74,40 +75,40 @@ class ItemDetailsParser {
         };
     }
 
-    tryParse (key, values) {
-        let parserName = key ? 'parse' + key.split(' ').map(titleCase).join('') : undefined,
-            fn = this[parserName];
+    tryParse(key, values) {
+        const parserName = key ? 'parse' + key.split(' ').map(titleCase).join('') : undefined;
+        const fn = this[parserName];
         if (typeof fn === 'function') fn.bind(this)(values);
     }
 
-    parseHeroClasses (values) { this.heroClasses = this.getConstraints(values); }
+    parseHeroClasses(values) { this.heroClasses = this.getConstraints(values); }
 
-    parseRace (values) { this.races = this.getConstraints(values); }
+    parseRace(values) { this.races = this.getConstraints(values); }
 
-    parseUnique (value) { this.unique = textNormalized(value).replace('-', 'not unique'); }
+    parseUnique(value) { this.unique = textNormalized(value).replace('-', 'not unique'); }
 
-    parseUsesLeft (value) { this.usesLeft = textNormalized(value); }
+    parseUsesLeft(value) { this.usesLeft = textNormalized(value); }
 
-    parseUsesPerDungeon (value) { this.usesPerDungeon = textNormalized(value); }
+    parseUsesPerDungeon(value) { this.usesPerDungeon = textNormalized(value); }
 
-    parseUsesPerFight (value) { this.usesPerFight = textNormalized(value); }
+    parseUsesPerFight(value) { this.usesPerFight = textNormalized(value); }
 
-    parseEffect (value) { this.effect = textNormalized(value); }
+    parseEffect(value) { this.effect = textNormalized(value); }
 
-    parseNeeds (value) { this.needs = textNormalized(value); }
+    parseNeeds(value) { this.needs = textNormalized(value); }
 
-    parseLocation (value) { this.location = textNormalized(value); }
+    parseLocation(value) { this.location = textNormalized(value); }
 
-    parseItemClass (values) { this.itemClasses = Array.from(values.querySelectorAll('a'), textNormalized); }
+    parseItemClass(values) { this.itemClasses = Array.from(values.querySelectorAll('a'), textNormalized); }
 
-    parseSkills (values) { this.skills = Array.from(values.querySelectorAll('a'), textNormalized); }
+    parseSkills(values) { this.skills = Array.from(values.querySelectorAll('a'), textNormalized); }
 
-    parseRemarks (value) { this.remarks = textNormalized(value); }
+    parseRemarks(value) { this.remarks = textNormalized(value); }
 
-    parseSet (value) { this.set = textNormalized(value); }
+    parseSet(value) { this.set = textNormalized(value); }
 
-    parseRequirements (values) {
-        this.requirements = Array.from(values.childNodes, textNormalized).reduce((acc,x) => {
+    parseRequirements(values) {
+        this.requirements = Array.from(values.childNodes, textNormalized).reduce((acc, x) => {
             if (x) {
                 if (x.indexOf('is') === 0) acc[acc.length - 1] += ' ' + x;
                 else acc.push(x);
@@ -117,9 +118,9 @@ class ItemDetailsParser {
         if (this.requirements.length === 1 && this.requirements[0] === 'no') this.requirements = '-';
     }
 
-    getConstraints (values): Constraints | string {
-        let list = Array.from(values.querySelectorAll('li span'));
-        let constraints = {
+    getConstraints(values): Constraints | string {
+        const list = Array.from(values.querySelectorAll('li span'));
+        const constraints = {
             include: list.filter(x => cssClass(x, 'generic_yes')).map(textNormalized),
             exclude: list.filter(x => cssClass(x, 'generic_no')).map(textNormalized),
         };

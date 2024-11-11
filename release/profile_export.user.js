@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        2.0.0
+// @version        2.0.1
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -460,8 +460,6 @@ class Hero {
         this.skills.sort((a, b) => {
             let cmp = b.effective_rank - a.effective_rank;
             if (cmp === 0)
-                cmp = b.rank - a.rank;
-            if (cmp === 0)
                 cmp = b.training_cost_ep - a.training_cost_ep;
             if (cmp === 0)
                 cmp = a.name.localeCompare(b.name);
@@ -728,12 +726,15 @@ const exportProfile = function () {
                     const h1 = frmSkills.querySelector("h1");
                     const d = new Date();
                     const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.0[/size]`;
-                    const txtExport = h1.querySelector("#profile-export-result") || add("textarea", h1.parentNode);
-                    attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
+                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.1[/size]`;
+                    let txtExport = h1.parentElement.querySelector("#profile-export-result");
+                    if (!txtExport) {
+                        txtExport = add("textarea", h1.parentNode);
+                        attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
+                    }
                     txtExport.innerHTML = bbcode;
                     attr(imgLoader, "style", "display: none");
-                    attr(btnExport, "disabled", "true");
+                    attr(btnExport, "disabled", "false", true);
                     cssClass(btnExport, "button clickable", true);
                     cssClass(btnExport, "button_disabled", false);
                 });

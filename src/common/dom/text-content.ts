@@ -1,7 +1,5 @@
 export function textContent(elem, value?) {
-    if (!elem) return '';
-    if (typeof value === 'undefined') {
-        return elem.textContent;
-    }
-    elem.textContent = value;
+  if (!elem) return "";
+  // prettier-ignore
+  return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }

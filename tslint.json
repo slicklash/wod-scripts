@@ -11,7 +11,9 @@
       "max-line-length": [true, 240],
       "member-access": [true, "no-public"],
       "no-angle-bracket-type-assertion": false,
+      "no-unused-variable": true,
       "object-literal-sort-keys": false,
+      "interface-name": false,
       "ordered-imports": false,
       "quotemark": ["single"]
     },
