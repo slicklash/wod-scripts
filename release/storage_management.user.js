@@ -1,17 +1,29 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.5.0
+// @version        1.6.0
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/trade/trade.php*
 // @run-at         document-end
-// @grant          none
+// @grant          GM.getValue
+// @grant          GM.setValue
+// @grant          GM_getValue
+// @grant          GM_setValue
 // ==/UserScript==
 
 (function() {
 'use strict';
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+return new (P || (P = Promise))(function (resolve, reject) {
+    function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+    function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+    function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+    step((generator = generator.apply(thisArg, _arguments || [])).next());
+});
+};
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
     parent && parent.nodeType && parent.appendChild(elem);
@@ -36,8 +48,10 @@ function attr(elem, nameOrMap, value, remove) {
 function insertAfter(node, ...elems) {
     const parent = node.parentNode;
     elems.forEach((elem) => {
-        parent.insertBefore(elem, node.nextSibling);
-        node = elem;
+        if (elem) {
+            parent.insertBefore(elem, node.nextSibling);
+            node = elem;
+        }
     });
 }
 function waitFor(selectorOrElement, eventName) {
@@ -57,6 +71,30 @@ function waitFor(selectorOrElement, eventName) {
             selectorOrElement.addEventListener(eventName, resolve);
         }
     });
+}
+function GX_getValue(key, defaultValue) {
+    if (typeof GM === "object")
+        return GM.getValue(key, defaultValue);
+    return Promise.resolve(GM_getValue(key));
+}
+function GX_setValue(key, value) {
+    if (typeof GM === "object")
+        return GM.setValue(key, value);
+    return Promise.resolve(GM_setValue(key, value));
+}
+var Store = {
+    get: GX_getValue,
+    set: GX_setValue,
+};
+function debounce(fn, delay) {
+    let timeout;
+    return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(function () {
+            fn.apply(context, args);
+        }, delay);
+    };
 }
 function textContent(elem, value) {
     if (!elem)
@@ -119,6 +157,8 @@ class StorageItem {
         if (/ seed$/.test(this.name))
             return true;
         if (/^reagent:/.test(this.name))
+            return true;
+        if (/^Shard.+of/.test(this.name))
             return true;
         if (/^(lesser|greater) emblem of/i.test(this.name))
             return true;
@@ -233,6 +273,7 @@ function _t(text) {
         return text;
     return text === "Commit" ? "nderungen" : text;
 }
+const KEY_SPLIT_FILTER = "split-filter";
 class StorageController {
     constructor() {
         this.labelsSellInfo = [];
@@ -263,14 +304,16 @@ class StorageController {
         };
     }
     init() {
-        waitFor('input[type="hidden"][name="view"]').then((elem) => {
+        return __awaiter(this, void 0, void 0, function* () {
+            const elem = yield waitFor('input[type="hidden"][name="view"]');
             if (elem && elem.value !== "gear") {
-                this._createControls();
+                const auto = yield Store.get(KEY_SPLIT_FILTER);
+                this._createControls(auto || "*leather*of*, Ancient seals*");
                 this._enableControls();
             }
         });
     }
-    _createControls() {
+    _createControls(splitFilter) {
         const buttons_commit = (Array.from(document.querySelectorAll(CommitButtonSelector)));
         if (!buttons_commit.length)
             return;
@@ -289,9 +332,25 @@ class StorageController {
         const equipItem = (x) => {
             x.ctrlLocationSelect.value = x.ctrlLocationSelect.options[0].value;
         };
+        const createSplitMatchers = (value) => value
+            .split(/[,;|]/)
+            .filter((x) => Boolean(x.trim()))
+            .map((x) => {
+            x = x.trim().replace(/\*/g, ".*");
+            return new RegExp(`^${x}$`, "i");
+        });
+        let splitMatchers = createSplitMatchers(splitFilter);
         const actions = {
-            split: {
+            splitAll: {
                 predicate: (x) => x.ctrlLocationSelect && x.ctrlLocationCheckbox,
+                handler: splitItem,
+            },
+            splitFilter: {
+                predicate: (x) => {
+                    return (x.ctrlLocationSelect &&
+                        x.ctrlLocationCheckbox &&
+                        splitMatchers.some((m) => m.test(x.name)));
+                },
                 handler: splitItem,
             },
             cellar: {
@@ -303,25 +362,36 @@ class StorageController {
                 handler: equipItem,
             },
         };
-        const onSplit = this._performAction.bind(this, actions.split);
+        const onSplitAll = this._performAction.bind(this, actions.splitAll);
+        const onSplitFilter = this._performAction.bind(this, actions.splitFilter);
         const onCellar = this._performAction.bind(this, actions.cellar);
         const onEquip = this._performAction.bind(this, actions.equip);
         const onSelectChanged = this._onSelectChanged.bind(this);
         const onSellChanged = this._onSellChanged.bind(this);
-        buttons_commit.forEach((commit) => {
+        buttons_commit.forEach((commit, i) => {
             const labelMove = this._makeLabel("Select");
             const labelSell = this._makeLabel("Selll");
-            const buttonSplit = this._makeButton("Split", onSplit);
+            const buttonSplit = this._makeButton("Split All", onSplitAll);
+            const buttonSplitAuto = this._makeButton("Split Filter", onSplitFilter);
             const buttonCellar = this._makeButton("Cellar", onCellar);
             const buttonEquip = this._makeButton("Equip", onEquip);
             const selectForLocation = this._makeSelect(140, onSelectChanged);
             const selectForSell = this._makeSelect(120, onSellChanged);
             const labelSellInfo = add("span");
-            this.actionButtons.push(buttonSplit, buttonCellar, buttonEquip);
+            const inputAuto = attr(add("input"), {
+                style: "margin-top: 5px; width: 100%",
+                value: splitFilter,
+            });
+            inputAuto.addEventListener("keyup", debounce((e) => {
+                splitFilter = e.target.value;
+                splitMatchers = createSplitMatchers(splitFilter);
+                Store.set(KEY_SPLIT_FILTER, splitFilter);
+            }, 500), false);
+            this.actionButtons.push(buttonSplit, buttonSplitAuto, buttonCellar, buttonEquip);
             this.labelsSellInfo.push(labelSellInfo);
             this.selectsForLocation.push(selectForLocation);
             this.selectsForSell.push(selectForSell);
-            insertAfter(commit, labelMove, selectForLocation, buttonSplit, buttonCellar, buttonEquip, labelSell, selectForSell, labelSellInfo);
+            insertAfter(commit, labelMove, selectForLocation, buttonSplit, buttonSplitAuto, buttonCellar, buttonEquip, labelSell, selectForSell, labelSellInfo, add("br"), i === 0 && inputAuto);
         });
     }
     _attachEvents() {
@@ -382,7 +452,10 @@ class StorageController {
             }
         }
         if (!onlySelected) {
-            tmp.forEach(handler);
+            tmp.forEach((item) => {
+                handler(item);
+                item.numberCell.style.backgroundColor = "rgba(0,255,0,0.2)";
+            });
         }
     }
     _addOptions(select, options, sellable) {
