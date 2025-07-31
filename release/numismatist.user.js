@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.0.3
+// @version        1.1.0
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
+// @include        http*://*.world-of-dungeons.*/wod/spiel/dungeon/dungeon.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/help/dungeonlist.php*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/title_list.php?menukey=hero_titles*
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/advance.php?menukey=level_costs*
@@ -27,11 +28,6 @@ return new (P || (P = Promise))(function (resolve, reject) {
     step((generator = generator.apply(thisArg, _arguments || [])).next());
 });
 };
-function parseHtml(str, returnBody) {
-    const e = document.implementation.createHTMLDocument();
-    e.body.innerHTML = str;
-    return returnBody ? e.body : e.body.children.length === 1 ? e.body.children[0] : e.body.children;
-}
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
     parent && parent.nodeType && parent.appendChild(elem);
@@ -52,6 +48,11 @@ function attr(elem, nameOrMap, value, remove) {
         return elem.getAttribute(nameOrMap);
     }
     return elem;
+}
+function parseHtml(str, returnBody) {
+    const e = document.implementation.createHTMLDocument();
+    e.body.innerHTML = str;
+    return returnBody ? e.body : e.body.children.length === 1 ? e.body.children[0] : e.body.children;
 }
 function httpFetch(url, method = "GET", data) {
     return new Promise((resolve, reject) => {
@@ -138,6 +139,9 @@ function main() {
         }
         else if (location.pathname.includes("title_list")) {
             showFameMedalInfo(heroes);
+        }
+        else if (location.pathname.includes("dungeon/dungeon.php")) {
+            showDungeonMedalInfo(heroes, true);
         }
         else {
             showLevelUpMedalInfo(heroes);
@@ -259,7 +263,7 @@ function showFameMedalInfo(profiles) {
         tr.insertBefore(td, tr.cells[1]);
     });
 }
-function showDungeonMedalInfo(profiles) {
+function showDungeonMedalInfo(profiles, dungeonPage = false) {
     const map = profiles.reduce((acc, x) => {
         x.medals.forEach((m) => {
             const key = m.toLowerCase();
@@ -269,7 +273,7 @@ function showDungeonMedalInfo(profiles) {
         });
         return acc;
     }, {});
-    const dungeons = Array.from(document.querySelectorAll("#main_content .content_table tbody tr td:nth-child(2)"));
+    const dungeons = Array.from(document.querySelectorAll(`#main_content .content_table > tbody > tr > td:nth-child(${dungeonPage ? 1 : 2})`));
     dungeons.forEach((td) => {
         const key = normalize(td.textContent.trim().toLowerCase());
         const heroes = map[hash(key)] || [];
