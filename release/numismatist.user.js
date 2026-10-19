@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.1.0
+// @version        1.1.1
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/dungeon/dungeon.php*
@@ -19,19 +19,12 @@
 
 (function() {
 'use strict';
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-    function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-    function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-});
-};
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent && parent.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
 function attr(elem, nameOrMap, value, remove) {
@@ -54,33 +47,38 @@ function parseHtml(str, returnBody) {
     e.body.innerHTML = str;
     return returnBody ? e.body : e.body.children.length === 1 ? e.body.children[0] : e.body.children;
 }
-function httpFetch(url, method = "GET", data) {
+function httpFetch(url, method = "GET", body) {
     return new Promise((resolve, reject) => {
         const request = {
             method,
             url,
-            headers: { Cookie: document.cookie },
+            headers: {},
             onload: (resp) => {
                 if (resp.readyState !== 4)
                     return;
-                if (resp.status >= 200 && resp.status < 300) {
-                    resolve({ data: resp.responseText });
-                }
-                else {
-                    reject({ data: resp.responseText });
-                }
+                const contentType = resp.responseHeaders
+                    ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+                    ?.trim()
+                    .toLowerCase();
+                const data = contentType === "application/json" || contentType?.endsWith("+json")
+                    ? JSON.parse(resp.responseText)
+                    : resp.responseText;
+                if (resp.status >= 200 && resp.status < 300)
+                    resolve({ data });
+                else
+                    reject({ status: resp.status, data });
             },
+            onerror: reject,
         };
-        if (typeof data === "object") {
-            request.data = JSON.stringify(data);
-            request.headers = { "Content-Type": "application/json" };
+        if (body !== undefined) {
+            request.data =
+                typeof body === "object" && body !== null ? JSON.stringify(body) : body;
+            if (typeof body === "object" && body !== null)
+                request.headers["Content-Type"] = "application/json";
         }
-        if (typeof GM === "object") {
-            GM.xmlHttpRequest(request);
-        }
-        else {
-            GM_xmlhttpRequest(request);
-        }
+        (typeof GM === "object" && GM?.xmlHttpRequest
+            ? GM.xmlHttpRequest
+            : GM_xmlhttpRequest)(request);
     });
 }
 function GX_getValue(key, defaultValue) {
@@ -108,45 +106,43 @@ const getLastReportKey = () => httpFetch("/wod/spiel/dungeon/report.php?menukey=
     if (!resp)
         return "none";
     const html = parseHtml(resp.data, true);
-    const last = html.querySelector("#main_content .row0").textContent.trim();
-    return hash(last);
+    const last = html.querySelector("#main_content .row0");
+    if (!last)
+        return "none";
+    return hash(last.textContent.trim());
 });
-function buildCache() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const groupHeroes = yield getGroupHeroes(document.forms.the_form.gruppe_id.value);
-        const profiles = yield getHeroProfiles(groupHeroes);
-        const cache = {
-            key: yield getLastReportKey(),
-            heroes: profiles.filter((x) => !x.isMentor),
-        };
-        yield Store.set("numismatist", JSON.stringify(cache));
-        return cache;
-    });
+async function buildCache() {
+    const groupHeroes = await getGroupHeroes(document.forms.the_form.gruppe_id.value);
+    const profiles = await getHeroProfiles(groupHeroes);
+    const cache = {
+        key: await getLastReportKey(),
+        heroes: profiles.filter((x) => !x.isMentor),
+    };
+    await Store.set("numismatist", JSON.stringify(cache));
+    return cache;
 }
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const idGroup = document.forms.the_form.gruppe_id.value;
-        if (!idGroup)
-            return;
-        const key = yield getLastReportKey();
-        let cache = JSON.parse(yield Store.get("numismatist", "{}"));
-        if (cache.key !== key) {
-            cache = yield buildCache();
-        }
-        const heroes = cache.heroes || [];
-        if (location.pathname.includes("dungeonlist")) {
-            showDungeonMedalInfo(heroes);
-        }
-        else if (location.pathname.includes("title_list")) {
-            showFameMedalInfo(heroes);
-        }
-        else if (location.pathname.includes("dungeon/dungeon.php")) {
-            showDungeonMedalInfo(heroes, true);
-        }
-        else {
-            showLevelUpMedalInfo(heroes);
-        }
-    });
+async function main() {
+    const idGroup = document.forms.the_form.gruppe_id.value;
+    if (!idGroup)
+        return;
+    const key = await getLastReportKey();
+    let cache = JSON.parse(await Store.get("numismatist", "{}"));
+    if (cache.key !== key) {
+        cache = await buildCache();
+    }
+    const heroes = cache.heroes || [];
+    if (location.pathname.includes("dungeonlist")) {
+        showDungeonMedalInfo(heroes);
+    }
+    else if (location.pathname.includes("title_list")) {
+        showFameMedalInfo(heroes);
+    }
+    else if (location.pathname.includes("dungeon/dungeon.php")) {
+        showDungeonMedalInfo(heroes, true);
+    }
+    else {
+        showLevelUpMedalInfo(heroes);
+    }
 }
 function getGroupHeroes(idGroup) {
     return new Promise((resolve, reject) => {
@@ -156,9 +152,10 @@ function getGroupHeroes(idGroup) {
             const groupHeroes = resp &&
                 Array.from(parseHtml(resp.data, true).querySelectorAll(".main_content tbody .content_table_mainline a")).map((x) => ({
                     name: x.textContent,
-                    profileUrl: x.getAttribute("href"),
+                    profileUrl: x.getAttribute("href") || "",
                 }));
-            resolve(groupHeroes);
+            if (groupHeroes && getGroupHeroes.length)
+                resolve(groupHeroes);
         });
     });
 }
@@ -215,7 +212,7 @@ function showLevelUpMedalInfo(profiles) {
         if (i > 2) {
             const requiredExp = parseInt(tr.cells[2].textContent.replace(/\s/g, ""), 10);
             const notObtained = profiles
-                .filter((x) => x.exp < requiredExp)
+                .filter((x) => x.exp && x.exp < requiredExp)
                 .map((x) => ({
                 name: `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`,
                 missing: requiredExp - x.exp,
@@ -246,7 +243,7 @@ function showFameMedalInfo(profiles) {
             a.textContent = name;
             const requiredFame = parseInt(tr.cells[0].textContent.replace(/\d+. title/, ""), 10);
             const notObtained = profiles
-                .filter((x) => x.fame < requiredFame)
+                .filter((x) => x.fame && x.fame < requiredFame)
                 .map((x) => `${x.name} (${(requiredFame - x.fame).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`)
                 .sort();
             if (notObtained.length) {
@@ -265,7 +262,7 @@ function showFameMedalInfo(profiles) {
 }
 function showDungeonMedalInfo(profiles, dungeonPage = false) {
     const map = profiles.reduce((acc, x) => {
-        x.medals.forEach((m) => {
+        (x.medals || []).forEach((m) => {
             const key = m.toLowerCase();
             if (!Array.isArray(acc[key]))
                 acc[key] = [];
@@ -277,7 +274,7 @@ function showDungeonMedalInfo(profiles, dungeonPage = false) {
     dungeons.forEach((td) => {
         const key = normalize(td.textContent.trim().toLowerCase());
         const heroes = map[hash(key)] || [];
-        const allHeroes = profiles.length && heroes.length === profiles.length;
+        const allHeroes = profiles.length && heroes.length === profiles.length ? true : false;
         if (!allHeroes) {
             const notObtained = profiles
                 .filter((x) => heroes.indexOf(x.name) < 0)

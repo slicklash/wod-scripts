@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.6.0
+// @version        1.6.2
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
@@ -15,19 +15,12 @@
 
 (function() {
 'use strict';
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-return new (P || (P = Promise))(function (resolve, reject) {
-    function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-    function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-    function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-    step((generator = generator.apply(thisArg, _arguments || [])).next());
-});
-};
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent && parent.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
 function attr(elem, nameOrMap, value, remove) {
@@ -68,7 +61,8 @@ function waitFor(selectorOrElement, eventName) {
             fn();
         }
         else {
-            selectorOrElement.addEventListener(eventName, resolve);
+            if (eventName)
+                selectorOrElement.addEventListener(eventName, resolve);
         }
     });
 }
@@ -141,14 +135,17 @@ var SPECIAL_CONSUMABLES = [
     "wooden pole",
 ];
 class StorageItem {
-    constructor() {
-        this.name = "";
-        this.isUsable = true;
-        this.uses = 1;
-        this.isGroupItem = true;
-        this._isConsumbale = false;
-        this.price = 0;
-    }
+    name = "";
+    isUsable = true;
+    uses = 1;
+    isGroupItem = true;
+    _isConsumbale = false;
+    numberCell;
+    ctrlLocationSelect;
+    ctrlLocationCheckbox;
+    ctrlSellCheckbox;
+    ctrlGroupCheckbox;
+    price = 0;
     get isConsumable() {
         if (this._isConsumbale)
             return true;
@@ -159,6 +156,10 @@ class StorageItem {
         if (/^reagent:/.test(this.name))
             return true;
         if (/^Shard.+of/.test(this.name))
+            return true;
+        if (/^Charm.+of/.test(this.name))
+            return true;
+        if (/^Rune.+of/.test(this.name))
             return true;
         if (/^(lesser|greater) emblem of/i.test(this.name))
             return true;
@@ -207,7 +208,7 @@ function getTable(main_content) {
         scope =
             scope[0].parentNode.parentNode.parentNode.parentNode.querySelector("tbody");
     }
-    catch (ex) {
+    catch {
         scope = null;
     }
     return scope;
@@ -275,43 +276,22 @@ function _t(text) {
 }
 const KEY_SPLIT_FILTER = "split-filter";
 class StorageController {
-    constructor() {
-        this.labelsSellInfo = [];
-        this.sellCount = 0;
-        this.sellSum = 0;
-        this.selectsForLocation = [];
-        this.selectsForSell = [];
-        this.actionButtons = [];
-        this._options = SELECTION_OPTIONS;
-        this._items = [];
-        this._enableControls = () => {
-            const { table, items } = getItems(document.querySelector("#main_content"));
-            this._table = table;
-            this._items = items;
-            this.selectsForLocation.forEach((x) => {
-                this._addOptions(x, this._options);
-                x.disabled = false;
-            });
-            const sellOptions = this._options.filter((x) => !x.notForSell);
-            this.selectsForSell.forEach((x) => {
-                this._addOptions(x, sellOptions, true);
-                x.disabled = false;
-            });
-            this.actionButtons.forEach((x) => {
-                x.disabled = false;
-            });
-            this._attachEvents();
-        };
-    }
-    init() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const elem = yield waitFor('input[type="hidden"][name="view"]');
-            if (elem && elem.value !== "gear") {
-                const auto = yield Store.get(KEY_SPLIT_FILTER);
-                this._createControls(auto || "*leather*of*, Ancient seals*");
-                this._enableControls();
-            }
-        });
+    labelsSellInfo = [];
+    sellCount = 0;
+    sellSum = 0;
+    selectsForLocation = [];
+    selectsForSell = [];
+    actionButtons = [];
+    _options = SELECTION_OPTIONS;
+    _table;
+    _items = [];
+    async init() {
+        const elem = await waitFor('input[type="hidden"][name="view"]');
+        if (elem && elem.value !== "gear") {
+            const auto = await Store.get(KEY_SPLIT_FILTER);
+            this._createControls(auto || "*leather*of*, Ancient seals*");
+            this._enableControls();
+        }
     }
     _createControls(splitFilter) {
         const buttons_commit = (Array.from(document.querySelectorAll(CommitButtonSelector)));
@@ -322,14 +302,19 @@ class StorageController {
         const go_tv = isGroupTv ? "-go_group" : "go_group";
         const go_gs = isGroupStorage ? "-go_group_2" : "go_group_2";
         const moveItemToCellar = (x) => {
-            x.ctrlLocationSelect.value = "go_keller";
+            if (x.ctrlLocationSelect)
+                x.ctrlLocationSelect.value = "go_keller";
         };
         const splitItem = (x) => {
+            if (!x.ctrlLocationSelect)
+                return;
             x.ctrlLocationSelect.value = !x.isConsumable ? go_tv : go_gs;
             if (!x.ctrlLocationSelect.value)
                 moveItemToCellar(x);
         };
         const equipItem = (x) => {
+            if (!x.ctrlLocationSelect)
+                return;
             x.ctrlLocationSelect.value = x.ctrlLocationSelect.options[0].value;
         };
         const createSplitMatchers = (value) => value
@@ -394,6 +379,24 @@ class StorageController {
             insertAfter(commit, labelMove, selectForLocation, buttonSplit, buttonSplitAuto, buttonCellar, buttonEquip, labelSell, selectForSell, labelSellInfo, add("br"), i === 0 && inputAuto);
         });
     }
+    _enableControls = () => {
+        const { table, items } = getItems(document.querySelector("#main_content"));
+        this._table = table;
+        this._items = items;
+        this.selectsForLocation.forEach((x) => {
+            this._addOptions(x, this._options);
+            x.disabled = false;
+        });
+        const sellOptions = this._options.filter((x) => !x.notForSell);
+        this.selectsForSell.forEach((x) => {
+            this._addOptions(x, sellOptions, true);
+            x.disabled = false;
+        });
+        this.actionButtons.forEach((x) => {
+            x.disabled = false;
+        });
+        this._attachEvents();
+    };
     _attachEvents() {
         if (!this._table) {
             return;
@@ -405,8 +408,8 @@ class StorageController {
     _onSellChanged(e) {
         const option = this._options.find((x) => x.key === e.target.value);
         for (const item of this._items) {
-            if (item.ctrlSellCheckbox && option.predicate(item)) {
-                item.ctrlSellCheckbox.checked = option.pick;
+            if (item.ctrlSellCheckbox && option && option.predicate?.(item)) {
+                item.ctrlSellCheckbox.checked = option.pick === true;
             }
         }
         this._updateSellInfo();
@@ -430,8 +433,8 @@ class StorageController {
     _onSelectChanged(e) {
         const option = this._options.find((x) => x.key === e.target.value);
         for (const item of this._items) {
-            if (item.ctrlLocationCheckbox && option.predicate(item)) {
-                item.ctrlLocationCheckbox.checked = option.pick;
+            if (item.ctrlLocationCheckbox && option?.predicate?.(item)) {
+                item.ctrlLocationCheckbox.checked = option.pick === true;
             }
         }
     }
@@ -442,7 +445,7 @@ class StorageController {
         const tmp = [];
         for (const item of this._items) {
             if (predicate(item)) {
-                if (item.ctrlLocationCheckbox.checked) {
+                if (item.ctrlLocationCheckbox?.checked) {
                     handler(item);
                     onlySelected = true;
                 }
@@ -454,7 +457,8 @@ class StorageController {
         if (!onlySelected) {
             tmp.forEach((item) => {
                 handler(item);
-                item.numberCell.style.backgroundColor = "rgba(0,255,0,0.2)";
+                if (item.numberCell)
+                    item.numberCell.style.backgroundColor = "rgba(0,255,0,0.2)";
             });
         }
     }
@@ -570,8 +574,6 @@ class StorageController {
         else if (elem.name.startsWith("SetGrpItem")) {
             prop = "ctrlGroupCheckbox";
         }
-        if (!prop)
-            return;
         const item = this._items.find((x) => x[prop] === elem);
         if (item && e.shiftKey) {
             this._items.forEach((y) => {
@@ -604,9 +606,9 @@ class StorageController {
                 if (Number.isInteger(val)) {
                     const single = val / uses;
                     group.forEach((x) => {
-                        x.input !== input &&
-                            x.fp_price < x.uses * single * 0.9 &&
-                            (x.input.value = Math.round(x.uses * single));
+                        if (x.input !== input && x.fp_price < x.uses * single * 0.9) {
+                            x.input.value = Math.round(x.uses * single);
+                        }
                     });
                 }
             }, false);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.2.2
+// @version        1.3.0
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
@@ -190,7 +190,8 @@ function initHotKeys() {
             const hotkey = HOT_KEYS[i];
             const keyCode = hotkey.toUpperCase().charCodeAt(0);
             choiceMap[keyCode] = choice;
-            addHotkeyFor(labelElem, hotkey);
+            if (labelElem)
+                addHotkeyFor(labelElem, hotkey);
         });
     }
     if (choices.length || buttonNext || buttonMore) {
@@ -257,7 +258,8 @@ function initQuestLog(context) {
         return;
     }
     window.addEventListener("adventure.choiceSelected", (e) => {
-        choice = e.detail;
+        const customEvent = e;
+        choice = customEvent.detail;
     });
     const form = document.forms.the_form;
     if (form) {
@@ -269,9 +271,14 @@ function initQuestLog(context) {
     }
 }
 class QuestLog {
+    _context;
+    isSupported = true;
+    _id;
+    _data;
+    _info;
+    _placeOptions;
     constructor(_context) {
         this._context = _context;
-        this.isSupported = true;
         const { adventure, place } = _context;
         const adventures = {};
         adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
@@ -282,6 +289,10 @@ class QuestLog {
             return;
         }
         this._info = adventures[adventure]();
+        if (!this._info) {
+            this.isSupported = false;
+            return;
+        }
         this._placeOptions = this._info[place];
         this._id = `${_context.world}_${_context.idHero}_${_context.adventure.replace(/ /g, "").toLowerCase()}`;
         this.load().then(() => {
@@ -303,16 +314,22 @@ class QuestLog {
     }
     pickItem(item) {
         const op = this._placeOptions;
+        if (!op)
+            return;
         if (op.pickSingle) {
             const itm = (op.pickSingleTransform ? op.pickSingleTransform(item) : item).trim();
             if (itm && op.pickSingle.indexOf(itm) > -1) {
-                this._data.itemsPicked = this._data.itemsPicked.filter((x) => op.pickSingle.indexOf(x) < 0);
+                if (!this._data)
+                    return;
+                this._data.itemsPicked = this._data.itemsPicked.filter((x) => op.pickSingle && op.pickSingle.indexOf(x) < 0);
                 this._data.itemsPicked.push(itm);
             }
         }
     }
     checkPlace() {
         const op = this._placeOptions;
+        if (!op)
+            return;
         let isChanged = false;
         const text = this._context.text;
         if (op.reset && text.indexOf(op.reset) > -1) {
@@ -322,8 +339,9 @@ class QuestLog {
         if (op.collect) {
             op.collect.forEach((x) => {
                 if (text.indexOf(x.match) > -1) {
-                    x.found.forEach((itm) => {
-                        if (this._data.itemsFound.indexOf(itm) < 0) {
+                    x.found?.forEach((itm) => {
+                        if (this._data?.itemsFound &&
+                            this._data.itemsFound.indexOf(itm) < 0) {
                             this._data.itemsFound.push(itm);
                             isChanged = true;
                         }
@@ -334,19 +352,19 @@ class QuestLog {
         if (op.use) {
             op.use.forEach((x) => {
                 if (text.indexOf(x.match) > -1) {
-                    if (x.found)
-                        this._data.itemsFound = this._data.itemsFound.filter((itm) => x.found.indexOf(itm) < 0);
-                    if (x.picked)
-                        this._data.itemsPicked = this._data.itemsPicked.filter((itm) => x.picked.indexOf(itm) < 0);
+                    if (x.found && this._data?.itemsFound)
+                        this._data.itemsFound = this._data.itemsFound.filter((itm) => x.found && x.found.indexOf(itm) < 0);
+                    if (x.picked && this._data?.itemsPicked)
+                        this._data.itemsPicked = this._data.itemsPicked.filter((itm) => x.picked && x.picked.indexOf(itm) < 0);
                     isChanged = true;
                 }
             });
         }
         if (op.do) {
             op.do.forEach((x) => {
-                if (text.indexOf(x.match) > -1) {
+                if (text.indexOf(x.match) > -1 && x.done) {
                     x.done.forEach((task) => {
-                        if (this._data.tasksDone.indexOf(task) < 0) {
+                        if (this._data && this._data.tasksDone.indexOf(task) < 0) {
                             this._data.tasksDone.push(task);
                             isChanged = true;
                         }
@@ -368,6 +386,8 @@ class QuestLog {
             return title + "\n" + items.join("\n");
         };
         const data = this._data;
+        if (!data)
+            return;
         const text = [
             toText("backpack:", data.itemsPicked.concat(data.itemsFound)),
             toText("done:", data.tasksDone),
@@ -381,6 +401,11 @@ class QuestLog {
             tasksDone: [],
         };
         return new Promise((resolve) => {
+            if (!this._id) {
+                this._data = empty;
+                resolve();
+                return;
+            }
             Store.get(this._id).then((value) => {
                 const loaded = value ? JSON.parse(value) : {};
                 Object.keys(loaded).forEach((x) => {
@@ -393,11 +418,15 @@ class QuestLog {
         });
     }
     save() {
+        if (!this._id || !this._data)
+            return;
         Store.set(this._id, JSON.stringify(this._data));
     }
     reset() {
+        if (!this._id)
+            return;
         this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
-        Store.set(this._id, undefined);
+        Store.set(this._id, "{}");
     }
     getPassingTimeInfo() {
         return {};
@@ -525,110 +554,107 @@ class QuestLog {
 }
 const crafting = [];
 const appointments = [];
+const appList = [
+    "The pumpkin hero tavern",
+    "The Adventurers' Guild",
+    "The Sunday Grove",
+    "Free warriors arena of Nebulat",
+    "Old Training Grounds",
+    "The Fortunes of Madame",
+    "Passingtime",
+    "Rescuing Father Wuel",
+    "Ingenuity Test",
+    "Haiku medal",
+    "Trading Post",
+    "Z Delete Passingtime in-progress flag",
+    "Z Clear Forced Exit",
+    "Z Set Forced Exit",
+];
 function initTabs() {
-    if (document.querySelector(".paginator_row")) {
-        const appList = [
-            "The Adventurers' Guild",
-            "Passingtime",
-            "Rescuing Father Wuel",
-            "The Fortunes of Madame",
-            "Ingenuity Test",
-            "Haiku medal",
-            "Old Training Grounds",
-            "Trading Post",
-        ];
-        const isAppointment = (title) => appList.some((x) => title.indexOf(x) > -1);
-        const invertClass = (className) => (className === "row0" ? "row1" : "row0");
-        const titleOf = (node) => (node.querySelector("h3") || { innerHTML: "" }).innerHTML;
-        const adventures = Array.from(document.querySelectorAll(".row0, .row1"));
-        let craftClass = "row1";
-        let appClass = "row1";
-        const guild = adventures.filter((x) => titleOf(x) === appList[0]).pop();
-        if (guild) {
-            guild.parentNode.insertBefore(guild, guild.parentNode.childNodes[0]);
-            adventures.splice(adventures.indexOf(guild), 1);
-            adventures.splice(0, 0, guild);
+    if (!document.querySelector(".paginator_row"))
+        return;
+    const isAppointment = (title) => appList.some((name) => title.includes(name));
+    const invertClass = (className) => className === "row0" ? "row1" : "row0";
+    const titleOf = (row) => row.querySelector("h3")?.innerHTML ?? "";
+    const adventures = Array.from(document.querySelectorAll(".row0, .row1"));
+    let craftClass = "row1";
+    let appClass = "row1";
+    adventures.sort((a, b) => {
+        const titleA = titleOf(a);
+        const titleB = titleOf(b);
+        const indexA = appList.findIndex((name) => titleA.includes(name));
+        const indexB = appList.findIndex((name) => titleB.includes(name));
+        if (indexA === -1)
+            return indexB === -1 ? 0 : 1;
+        if (indexB === -1)
+            return -1;
+        return indexA - indexB;
+    });
+    adventures.forEach((adventure) => {
+        adventure.parentNode?.appendChild(adventure);
+    });
+    for (const adventure of adventures) {
+        const className = adventure.className;
+        const title = titleOf(adventure);
+        if (!title)
+            continue;
+        const isApp = isAppointment(title);
+        const currentClass = isApp ? appClass : craftClass;
+        const nextClass = currentClass === className ? invertClass(currentClass) : className;
+        if (isApp) {
+            appClass = nextClass;
+            appointments.push(adventure);
         }
-        for (const adventure of adventures) {
-            const className = adventure.className;
-            const title = titleOf(adventure);
-            if (!title)
-                continue;
-            if (isAppointment(title)) {
-                if (appClass === className) {
-                    appClass = invertClass(appClass);
-                    adventure.className = appClass;
-                }
-                else {
-                    appClass = className;
-                }
-                appointments.push(adventure);
-                adventure.style.display = "none";
-            }
-            else {
-                if (craftClass === className) {
-                    craftClass = invertClass(craftClass);
-                    adventure.className = craftClass;
-                }
-                else {
-                    craftClass = className;
-                }
-                crafting.push(adventure);
-            }
-            hideDescription(adventure);
+        else {
+            craftClass = nextClass;
+            crafting.push(adventure);
+            adventure.style.display = "none";
         }
-        const tabCrafting = makeTab("Crafting", true);
-        const tabAppointments = makeTab("Appointments", false);
-        const menu = document.createElement("ul");
-        menu.innerHTML = '<li class="label">Adventures</li>';
-        menu.appendChild(tabCrafting);
-        menu.appendChild(tabAppointments);
-        const bar = document.createElement("div");
-        bar.className = "bar";
-        const content = document.createElement("div");
-        content.className = "content";
-        const div = document.createElement("div");
-        div.className += "tab";
-        div.appendChild(menu);
-        div.appendChild(bar);
-        div.appendChild(content);
-        const h1 = document.getElementsByTagName("h1")[0];
-        const p = h1.parentNode;
-        p.replaceChild(div, h1);
+        adventure.className = nextClass;
+        hideDescription(adventure);
+    }
+    const menu = document.createElement("ul");
+    menu.innerHTML = '<li class="label">Adventures</li>';
+    menu.append(makeTab("Appointments", true), makeTab("Crafting", false));
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const content = document.createElement("div");
+    content.className = "content";
+    const tab = document.createElement("div");
+    tab.className = "tab";
+    tab.append(menu, bar, content);
+    const h1 = document.querySelector("h1");
+    if (h1?.parentNode) {
+        h1.parentNode.replaceChild(tab, h1);
     }
 }
 function hideDescription(row) {
     const td = row.querySelector("td");
-    const descriptionNodes = Array.from(td.childNodes).filter((x) => x.nodeName !== "TABLE");
-    const div = document.createElement("div");
     const header = td.children[0];
-    div.style.display = "none";
-    td.insertBefore(div, header.nextSibling);
-    descriptionNodes.forEach((x) => div.appendChild(x));
+    const descriptionNodes = Array.from(td.childNodes).filter((node) => node.nodeName !== "TABLE");
+    const description = document.createElement("div");
+    description.style.display = "none";
+    td.insertBefore(description, header.nextSibling);
+    descriptionNodes.forEach((node) => description.appendChild(node));
     header.style.cursor = "pointer";
     const title = header.querySelector("h3");
     title.style.display = "inline";
-    const im = document.createElement("img");
-    im.src = "/wod/css/icons/common/more_text.png";
-    im.style.paddingLeft = "10px";
-    title.parentNode.appendChild(im);
+    const icon = document.createElement("img");
+    icon.src = "/wod/css/icons/common/more_text.png";
+    icon.style.paddingLeft = "10px";
+    title.parentNode.appendChild(icon);
     title.parentElement.style.paddingBottom = "5px";
     td.style.paddingBottom = "5px";
     header.addEventListener("click", () => {
-        if (div.style.display) {
-            div.style.display = "";
-            im.src = im.src.replace("more", "less");
-        }
-        else {
-            div.style.display = "none";
-            im.src = im.src.replace("less", "more");
-        }
+        const isHidden = Boolean(description.style.display);
+        description.style.display = isHidden ? "" : "none";
+        icon.src = icon.src.replace(isHidden ? "more" : "less", isHidden ? "less" : "more");
     });
 }
 function makeTab(title, selected) {
     const action = document.createElement("a");
-    action.setAttribute("href", "#");
-    action.innerHTML = title;
+    action.href = "#";
+    action.textContent = title;
     action.addEventListener("click", selectTab);
     const tab = document.createElement("li");
     tab.className = selected ? "selected" : "not_selected";
@@ -636,32 +662,30 @@ function makeTab(title, selected) {
     return tab;
 }
 function selectTab(e) {
-    const max = Math.max(crafting.length, appointments.length);
-    const isApp = e.target.innerHTML === "Appointments";
-    const selectedTab = e.target.parentNode;
-    const options = isApp
-        ? {
-            otherTab: selectedTab.previousSibling,
-            displayApp: "",
-            displayCraft: "none",
-        }
-        : {
-            otherTab: selectedTab.nextSibling,
-            displayApp: "none",
-            displayCraft: "",
-        };
+    e.preventDefault();
+    const target = e.currentTarget;
+    const selectedTab = target.parentElement;
+    if (!selectedTab)
+        return;
+    const isApp = target.textContent?.trim() === "Appointments";
+    const otherTab = isApp
+        ? selectedTab.nextElementSibling
+        : selectedTab.previousElementSibling;
     selectedTab.className = "selected";
-    options.otherTab.className = "not_selected";
-    for (let i = 0; i < max; i++) {
-        if (i < crafting.length)
-            crafting[i].style.display = options.displayCraft;
-        if (i < appointments.length)
-            appointments[i].style.display = options.displayApp;
-    }
+    if (otherTab)
+        otherTab.className = "not_selected";
+    appointments.forEach((row) => {
+        row.style.display = isApp ? "" : "none";
+    });
+    crafting.forEach((row) => {
+        row.style.display = isApp ? "none" : "";
+    });
 }
 function main() {
     initTabs();
     const context = getContext();
+    if (!context)
+        return;
     initHighlights(context);
     initHotKeys();
     initQuestLog(context);

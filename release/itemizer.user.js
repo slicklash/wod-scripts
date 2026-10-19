@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Itemizer
 // @description    Scripts improves items found page
-// @version        1.0.3
+// @version        1.0.4
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/*dungeon/report.php*
@@ -12,8 +12,10 @@
 'use strict';
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent && parent.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
 function textContent(elem, value) {
@@ -22,7 +24,7 @@ function textContent(elem, value) {
     return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
 function main() {
-    let tables = Array.from(document.querySelectorAll("table")).filter((x) => { var _a; return ((_a = x.previousElementSibling) === null || _a === void 0 ? void 0 : _a.tagName) === "H2" && !x.className; });
+    let tables = Array.from(document.querySelectorAll("table")).filter((x) => x.previousElementSibling?.tagName === "H2" && !x.className);
     showSummary(parseHeros(tables));
     tables = Array.from(document.querySelectorAll("table")).filter(x => !x.id && !x.className && x.querySelector(".rep_initiative"));
     showLevel(parseRounds(tables));
@@ -60,13 +62,12 @@ function parseItems(heroName, table) {
     return Array.from(table.querySelectorAll("tr"))
         .slice(1)
         .reduce((acc, tr) => {
-        var _a, _b, _c;
         const tds = Array.from(tr.querySelectorAll("td"));
         if (tds.length < 3)
             return acc;
         const item = tds[1];
-        const damaged = (((_a = tds[3]) === null || _a === void 0 ? void 0 : _a.textContent) || "").trim().match(/-\d+/);
-        const uses = (_c = (((_b = tds[4]) === null || _b === void 0 ? void 0 : _b.textContent) || "").trim().match(/-?\d+/gm)) === null || _c === void 0 ? void 0 : _c.map(Number);
+        const damaged = (tds[3]?.textContent || "").trim().match(/-\d+/);
+        const uses = (tds[4]?.textContent || "").trim().match(/-?\d+/gm)?.map(Number);
         let used = 0;
         let remaining = 1;
         if (uses) {
@@ -82,8 +83,9 @@ function parseItems(heroName, table) {
             isConsumable: Boolean(uses && uses.length > 1),
             used,
             uses,
-            usedHtml: used,
+            usedHtml: used.toString(),
             remaining,
+            count: 1,
             damaged: damaged ? Number(damaged[0]) : 0,
             calc: function () {
                 this.usedHtml = this.remaining < Math.abs(this.used) ? `<span style="color:tomato">${this.used}</span>` : `${this.used}`;
@@ -102,7 +104,6 @@ function parseRounds(tables) {
         const room = table.parentElement.children[0].textContent.match(/room (\d+)/);
         const tds = [...table.querySelectorAll("tr td:nth-child(2)")];
         return tds.reduce((acc, td) => {
-            var _a;
             const t = td.textContent.replace(/\n/g, " ");
             let m = t.match(regex_uses);
             if (!m)
@@ -123,8 +124,11 @@ function parseRounds(tables) {
                 html: Array.from(td.querySelectorAll('[href*="item"]')).map((x) => x.outerHTML).join(", "),
                 skill,
                 skillHtml: td.querySelector('[href*="skill"]').outerHTML,
-                mpHtml: ((_a = td.querySelector(".rep_mana_cost")) === null || _a === void 0 ? void 0 : _a.outerHTML) || "",
+                mpHtml: td.querySelector(".rep_mana_cost")?.outerHTML || "",
                 room: room ? Number(room[1]) : undefined,
+                used: 0,
+                remaining: 0,
+                usedHtml: "",
             });
             return acc;
         }, []);
@@ -136,13 +140,15 @@ function groupUsed(items) {
     return items.reduce((acc, item) => {
         if (seen.has(item.name)) {
             const existing = seen.get(item.name);
+            if (!existing)
+                return acc;
             existing.used += item.used;
             existing.remaining += item.remaining;
-            existing.calc();
+            existing.calc?.();
         }
         else {
             seen.set(item.name, item);
-            item.calc();
+            item.calc?.();
             acc.push(item);
         }
         return acc;
@@ -156,7 +162,7 @@ function showSummary(heroes) {
     const damaged = [].concat(...heroes.map((x) => x.itemsDamaged));
     const found = [].concat(...heroes.map((x) => x.itemsFound));
     const lost = [].concat(...heroes.map((x) => x.itemsLost));
-    const uses = (x) => { var _a; return ((_a = x.uses) === null || _a === void 0 ? void 0 : _a.length) ? ` (${x.uses[0]}/${x.uses[1]})` : ""; };
+    const uses = (x) => x.uses?.length ? ` (${x.uses[0]}/${x.uses[1]})` : "";
     add("table", document.querySelector('[name="the_form"] h2'), tr([
         table("Consumables used", ["html", "usedHtml", "heroName"], used),
         table("Items damaged", ["html", "damaged", "heroName"], damaged),
@@ -178,7 +184,7 @@ function table(title, columns, items) {
     return (`<h2>${title} (${items.length})</h2><table class="content_table" style="font-size:14px;font-weight:normal" >` +
         items
             .sort(sortItems)
-            .sort((a, b) => (a.room ? a.room - b.room : 0))
+            .sort((a, b) => (a.room ? a.room - (b.room ?? 0) : 0))
             .map((item, i, arr) => {
             const str = `<tr class="row${i % 2}">${columns.map((col) => '<td style="text-align: left">' + format(col, item) + "</td>").join("")}</tr>`;
             if ((i > 0 && arr[i - 1].room !== item.room) || (i === 0 && item.room))
@@ -195,7 +201,8 @@ function compress(items) {
         const key = `${item.room},${item.heroName},${item.skill},${item.name}`;
         if (key === lastKey && seen.has(key)) {
             const existing = seen.get(key);
-            existing.count++;
+            if (existing)
+                existing.count = (existing.count || 0) + 1;
         }
         else {
             seen.set(key, item);

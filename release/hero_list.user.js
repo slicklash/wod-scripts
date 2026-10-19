@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Hero List
 // @description    Scripts adds functionality to order your heroes
-// @version        1.2.2
+// @version        1.2.3
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/settings/heroes.php*
 // @run-at         document-start
@@ -17,8 +17,10 @@
 'use strict';
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent && parent.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
 function attr(elem, nameOrMap, value, remove) {
@@ -36,45 +38,52 @@ function attr(elem, nameOrMap, value, remove) {
     }
     return elem;
 }
+function insertAfter(node, ...elems) {
+    const parent = node.parentNode;
+    elems.forEach((elem) => {
+        if (elem) {
+            parent.insertBefore(elem, node.nextSibling);
+            node = elem;
+        }
+    });
+}
 function textContent(elem, value) {
     if (!elem)
         return "";
     return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
-function insertAfter(node, ...elems) {
-    const parent = node.parentNode;
-    elems.forEach((elem) => {
-        parent.insertBefore(elem, node.nextSibling);
-        node = elem;
-    });
-}
-function httpFetch(url, method = "GET", data) {
+function httpFetch(url, method = "GET", body) {
     return new Promise((resolve, reject) => {
         const request = {
             method,
             url,
-            headers: { Cookie: document.cookie },
+            headers: {},
             onload: (resp) => {
                 if (resp.readyState !== 4)
                     return;
-                if (resp.status >= 200 && resp.status < 300) {
-                    resolve({ data: resp.responseText });
-                }
-                else {
-                    reject({ data: resp.responseText });
-                }
+                const contentType = resp.responseHeaders
+                    ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+                    ?.trim()
+                    .toLowerCase();
+                const data = contentType === "application/json" || contentType?.endsWith("+json")
+                    ? JSON.parse(resp.responseText)
+                    : resp.responseText;
+                if (resp.status >= 200 && resp.status < 300)
+                    resolve({ data });
+                else
+                    reject({ status: resp.status, data });
             },
+            onerror: reject,
         };
-        if (typeof data === "object") {
-            request.data = JSON.stringify(data);
-            request.headers = { "Content-Type": "application/json" };
+        if (body !== undefined) {
+            request.data =
+                typeof body === "object" && body !== null ? JSON.stringify(body) : body;
+            if (typeof body === "object" && body !== null)
+                request.headers["Content-Type"] = "application/json";
         }
-        if (typeof GM === "object") {
-            GM.xmlHttpRequest(request);
-        }
-        else {
-            GM_xmlhttpRequest(request);
-        }
+        (typeof GM === "object" && GM?.xmlHttpRequest
+            ? GM.xmlHttpRequest
+            : GM_xmlhttpRequest)(request);
     });
 }
 function GX_getValue(key, defaultValue) {
@@ -109,7 +118,7 @@ function parseHeroTable([, ...rows], currentTime) {
             return title;
         };
         Promise.all(rows.map((x) => getHeroInfo(formatDungeonTitle, x))).then((result) => {
-            resolve(result.sort((a, b) => a.weight - b.weight));
+            resolve(result.sort((a, b) => (a.weight || 0) - (b.weight || 0)));
         });
     });
 }
@@ -122,12 +131,13 @@ function getHeroInfo(formatDungeonTitle, row) {
         const dungeon = getDungeonName(next);
         const time = textContent(cells[4]).trim();
         Store.get(hid).then((value) => {
-            let info;
+            let info = {};
             try {
                 info = value ? JSON.parse(value) : {};
             }
-            catch (_a) {
-                info = {};
+            catch (e) {
+                if (e)
+                    info = {};
             }
             const weight = info.weight || (level === 0 ? 100 : level);
             if (dungeon) {
@@ -157,8 +167,7 @@ function saveWeights(rows) {
         let weight = Number(cells[6].querySelector("input").value);
         if (isNaN(weight))
             weight = 0;
-        const p = httpFetch("/wod/spiel/hero/profile.php?id=" + hid);
-        p.then((resp) => {
+        const p = httpFetch("/wod/spiel/hero/profile.php?id=" + hid).then((resp) => {
             const data = resp.data;
             const n = data.indexOf("group:");
             const group = data
@@ -179,8 +188,8 @@ function main(main_content) {
     const table = (main_content || document.querySelector("#main_content")).querySelector("form table");
     const rows = table
         ? Array.from(table.querySelectorAll("tr"))
-        : undefined;
-    if (rows) {
+        : [];
+    if (rows.length) {
         const newTable = add("table");
         const newTbody = add("tbody", newTable);
         attr(newTable, "class", "content_table");
