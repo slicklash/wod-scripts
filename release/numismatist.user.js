@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.2.0
+// @version        1.2.1
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/dungeon/dungeon.php*
@@ -90,7 +90,7 @@ const normalize = (text) => text
     .trim();
 const hash = (text) => Math.abs(text.padEnd(11, "0").split("").map((x) => x.charCodeAt(0)).reduce((a, x) => (a + ((a << 7) + (a << 3))) ^ x)).toString(16);
 const html = (data) => parseHtml(data, true);
-const text = (el) => el.textContent?.trim() || "";
+const text = (el) => el?.textContent?.trim() || "";
 const number = (value) => Number(value.replace(/\s/g, ""));
 const rows = () => Array.from(document.querySelectorAll(".content_table tr"));
 const getLastReportKey = async () => {

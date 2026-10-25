@@ -8,8 +8,6 @@
 // @run-at         document-start
 // @grant          GM.getValue
 // @grant          GM.setValue
-// @grant          GM_getValue
-// @grant          GM_setValue
 // ==/UserScript==
 
 (function() {
@@ -234,19 +232,13 @@ function addHotkeyFor(elem, text) {
         elem.appendChild(span);
     }
 }
-function GX_getValue(key, defaultValue) {
-    if (typeof GM === "object")
-        return GM.getValue(key, defaultValue);
-    return Promise.resolve(GM_getValue(key));
-}
-function GX_setValue(key, value) {
-    if (typeof GM === "object")
-        return GM.setValue(key, value);
-    return Promise.resolve(GM_setValue(key, value));
-}
 var Store = {
-    get: GX_getValue,
-    set: GX_setValue,
+    get(key, defaultValue) {
+        return GM.getValue(key, defaultValue);
+    },
+    set(key, value) {
+        return GM.setValue(key, value);
+    },
 };
 function initQuestLog(context) {
     if (!context || !context.isQuest) {

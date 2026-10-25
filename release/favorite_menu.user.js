@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Favorite Menu
 // @description    Script allows to alter main menu by injecting customizable entries
-// @version        1.0.4
+// @version        1.0.5
 // @author         Never
 // @include        https://*.world-of-dungeons.*
 // @run-at         document-start
@@ -12,35 +12,30 @@
 'use strict';
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent?.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
-function attr(elem, nameOrMap, value, remove) {
-    if (remove) {
-        elem.removeAttribute(nameOrMap);
-    }
-    else if (typeof nameOrMap === "object") {
-        Object.keys(nameOrMap).forEach((key) => { elem.setAttribute(key, nameOrMap[key]); });
-    }
-    else if (value) {
-        elem.setAttribute(nameOrMap, value);
+function attr(elem, nameOrMap, value) {
+    if (typeof nameOrMap === "string") {
+        if (value === undefined)
+            return elem.getAttribute(nameOrMap) ?? "";
+        if (value === null)
+            elem.removeAttribute(nameOrMap);
+        else
+            elem.setAttribute(nameOrMap, value);
     }
     else {
-        return elem.getAttribute(nameOrMap);
+        Object.entries(nameOrMap).forEach(([k, v]) => v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v));
     }
     return elem;
 }
 function cssClass(elem, name, toggleOn) {
-    const classNames = elem.className.split(" ");
-    const has = classNames.some((x) => x === name);
-    if (typeof toggleOn !== "boolean")
-        return has;
-    if (has && toggleOn)
-        return elem;
-    elem.className = toggleOn
-        ? elem.className + " " + name
-        : classNames.filter((x) => x !== name).join(" ");
+    if (toggleOn === undefined)
+        return elem.classList.contains(name);
+    elem.classList.toggle(name, toggleOn);
     return elem;
 }
 function waitFor(selectorOrElement, eventName) {
@@ -57,7 +52,8 @@ function waitFor(selectorOrElement, eventName) {
             fn();
         }
         else {
-            selectorOrElement.addEventListener(eventName, resolve);
+            if (eventName)
+                selectorOrElement.addEventListener(eventName, resolve);
         }
     });
 }
@@ -171,7 +167,7 @@ function main(verticalMenu) {
             link = add("a");
             attr(link, { href: "#", class: "menu-2-caption" });
         }
-        attr(link, "onclick", null, true);
+        attr(link, "onclick", null);
         const menu_item = MENU_LAYOUT[key];
         if (typeof menu_item === "string") {
             link.innerHTML = menu_item;
@@ -193,7 +189,7 @@ function main(verticalMenu) {
             Object.keys(submenu_items).forEach((subkey) => {
                 const sublink = menu_items[subkey];
                 if (sublink) {
-                    attr(sublink, "onclick", null, true);
+                    attr(sublink, "onclick", null);
                     const menu3 = add("div", submenu);
                     const menu3_cap = add(sublink, menu3);
                     attr(menu3, "class", "menu-3");
