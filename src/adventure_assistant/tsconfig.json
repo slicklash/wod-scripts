@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outFile": "../../build/adventure_assistant.js"
+        "outFile": "../../build/adventure_assistant.js",
+        "rootDir": ".."
     }
 }

@@ -1,8 +1,24 @@
-import { parseHtml } from "@common/dom/parse-html";
 import { add } from "@common/dom/add";
 import { attr } from "@common/dom/attr";
+import { parseHtml } from "@common/dom/parse-html";
 import { httpFetch } from "@common/net/http-fetch";
 import { Store } from "@common/persistence/store";
+
+type Hero = {
+  name: string;
+  profileUrl: string;
+};
+
+type HeroProfileInfo = {
+  name: string;
+  medals?: string[];
+  fame?: number;
+  exp?: number;
+  isMentor: boolean;
+};
+
+const CACHE_KEY = "numismatist";
+const FORM = () => (document.forms as any)?.the_form?.gruppe_id?.value;
 
 const normalize = (text: string) =>
   text
@@ -12,279 +28,222 @@ const normalize = (text: string) =>
     .replace(/the /g, "")
     .trim();
 
-const hash = (text: string) =>
-  // prettier-ignore
-  Math.abs(text.padEnd(11, "0").split("").map((x) => x.charCodeAt(0)).reduce((a, x) => (a + ((a << 7) + (a << 3))) ^ x)).toString(4 * 4);
+// prettier-ignore
+const hash = (text: string) => Math.abs(text.padEnd(11, "0").split("").map((x) => x.charCodeAt(0)).reduce((a, x) => (a + ((a << 7) + (a << 3))) ^ x)).toString(16);
+const html = (data: string) => parseHtml<HTMLElement>(data, true);
+const text = (el?: Element) => el?.textContent?.trim() || "";
+const number = (value: string) => Number(value.replace(/\s/g, ""));
+// prettier-ignore
+const rows = () => Array.from(document.querySelectorAll<HTMLTableRowElement>(".content_table tr"));
+const getLastReportKey = async () => {
+  const resp = await httpFetch("/wod/spiel/dungeon/report.php?menukey=reports");
+  const last = resp && html(resp.data).querySelector("#main_content .row0");
+  return last ? hash(text(last)) : "none";
+};
 
-const getLastReportKey = () =>
-  httpFetch("/wod/spiel/dungeon/report.php?menukey=reports").then((resp) => {
-    if (!resp) return "none";
-    const html = parseHtml<HTMLElement>(resp.data, true);
-    const last = html.querySelector("#main_content .row0").textContent.trim();
-    return hash(last);
+async function getGroupHeroes(id: string): Promise<Hero[]> {
+  const resp = await httpFetch(`/wod/spiel/dungeon/group.php?id=${id}`);
+  if (!resp) throw new Error("Failed to load group heroes");
+  return Array.from(
+    html(resp.data).querySelectorAll<HTMLAnchorElement>(
+      ".main_content tbody .content_table_mainline a",
+    ),
+  ).map((a) => ({ name: text(a), profileUrl: a.getAttribute("href") || "" }));
+}
+
+async function batchMap<T, U>(
+  items: T[],
+  fn: (item: T) => Promise<U>,
+  concurrency: number = 3,
+): Promise<U[]> {
+  const results: U[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    results.push(
+      ...(await Promise.all(items.slice(i, i + concurrency).map(fn))),
+    );
+  }
+  return results;
+}
+
+async function parseProfile(hero: Hero): Promise<HeroProfileInfo> {
+  const resp = await httpFetch(hero.profileUrl);
+  if (!resp) throw new Error(`Failed to load profile: ${hero.name}`);
+
+  const doc = html(resp.data);
+  const profile: HeroProfileInfo = { name: hero.name, isMentor: true };
+
+  doc.querySelectorAll(".content_table tr").forEach((row) => {
+    const cells = row.querySelectorAll("td");
+    const key = text(cells[0]);
+    const value = text(cells[1]);
+    if (key === "class") profile.isMentor = value.includes("Mentor");
+    if (key === "fame") profile.fame = number(value);
+    if (key.includes("gained")) profile.exp = number(value);
   });
 
-async function buildCache() {
-  const groupHeroes = await getGroupHeroes(
-    (<any>document.forms).the_form.gruppe_id.value,
-  );
-  const profiles = await getHeroProfiles(groupHeroes);
+  if (profile.isMentor) return profile;
+
+  const medalsUrl = Array.from(
+    doc.querySelectorAll<HTMLAnchorElement>("#smarttabs__details_inner a"),
+  )
+    .map((a) => a.getAttribute("href"))
+    .find((url) => url?.includes("goallist"));
+
+  if (!medalsUrl) {
+    profile.medals = [];
+    return profile;
+  }
+
+  try {
+    const resp = await httpFetch(medalsUrl);
+    profile.medals = resp
+      ? Array.from(
+          html(resp.data).querySelectorAll(".details.earned .label"),
+        ).map((el) => hash(normalize(text(el).toLowerCase())))
+      : [];
+  } catch {
+    profile.medals = [];
+  }
+
+  return profile;
+}
+
+async function buildCache(groupId: string) {
+  const profiles = await batchMap(await getGroupHeroes(groupId), parseProfile);
   const cache = {
     key: await getLastReportKey(),
-    heroes: profiles.filter((x) => !x.isMentor),
+    groupId,
+    heroes: profiles.filter((hero) => !hero.isMentor),
   };
-  await Store.set("numismatist", JSON.stringify(cache));
+
+  await Store.set(CACHE_KEY, JSON.stringify(cache));
   return cache;
 }
 
 export async function main() {
-  const idGroup = (<any>document.forms).the_form.gruppe_id.value;
-  if (!idGroup) return;
+  const groupId = FORM();
+  if (!groupId) return;
 
   const key = await getLastReportKey();
-  let cache = JSON.parse(await Store.get("numismatist", "{}"));
+  let cache = JSON.parse(await Store.get(CACHE_KEY, "{}"));
 
-  if (cache.key !== key) {
-    cache = await buildCache();
+  if (cache.key !== key || cache.groupId !== groupId) {
+    cache = await buildCache(groupId);
   }
 
-  const heroes = cache.heroes || [];
+  const heroes: HeroProfileInfo[] = cache.heroes || [];
+  const path = location.pathname;
 
-  if (location.pathname.includes("dungeonlist")) {
-    showDungeonMedalInfo(heroes);
-  } else if (location.pathname.includes("title_list")) {
-    showFameMedalInfo(heroes);
-  } else {
-    showLevelUpMedalInfo(heroes);
-  }
+  if (path.includes("dungeonlist")) showDungeonMedalInfo(heroes);
+  else if (path.includes("title_list")) showFameMedalInfo(heroes);
+  else if (path.includes("dungeon/dungeon.php"))
+    showDungeonMedalInfo(heroes, true);
+  else showLevelUpMedalInfo(heroes);
 }
 
-interface IHero {
-  name: string;
-  profileUrl: string;
-}
+const formatNumber = (n: number) =>
+  n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
-interface IHeroProfileInfo {
-  name: string;
-  medals?: string[];
-  fame?: number;
-  exp?: number;
-  isMentor: boolean;
-}
-
-function getGroupHeroes(idGroup: string): Promise<IHero[]> {
-  return new Promise((resolve, reject) => {
-    httpFetch(`/wod/spiel/dungeon/group.php?id=${idGroup}`)
-      .catch(reject)
-      .then((resp) => {
-        const groupHeroes =
-          resp &&
-          (
-            Array.from(
-              parseHtml<HTMLElement>(resp.data, true).querySelectorAll(
-                ".main_content tbody .content_table_mainline a",
-              ),
-            ) as HTMLAnchorElement[]
-          ).map((x) => ({
-            name: x.textContent,
-            profileUrl: x.getAttribute("href"),
-          }));
-
-        resolve(groupHeroes);
-      });
-  });
-}
-
-function getHeroProfiles(groupHeroes: IHero[]): Promise<IHeroProfileInfo[]> {
-  return <any>Promise.all(groupHeroes.map((hero) => parseProfile(hero)));
-}
-
-function parseProfile(hero: IHero): Promise<IHeroProfileInfo> {
-  return new Promise((resolve, reject) => {
-    httpFetch(hero.profileUrl)
-      .catch(reject)
-      .then((resp) => {
-        if (!resp) return;
-        const html = parseHtml<HTMLElement>(resp.data, true);
-        const profile: IHeroProfileInfo = {
-          name: hero.name,
-          isMentor: true,
-        };
-
-        const rows = Array.from(
-          html.querySelectorAll(".content_table tr"),
-        ) as HTMLTableRowElement[];
-
-        rows.forEach((x) => {
-          if (x.cells[0].textContent.trim() === "class") {
-            profile.isMentor = x.cells[1].textContent.trim().includes("Mentor");
-          } else if (x.cells[0].textContent.trim() === "fame") {
-            profile.fame = Number(x.cells[1].textContent.replace(/ /g, ""));
-          } else if (x.cells[0].textContent.trim().includes("gained")) {
-            profile.exp = Number(x.cells[1].textContent.replace(/ /g, ""));
-          }
-        });
-
-        if (profile.isMentor) {
-          resolve(profile);
-          return;
-        }
-
-        const medalsUrl = (
-          Array.from(
-            html.querySelectorAll("#smarttabs__details_inner a"),
-          ) as HTMLAnchorElement[]
-        )
-          .map((x) => x.getAttribute("href"))
-          .find((x) => x && x.includes("goallist"));
-
-        httpFetch(medalsUrl)
-          .catch(reject)
-          .then((resp2) => {
-            if (!resp2) return;
-            profile.medals = Array.from(
-              parseHtml<HTMLElement>(resp2.data, true).querySelectorAll(
-                ".details.earned .label",
-              ),
-            ).map((x) => hash(normalize(x.innerHTML.trim().toLowerCase())));
-
-            resolve(profile);
-          });
-      });
-  });
-}
-
-function showLevelUpMedalInfo(profiles: IHeroProfileInfo[]) {
-  const rows: HTMLTableRowElement[] = <any>(
-    Array.from(document.querySelectorAll(".content_table tr"))
+const setMissingTitle = (row: Element, type: string, names: string[]) => {
+  row.setAttribute(
+    "title",
+    `${type} (${names.length}):\n\n${names.join("\n")}`,
   );
+};
 
-  rows.forEach((tr, i) => {
+function showLevelUpMedalInfo(profiles: HeroProfileInfo[]) {
+  rows().forEach((tr, i) => {
     const td = tr.cells[0];
     td.setAttribute("style", "min-width: 50px");
+    if (i <= 2) return;
 
-    if (i > 2) {
-      const requiredExp = parseInt(
-        tr.cells[2].textContent.replace(/\s/g, ""),
-        10,
-      );
-      const notObtained = profiles
-        .filter((x) => x.exp < requiredExp)
-        .map((x) => ({
-          name: `${x.name} (${(requiredExp - x.exp).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`,
-          missing: requiredExp - x.exp,
-        }))
-        .sort((a, b) => a.missing - b.missing)
-        .map((x) => x.name);
+    const required = parseInt(tr.cells[2].textContent.replace(/\s/g, ""), 10);
+    const missing = profiles
+      .filter((hero) => hero.exp && hero.exp < required)
+      .map((hero) => ({
+        name: `${hero.name} (${formatNumber(required - hero.exp!)})`,
+        deficit: required - hero.exp!,
+      }))
+      .sort((a, b) => a.deficit - b.deficit)
+      .map((hero) => hero.name);
 
-      if (notObtained.length) {
-        addMedalIcon(false, td, "left");
-        tr.setAttribute(
-          "title",
-          `Exp deficit (${notObtained.length}):\n\n${notObtained.join("\n")}`,
-        );
-      } else {
-        addMedalIcon(true, td, "left");
-      }
-    }
+    addMedalIcon(!missing.length, td, "left");
+    if (missing.length) setMissingTitle(tr, "Exp deficit", missing);
   });
 }
 
-function showFameMedalInfo(profiles: IHeroProfileInfo[]) {
-  const rows: HTMLTableRowElement[] = <any>(
-    Array.from(document.querySelectorAll(".content_table tr"))
-  );
+function showFameMedalInfo(profiles: HeroProfileInfo[]) {
   const medals = ["pin", "oak leaf", "shamrock", "laurel"];
 
-  rows.forEach((tr, i) => {
+  rows().forEach((tr, i) => {
     const td = add<HTMLTableCellElement>("td");
     td.setAttribute("style", "min-width: 210px");
 
-    if (i > 0) {
-      const name = `${i > 4 ? "large " : ""}${medals[(i - 1) % medals.length]}${i > 12 ? " of honor" : i > 8 ? " and ribbon" : ""}`;
+    if (i === 0) {
+      td.innerHTML = "<strong>medal</strong>";
+    } else {
+      const name = `${i > 4 ? "large " : ""}${medals[(i - 1) % 4]}${i > 12 ? " of honor" : i > 8 ? " and ribbon" : ""}`;
       const a = add<HTMLAnchorElement>("a", td);
       a.href = `/wod/spiel/hero/item.php?name=${name.replace(/ /g, "+")}&is_popup=1`;
       a.target = "_blank";
       a.textContent = name;
 
-      const requiredFame = parseInt(
+      const required = parseInt(
         tr.cells[0].textContent.replace(/\d+. title/, ""),
         10,
       );
-      const notObtained = profiles
-        .filter((x) => x.fame < requiredFame)
-        .map(
-          (x) =>
-            `${x.name} (${(requiredFame - x.fame).toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1 ")})`,
-        )
+      const missing = profiles
+        .filter((hero) => hero.fame && hero.fame < required)
+        .map((hero) => `${hero.name} (${formatNumber(required - hero.fame!)})`)
         .sort();
 
-      if (notObtained.length) {
-        addMedalIcon(false, td);
-        tr.setAttribute(
-          "title",
-          `Fame deficit (${notObtained.length}):\n\n${notObtained.join("\n")}`,
-        );
-      } else {
-        addMedalIcon(true, td);
-      }
-    } else {
-      td.innerHTML = "<strong>medal</strong>";
+      addMedalIcon(!missing.length, td);
+      if (missing.length) setMissingTitle(tr, "Fame deficit", missing);
     }
 
     tr.insertBefore(td, tr.cells[1]);
   });
 }
 
-function showDungeonMedalInfo(profiles: IHeroProfileInfo[]) {
-  const map: { [x: string]: string[] } = profiles.reduce(
-    (acc, x) => {
-      x.medals.forEach((m) => {
-        const key = m.toLowerCase();
-        if (!Array.isArray(acc[key])) acc[key] = [];
-        acc[key].push(x.name);
-      });
-
-      return acc;
-    },
-    <any>{},
-  );
-
-  const dungeons = Array.from(
-    document.querySelectorAll(
-      "#main_content .content_table tbody tr td:nth-child(2)",
-    ),
-  );
-
-  dungeons.forEach((td) => {
-    const key = normalize(td.textContent.trim().toLowerCase());
-    const heroes = map[hash(key)] || [];
-    const allHeroes = profiles.length && heroes.length === profiles.length;
-
-    if (!allHeroes) {
-      const notObtained = profiles
-        .filter((x) => heroes.indexOf(x.name) < 0)
-        .map((x) => x.name)
-        .sort();
-      td.setAttribute(
-        "title",
-        `Missing medal (${notObtained.length}):\n\n${notObtained.join("\n")}`,
-      );
-    }
-
-    addMedalIcon(allHeroes, td);
-  });
-}
-
-function addMedalIcon(
-  isAchieved: boolean,
-  elem: Element,
-  position: string = "right",
+function showDungeonMedalInfo(
+  profiles: HeroProfileInfo[],
+  dungeonPage = false,
 ) {
-  const img: HTMLImageElement = add<HTMLImageElement>("img", elem);
+  const medals: Record<string, string[]> = {};
 
-  img.src = `/wod/css/icons/common/${isAchieved ? "medal_big" : "medal_big_gray"}.png`;
-  attr(img, "style", "width: 24px; float: " + position);
+  profiles.forEach((hero) =>
+    (hero.medals || []).forEach((medal) => {
+      (medals[medal.toLowerCase()] ||= []).push(hero.name);
+    }),
+  );
+
+  document
+    .querySelectorAll(
+      `#main_content .content_table > tbody > tr > td:nth-child(${dungeonPage ? 1 : 2})`,
+    )
+    .forEach((td) => {
+      const key = hash(normalize(text(td).toLowerCase()));
+      const heroes = medals[key] || [];
+      const achieved = profiles.length > 0 && heroes.length === profiles.length;
+
+      if (!achieved) {
+        const missing = profiles
+          .filter((hero) => !heroes.includes(hero.name))
+          .map((hero) => hero.name)
+          .sort();
+        setMissingTitle(td, "Missing medal", missing);
+      }
+
+      addMedalIcon(achieved, td);
+    });
 }
 
-document.addEventListener("DOMContentLoaded", () => main());
+function addMedalIcon(achieved: boolean, elem: Element, position = "right") {
+  const img = add<HTMLImageElement>("img", elem);
+  img.src = `/wod/css/icons/common/medal_big${achieved ? "" : "_gray"}.png`;
+  attr(img, "style", `width: 24px; float: ${position}`);
+}
+
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", main, { once: true });
+else main();

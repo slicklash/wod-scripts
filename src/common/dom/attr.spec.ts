@@ -34,7 +34,7 @@ describe("common / functions / dom / attr", () => {
     const div = document.createElement("div");
     div.setAttribute("id", "test");
 
-    const el = attr(div, "id", "aa", true);
+    const el = attr(div, "id", null);
 
     expect(el.getAttribute("id")).toBeNull();
     expect(el).toBe(div);

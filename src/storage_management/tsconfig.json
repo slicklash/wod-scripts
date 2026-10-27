@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outFile": "../../build/storage_management.js"
+        "outFile": "../../build/storage_management.js",
+        "rootDir": ".."
     }
 }

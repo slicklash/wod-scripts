@@ -1,6 +1,6 @@
 import { StorageItem } from "./storage-item";
 
-export interface ISelectionOption {
+export type SelectionOption = {
   key: string;
   title: string;
   pick?: boolean;
@@ -8,10 +8,10 @@ export interface ISelectionOption {
   count?: number;
   countSell?: number;
   predicate?(item: StorageItem): boolean;
-}
+};
 
 // prettier-ignore
-export const SELECTION_OPTIONS: ISelectionOption[] = [
+export const SELECTION_OPTIONS: SelectionOption[] = [
     { key: 'none', title: 'none', pick: false, predicate: () => true },
     { key: '---', title: 'All' },
     { key: 'all', title: 'all', pick: true, predicate: () => true, count: 0, countSell: 0 },

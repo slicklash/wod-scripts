@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Hero List
 // @description    Scripts adds functionality to order your heroes
-// @version        1.3.0
+// @version        1.3.1
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/settings/heroes.php*
 // @run-at         document-start
@@ -53,9 +53,9 @@ function httpFetch(url, method = "GET", body) {
                 if (readyState !== 4)
                     return;
                 const type = responseHeaders
-                    .match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
-                    .trim()
-                    .toLowerCase();
+                    ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+                    ?.trim()
+                    ?.toLowerCase();
                 const data = type?.includes("json")
                     ? JSON.parse(responseText)
                     : responseText;
@@ -132,11 +132,13 @@ async function saveWeights(rows) {
         const weight = Number(input.value) || 0;
         const { data } = (await httpFetch(`/wod/spiel/hero/profile.php?id=${hid}`));
         const index = data.indexOf("group:");
-        const group = data
-            .slice(index, index + 200)
-            .split("<a")[1]
-            .split(/[><]/)[1];
-        await Store.set(hid, JSON.stringify({ weight, group }));
+        if (index > -1) {
+            const group = data
+                .slice(index, index + 200)
+                .split("<a")[1]
+                .split(/[><]/)[1];
+            await Store.set(hid, JSON.stringify({ weight, group }));
+        }
     }));
     const form = document.forms.namedItem("the_form");
     form?.submit();

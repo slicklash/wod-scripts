@@ -5,7 +5,7 @@ export function log(...args) {
     el = document.createElement("textarea");
     el.setAttribute("style", "height: 200px; width:1000px");
     el.setAttribute("id", "_log-window");
-    center.parentNode.insertBefore(el, center);
+    center?.parentNode?.insertBefore(el, center);
   }
   el.textContent += args.join(" ") + "\n";
 }

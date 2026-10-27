@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.3.0
+// @version        1.3.2
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
 // @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
@@ -22,10 +22,9 @@ function getContext() {
     if (!_context) {
         const h1 = document.querySelector("h1");
         const title = h1 ? h1.textContent : "";
-        if (!title || title.indexOf("adventure") !== 0) {
+        if (!title || title.indexOf("adventure") !== 0)
             return;
-        }
-        const texts = (Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION")));
+        const texts = Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION"));
         texts.forEach((x) => {
             x.innerHTML = x.innerHTML
                 .replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
@@ -45,192 +44,6 @@ function getContext() {
         _context.isQuest = Object.keys(Quests).some((x) => _context.adventure.indexOf(Quests[x]) > -1);
     }
     return _context;
-}
-function initHighlights(context) {
-    if (!context || !context.isQuest) {
-        return;
-    }
-    const { adventure, place } = context;
-    const adventures = {};
-    adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
-    adventures[Quests.Passingtime] = getPassingtimeHighlights;
-    adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
-    if (!(adventure in adventures)) {
-        return;
-    }
-    const highlights = adventures[adventure]()[place] || [];
-    const texts = context.texts.map((x) => x.innerHTML);
-    highlights.forEach((x) => {
-        const start = x.indexOf("_");
-        const end = x.indexOf("_", start + 1);
-        const search = new RegExp(start > -1 ? x.replace(/_/g, "") : x, "g");
-        const highlight = start > -1
-            ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}`
-            : `<span style="color:orchid">${x}</span>`;
-        texts.forEach((y, i) => {
-            texts[i] = y.replace(search, highlight);
-        });
-    });
-    const re_html = /&lt;(.+)&gt;(.+)&lt;\/\1&gt;/g;
-    context.texts.forEach((x, i) => {
-        x.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
-    });
-}
-function getPassingtimeHighlights() {
-    return {
-        "*": ["bejeweled necklace"],
-        "Grandfather answers": ["stonemasonry", "carpenters", "cobblers", "bakers"],
-    };
-}
-function getWuelHighlights() {
-    return {
-        "*": [
-            "juicy fruits",
-            "food in layers",
-            "nutty things",
-            "fish with arms",
-            "things that zap",
-            "things that are purple",
-            "things that glow in the dark",
-            "fishes with sharp teeth",
-            "lavendar-colored wand",
-            "the _mayor_ here",
-            "taken _all the classes_",
-            "an unusual _iridescent one_",
-            "fine _electric eel_",
-            "fine _octopus_",
-            "fine _lantern fish_",
-            "fine _puffer fish_",
-            "fine _mackerel_",
-            "fine _piranha_",
-            "other _gear for mages_",
-            "other _ranged weapons_",
-            "other _armors_",
-            "other _melee weapons_",
-            "herbs, incense and poisons",
-            "other enhanced _jewelry_",
-            "instruments and parchments",
-            "other _exotic items_",
-        ],
-        "Kotko: church": ["enchanted band"],
-        "Kotko: woman with red feather": [
-            "peanuts",
-            "eggplant",
-            "banana",
-            "sandwich",
-            "orange",
-            "fried chicken",
-        ],
-    };
-}
-function getIngenuityTestHighlights() {
-    return {
-        "*": ["bejeweled necklace", "blue key", "Large", "Medium", "Small", "Tiny", "pair of fairy wings"],
-        "Freshwater Spring": ["under _the water_"],
-        "Middle of the River : Chatting": [
-            "red key",
-            "crescent",
-            "rectangle",
-            "circle",
-            "heart",
-            "diamond",
-            "plus-sign",
-            "oval",
-            "star",
-            "triangle",
-            "square",
-        ],
-        "Rialb's Ghost": ["purple key"],
-        "The Fairytale Princess": ["pink hair ribbons"],
-        "The Hut": [
-            "Turquoise",
-            "Yellow",
-            "Green",
-            "Red",
-            "Magenta",
-            "Black",
-            "Blue",
-            "Purple",
-            "Orange",
-            "White",
-        ],
-    };
-}
-function initHotKeys() {
-    const buttons = Array.from(document.querySelectorAll('a, input[type="submit"]'));
-    let buttonNext;
-    let buttonMore;
-    if (buttons.length) {
-        buttons.forEach((button) => {
-            if (button.innerHTML === "Next" ||
-                (button.value && button.value.trim() === "Ok")) {
-                buttonNext = button;
-                addHotkeyFor(buttonNext.parentNode, "n");
-            }
-            else if (button.innerHTML === "More adventures") {
-                buttonMore = button;
-                addHotkeyFor(buttonMore.parentNode, "m");
-            }
-        });
-        if (buttonNext) {
-            buttonNext.focus();
-        }
-        else if (buttonMore) {
-            buttonMore.focus();
-        }
-    }
-    const choices = (Array.from(document.querySelectorAll('input[type="radio"]')));
-    const choiceMap = {};
-    if (choices.length) {
-        const HOT_KEYS = "123456789qwertyuiop";
-        choices.forEach((choice, i) => {
-            const labelElem = choice.parentNode;
-            const hotkey = HOT_KEYS[i];
-            const keyCode = hotkey.toUpperCase().charCodeAt(0);
-            choiceMap[keyCode] = choice;
-            if (labelElem)
-                addHotkeyFor(labelElem, hotkey);
-        });
-    }
-    if (choices.length || buttonNext || buttonMore) {
-        const normalizeKey = (key) => (key >= 96 && key <= 105 ? key - 48 : key);
-        document.onkeyup = (e) => {
-            const activeElem = document.activeElement;
-            if (activeElem &&
-                activeElem.tagName.toLowerCase() === "input" &&
-                activeElem.getAttribute("type") === "text") {
-                return;
-            }
-            const keyCode = normalizeKey(e.which);
-            if (buttonMore && keyCode === 77) {
-                buttonMore.focus();
-            }
-            else if (buttonNext &&
-                (keyCode === 78 || keyCode === 48)) {
-                buttonNext.focus();
-            }
-            else if (Object.prototype.hasOwnProperty.call(choiceMap, keyCode)) {
-                const choice = choiceMap[keyCode];
-                choice.checked = true;
-                choice.focus();
-                publishChoiceEvent(choice);
-                return false;
-            }
-        };
-    }
-}
-function publishChoiceEvent(choice) {
-    const event = new CustomEvent("adventure.choiceSelected", {
-        detail: choice.nextSibling.textContent.trim(),
-    });
-    window.dispatchEvent(event);
-}
-function addHotkeyFor(elem, text) {
-    if (elem) {
-        const span = document.createElement("span");
-        span.innerHTML = `<sup style="padding: 1px 3px; border: 1px solid #666; font-size: 10px">${text}</sup>`;
-        elem.appendChild(span);
-    }
 }
 var Store = {
     get(key, defaultValue) {
@@ -544,38 +357,46 @@ class QuestLog {
         };
     }
 }
-const crafting = [];
-const appointments = [];
-const appList = [
+const QUEST_TITLES = ["Passingtime", "Rescuing Father Wuel", "Ingenuity Test"];
+const APPOINTMENT_TITLES = [
     "The pumpkin hero tavern",
     "The Adventurers' Guild",
     "The Sunday Grove",
     "Free warriors arena of Nebulat",
     "Old Training Grounds",
     "The Fortunes of Madame",
-    "Passingtime",
-    "Rescuing Father Wuel",
-    "Ingenuity Test",
     "Haiku medal",
     "Trading Post",
     "Z Delete Passingtime in-progress flag",
     "Z Clear Forced Exit",
     "Z Set Forced Exit",
 ];
+let _quests = [];
+let _appointments = [];
+let _crafting = [];
+const TAB_TITLES = {
+    quests: "Quests",
+    appointments: "Appointments",
+    crafting: "Crafting",
+};
 function initTabs() {
     if (!document.querySelector(".paginator_row"))
         return;
-    const isAppointment = (title) => appList.some((name) => title.includes(name));
+    const categorize = (title) => {
+        if (QUEST_TITLES.some((name) => title.includes(name)))
+            return "quests";
+        if (APPOINTMENT_TITLES.some((name) => title.includes(name)))
+            return "appointments";
+        return null;
+    };
     const invertClass = (className) => className === "row0" ? "row1" : "row0";
     const titleOf = (row) => row.querySelector("h3")?.innerHTML ?? "";
     const adventures = Array.from(document.querySelectorAll(".row0, .row1"));
-    let craftClass = "row1";
-    let appClass = "row1";
     adventures.sort((a, b) => {
         const titleA = titleOf(a);
         const titleB = titleOf(b);
-        const indexA = appList.findIndex((name) => titleA.includes(name));
-        const indexB = appList.findIndex((name) => titleB.includes(name));
+        const indexA = _sortByOrder(titleA);
+        const indexB = _sortByOrder(titleB);
         if (indexA === -1)
             return indexB === -1 ? 0 : 1;
         if (indexB === -1)
@@ -585,29 +406,37 @@ function initTabs() {
     adventures.forEach((adventure) => {
         adventure.parentNode?.appendChild(adventure);
     });
+    _quests = [];
+    _appointments = [];
+    _crafting = [];
+    let appClass = "row1";
+    let craftClass = "row1";
     for (const adventure of adventures) {
         const className = adventure.className;
         const title = titleOf(adventure);
         if (!title)
             continue;
-        const isApp = isAppointment(title);
-        const currentClass = isApp ? appClass : craftClass;
+        const category = categorize(title);
+        const currentClass = category === "appointments" ? appClass : craftClass;
         const nextClass = currentClass === className ? invertClass(currentClass) : className;
-        if (isApp) {
+        if (category === "quests") {
+            _quests.push(adventure);
+        }
+        else if (category === "appointments") {
             appClass = nextClass;
-            appointments.push(adventure);
+            _appointments.push(adventure);
         }
         else {
             craftClass = nextClass;
-            crafting.push(adventure);
+            _crafting.push(adventure);
             adventure.style.display = "none";
         }
         adventure.className = nextClass;
-        hideDescription(adventure);
+        _hideDescription(adventure);
     }
     const menu = document.createElement("ul");
     menu.innerHTML = '<li class="label">Adventures</li>';
-    menu.append(makeTab("Appointments", true), makeTab("Crafting", false));
+    menu.append(makeTab("appointments", TAB_TITLES.appointments, true), makeTab("crafting", TAB_TITLES.crafting, false), makeTab("quests", TAB_TITLES.quests, false));
     const bar = document.createElement("div");
     bar.className = "bar";
     const content = document.createElement("div");
@@ -619,8 +448,15 @@ function initTabs() {
     if (h1?.parentNode) {
         h1.parentNode.replaceChild(tab, h1);
     }
+    _showTab("appointments", true);
+    _showTab("crafting", false);
+    _showTab("quests", false);
 }
-function hideDescription(row) {
+function _sortByOrder(title) {
+    const combined = [...QUEST_TITLES, ...APPOINTMENT_TITLES];
+    return combined.findIndex((name) => title.includes(name));
+}
+function _hideDescription(row) {
     const td = row.querySelector("td");
     const header = td.children[0];
     const descriptionNodes = Array.from(td.childNodes).filter((node) => node.nodeName !== "TABLE");
@@ -643,35 +479,246 @@ function hideDescription(row) {
         icon.src = icon.src.replace(isHidden ? "more" : "less", isHidden ? "less" : "more");
     });
 }
-function makeTab(title, selected) {
+function makeTab(key, label, selected) {
     const action = document.createElement("a");
     action.href = "#";
-    action.textContent = title;
-    action.addEventListener("click", selectTab);
+    action.textContent = label;
+    action.addEventListener("click", _selectTab);
     const tab = document.createElement("li");
     tab.className = selected ? "selected" : "not_selected";
     tab.appendChild(action);
     return tab;
 }
-function selectTab(e) {
+function _selectTab(e) {
     e.preventDefault();
     const target = e.currentTarget;
     const selectedTab = target.parentElement;
     if (!selectedTab)
         return;
-    const isApp = target.textContent?.trim() === "Appointments";
-    const otherTab = isApp
-        ? selectedTab.nextElementSibling
-        : selectedTab.previousElementSibling;
+    const selectedTitle = target.textContent?.trim() ?? "";
+    _activeTab =
+        Object.entries(TAB_TITLES).find(([, v]) => v === selectedTitle)?.[0] ?? "appointments";
     selectedTab.className = "selected";
-    if (otherTab)
-        otherTab.className = "not_selected";
-    appointments.forEach((row) => {
-        row.style.display = isApp ? "" : "none";
+    if (selectedTab.nextElementSibling) {
+        selectedTab.nextElementSibling.className = "not_selected";
+    }
+    if (selectedTab.previousElementSibling) {
+        selectedTab.previousElementSibling.className = "not_selected";
+    }
+    _showTab("appointments", _activeTab === "appointments");
+    _showTab("crafting", _activeTab === "crafting");
+    _showTab("quests", _activeTab === "quests");
+}
+let _activeTab = "appointments";
+function _showTab(key, visible) {
+    const list = key === "quests"
+        ? _quests
+        : key === "appointments"
+            ? _appointments
+            : _crafting;
+    list.forEach((row) => {
+        row.style.display = visible ? "" : "none";
     });
-    crafting.forEach((row) => {
-        row.style.display = isApp ? "none" : "";
+}
+const HOT_KEY_CHARS = "123456789qwertyuiop";
+function initHotKeys() {
+    const buttons = Array.from(document.querySelectorAll('a, input[type="submit"]'));
+    let buttonNext;
+    let buttonMore;
+    if (buttons.length) {
+        buttons.forEach((button) => {
+            const innerHTML = button.innerHTML;
+            const value = button instanceof HTMLInputElement ? button.value : undefined;
+            if (innerHTML === "Next" || (value && value.trim() === "Ok")) {
+                buttonNext = button;
+                _addHotkeyFor(button.parentNode, "n");
+            }
+            else if (innerHTML === "More adventures") {
+                buttonMore = button;
+                _addHotkeyFor(buttonMore.parentNode, "m");
+            }
+        });
+        if (buttonNext) {
+            buttonNext.focus();
+        }
+        else if (buttonMore) {
+            buttonMore.focus();
+        }
+    }
+    const choices = Array.from(document.querySelectorAll('input[type="radio"]'));
+    const choiceMap = {};
+    if (choices.length) {
+        choices.forEach((choice, i) => {
+            const labelElem = choice.parentNode;
+            const hotkey = HOT_KEY_CHARS[i];
+            const keyCode = hotkey.toUpperCase().charCodeAt(0);
+            choiceMap[keyCode] = choice;
+            if (labelElem)
+                _addHotkeyFor(labelElem, hotkey);
+        });
+    }
+    if (choices.length || buttonNext || buttonMore) {
+        const normalizeKey = (key) => key >= 96 && key <= 105 ? key - 48 : key;
+        document.onkeyup = (e) => {
+            const activeElem = document.activeElement;
+            if (activeElem &&
+                activeElem.tagName.toLowerCase() === "input" &&
+                activeElem.getAttribute("type") === "text") {
+                return;
+            }
+            const keyCode = normalizeKey(e.which);
+            if (buttonMore && keyCode === 77) {
+                buttonMore.focus();
+            }
+            else if (buttonNext &&
+                (keyCode === 78 || keyCode === 48)) {
+                buttonNext.focus();
+            }
+            else if (Object.prototype.hasOwnProperty.call(choiceMap, keyCode)) {
+                const choice = choiceMap[keyCode];
+                choice.checked = true;
+                choice.focus();
+                _publishChoiceEvent(choice);
+                return false;
+            }
+        };
+    }
+}
+function _publishChoiceEvent(choice) {
+    const event = new CustomEvent("adventure.choiceSelected", {
+        detail: choice.nextSibling?.textContent?.trim() ?? "",
     });
+    window.dispatchEvent(event);
+}
+function _addHotkeyFor(elem, text) {
+    if (elem) {
+        const span = document.createElement("span");
+        span.innerHTML = `<sup style="padding: 1px 3px; border: 1px solid #666; font-size: 10px">${text}</sup>`;
+        elem.appendChild(span);
+    }
+}
+const HIGHLIGHT_TITLES = {
+    IngenuityTest: "Ingenuity Test",
+    Passingtime: "Passingtime",
+    RescuingFatherWuel: "Rescuing Father Wuel",
+};
+function initHighlights(context) {
+    if (!context || !context.isQuest) {
+        return;
+    }
+    const { adventure, place } = context;
+    const adventures = {};
+    adventures[HIGHLIGHT_TITLES.RescuingFatherWuel] = getWuelHighlights;
+    adventures[HIGHLIGHT_TITLES.Passingtime] = getPassingtimeHighlights;
+    adventures[HIGHLIGHT_TITLES.IngenuityTest] = getIngenuityTestHighlights;
+    if (!(adventure in adventures)) {
+        return;
+    }
+    const highlights = adventures[adventure]()[place] || [];
+    const texts = context.texts.map((x) => x.innerHTML);
+    highlights.forEach((x) => {
+        const start = x.indexOf("_");
+        const end = x.indexOf("_", start + 1);
+        const search = new RegExp(start > -1 ? x.replace(/_/g, "") : x, "g");
+        const highlight = start > -1
+            ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}`
+            : `<span style="color:orchid">${x}</span>`;
+        texts.forEach((y, i) => {
+            texts[i] = y.replace(search, highlight);
+        });
+    });
+    const re_html = /&lt;(.+)&gt;(.+)&lt;\/\1&gt;/g;
+    context.texts.forEach((x, i) => {
+        x.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
+    });
+}
+function getPassingtimeHighlights() {
+    return {
+        "*": ["bejeweled necklace"],
+        "Grandfather answers": ["stonemasonry", "carpenters", "cobblers", "bakers"],
+    };
+}
+function getWuelHighlights() {
+    return {
+        "*": [
+            "juicy fruits",
+            "food in layers",
+            "nutty things",
+            "fish with arms",
+            "things that zap",
+            "things that are purple",
+            "things that glow in the dark",
+            "fishes with sharp teeth",
+            "lavendar-colored wand",
+            "the _mayor_ here",
+            "taken _all the classes_",
+            "an unusual _iridescent one_",
+            "fine _electric eel_",
+            "fine _octopus_",
+            "fine _lantern fish_",
+            "fine _puffer fish_",
+            "fine _mackerel_",
+            "fine _piranha_",
+            "other _gear for mages_",
+            "other _ranged weapons_",
+            "other _armors_",
+            "other _melee weapons_",
+            "herbs, incense and poisons",
+            "other enhanced _jewelry_",
+            "instruments and parchments",
+            "other _exotic items_",
+        ],
+        "Kotko: church": ["enchanted band"],
+        "Kotko: woman with red feather": [
+            "peanuts",
+            "eggplant",
+            "banana",
+            "sandwich",
+            "orange",
+            "fried chicken",
+        ],
+    };
+}
+function getIngenuityTestHighlights() {
+    return {
+        "*": [
+            "bejeweled necklace",
+            "blue key",
+            "Large",
+            "Medium",
+            "Small",
+            "Tiny",
+            "pair of fairy wings",
+        ],
+        "Freshwater Spring": ["under _the water_"],
+        "Middle of the River : Chatting": [
+            "red key",
+            "crescent",
+            "rectangle",
+            "circle",
+            "heart",
+            "diamond",
+            "plus-sign",
+            "oval",
+            "star",
+            "triangle",
+            "square",
+        ],
+        "Rialb's Ghost": ["purple key"],
+        "The Fairytale Princess": ["pink hair ribbons"],
+        "The Hut": [
+            "Turquoise",
+            "Yellow",
+            "Green",
+            "Red",
+            "Magenta",
+            "Black",
+            "Blue",
+            "Purple",
+            "Orange",
+            "White",
+        ],
+    };
 }
 function main() {
     initTabs();
@@ -682,6 +729,9 @@ function main() {
     initHotKeys();
     initQuestLog(context);
 }
-document.addEventListener("DOMContentLoaded", () => main());
+if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", main, { once: true });
+else
+    main();
 
 })();

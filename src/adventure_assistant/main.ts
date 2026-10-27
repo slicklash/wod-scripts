@@ -1,15 +1,16 @@
 import { getContext } from "./context";
-import { initHighlights } from "./highlights";
-import { initHotKeys } from "./hotkeys";
-import { initQuestLog } from "./questlog";
-import { initTabs } from "./tabs";
+import { initQuestLog } from "./logic";
+import { initHighlights, initHotKeys, initTabs } from "./ui";
 
-export function main() {
+export function main(): void {
   initTabs();
   const context = getContext();
+  if (!context) return;
   initHighlights(context);
   initHotKeys();
   initQuestLog(context);
 }
 
-document.addEventListener("DOMContentLoaded", () => main());
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", main, { once: true });
+else main();

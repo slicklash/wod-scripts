@@ -14,7 +14,7 @@ export function waitFor(
       };
       fn();
     } else {
-      selectorOrElement.addEventListener(eventName, resolve);
+      if (eventName) selectorOrElement.addEventListener(eventName, resolve);
     }
   });
 }

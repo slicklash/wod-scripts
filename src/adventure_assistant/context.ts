@@ -4,7 +4,7 @@ export const Quests = {
   RescuingFatherWuel: "Rescuing Father Wuel",
 };
 
-export interface IAdventureContext {
+export type AdventureContext = {
   idHero: string;
   world: string;
   adventure: string;
@@ -12,22 +12,20 @@ export interface IAdventureContext {
   texts: HTMLElement[];
   text: string;
   isQuest?: boolean;
-}
+};
 
-let _context: IAdventureContext;
+let _context: AdventureContext;
 
-export function getContext(): IAdventureContext {
+export function getContext(): AdventureContext | undefined {
   if (!_context) {
     const h1 = document.querySelector("h1");
     const title = h1 ? h1.textContent : "";
 
-    if (!title || title.indexOf("adventure") !== 0) {
-      return;
-    }
+    if (!title || title.indexOf("adventure") !== 0) return;
 
-    const texts = <any>(
-      Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION"))
-    );
+    const texts = Array.from(
+      document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION"),
+    ) as HTMLElement[];
 
     texts.forEach((x) => {
       x.innerHTML = x.innerHTML

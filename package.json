@@ -6,31 +6,31 @@
   "license": "BSD-2-Clause",
   "scripts": {
     "re:favmenu": "tsc --project src/favorite_menu/tsconfig.json && node ./scripts/bundle.js favorite_menu && eslint ./release/favorite_menu.user.js",
-    "re:hero": "npx tsc --project src/hero_list/tsconfig.json && node ./scripts/bundle.js hero_list && eslint ./release/hero_list.user.js",
-    "re:num": "npx tsc --project src/numismatist/tsconfig.json && node ./scripts/bundle.js numismatist && eslint ./release/numismatist.user.js",
-    "re:tidy": "npx tsc --project src/tidy_trade/tsconfig.json && node ./scripts/bundle.js tidy_trade && eslint ./release/tidy_trade.user.js",
-    "re:storage": "npx tsc --project src/storage_management/tsconfig.json && node ./scripts/bundle.js storage_management && eslint ./release/storage_management.user.js",
-    "re:adventure": "npx tsc --project src/adventure_assistant/tsconfig.json && node ./scripts/bundle.js adventure_assistant && eslint ./release/adventure_assistant.user.js",
-    "re:profile": "npx tsc --project src/profile_export/tsconfig.json && node ./scripts/bundle.js profile_export && eslint ./release/profile_export.user.js",
-    "re:itemizer": "npx tsc --project src/itemizer/tsconfig.json && node ./scripts/bundle.js itemizer && eslint ./release/itemizer.user.js",
-    "re": "npm run re:favmenu && npm run re:hero && npm run re:num && npm run re:tidy && npm run re:storage && npm run re:adventure && npm run re:profile && npm run re:itemizer",
+    "re:hero": "tsc --project src/hero_list/tsconfig.json && node ./scripts/bundle.js hero_list && eslint ./release/hero_list.user.js",
+    "re:num": "tsc --project src/numismatist/tsconfig.json && node ./scripts/bundle.js numismatist && eslint ./release/numismatist.user.js",
+    "re:tidy": "tsc --project src/tidy_trade/tsconfig.json && node ./scripts/bundle.js tidy_trade && eslint ./release/tidy_trade.user.js",
+    "re:storage": "tsc --project src/storage_management/tsconfig.json && node ./scripts/bundle.js storage_management && eslint ./release/storage_management.user.js",
+    "re:adventure": "tsc --project src/adventure_assistant/tsconfig.json && node ./scripts/bundle.js adventure_assistant && eslint ./release/adventure_assistant.user.js",
+    "re:profile": "tsc --project src/profile_export/tsconfig.json && node ./scripts/bundle.js profile_export && eslint ./release/profile_export.user.js",
+    "re:itemizer": "tsc --project src/itemizer/tsconfig.json && node ./scripts/bundle.js itemizer && eslint ./release/itemizer.user.js",
+    "re:arcane_library": "tsc --project src/arcane_library/tsconfig.json && node ./scripts/bundle.js arcane_library && eslint ./release/arcane_library.user.js",
+    "build": "npm run re:favmenu && npm run re:hero && npm run re:num && npm run re:tidy && npm run re:storage && npm run re:adventure && npm run re:profile && npm run re:itemizer",
     "test": "jest",
     "coverage": "jest --coverage"
   },
-  "dependencies": {
-    "typescript": "4.3.5"
-  },
   "devDependencies": {
-    "@types/greasemonkey": "0.0.28",
-    "@types/jest": "^23.0.0",
-    "@types/node": "^12.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@jest/globals": "^30.5.2",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.5",
+    "@types/tampermonkey": "^5.5.0",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
     "eslint": "^8.45.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "jest": "^23.0.0",
-    "jest-environment-jsdom": "^23.0.0",
-    "ts-jest": "^23.0.0",
-    "ts-node": "^10.9.1"
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-prettier": "^5.5.7",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
   }
 }

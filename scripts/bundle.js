@@ -22,7 +22,8 @@ const stripAMD = (content) =>
       );
 
       imports.forEach((x) => {
-        p = p.replace(new RegExp(x + ".", "g"), "");
+        p = p.replace(new RegExp(`\\(0,\\s*${x}\\.([\\w$]+)\\)`, "g"), "$1");
+        p = p.replace(new RegExp(`\\b${x}\\.`, "g"), "");
       });
 
       return p

@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outFile": "../../build/itemizer.js"
+        "outFile": "../../build/itemizer.js",
+        "rootDir": ".."
     }
 }

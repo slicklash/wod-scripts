@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Numismatist
 // @description    Shows medal summary for whole group
-// @version        1.2.1
+// @version        1.2.2
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/numismatist.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/dungeon/dungeon.php*
@@ -57,9 +57,9 @@ function httpFetch(url, method = "GET", body) {
                 if (readyState !== 4)
                     return;
                 const type = responseHeaders
-                    .match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
-                    .trim()
-                    .toLowerCase();
+                    ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+                    ?.trim()
+                    ?.toLowerCase();
                 const data = type?.includes("json")
                     ? JSON.parse(responseText)
                     : responseText;
@@ -81,7 +81,7 @@ var Store = {
     },
 };
 const CACHE_KEY = "numismatist";
-const FORM = () => document.forms.the_form.gruppe_id.value;
+const FORM = () => document.forms?.the_form?.gruppe_id?.value;
 const normalize = (text) => text
     .replace("swamp dragons", "swamp dragon")
     .replace(" revival", "")
@@ -104,7 +104,13 @@ async function getGroupHeroes(id) {
         throw new Error("Failed to load group heroes");
     return Array.from(html(resp.data).querySelectorAll(".main_content tbody .content_table_mainline a")).map((a) => ({ name: text(a), profileUrl: a.getAttribute("href") || "" }));
 }
-const getHeroProfiles = (heroes) => Promise.all(heroes.map(parseProfile));
+async function batchMap(items, fn, concurrency = 3) {
+    const results = [];
+    for (let i = 0; i < items.length; i += concurrency) {
+        results.push(...(await Promise.all(items.slice(i, i + concurrency).map(fn))));
+    }
+    return results;
+}
 async function parseProfile(hero) {
     const resp = await httpFetch(hero.profileUrl);
     if (!resp)
@@ -143,7 +149,7 @@ async function parseProfile(hero) {
     return profile;
 }
 async function buildCache(groupId) {
-    const profiles = await getHeroProfiles(await getGroupHeroes(groupId));
+    const profiles = await batchMap(await getGroupHeroes(groupId), parseProfile);
     const cache = {
         key: await getLastReportKey(),
         groupId,

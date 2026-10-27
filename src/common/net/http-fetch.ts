@@ -1,32 +1,34 @@
-export interface IResponse {
-  data?: any;
-}
+export type Response<T = any> = { data?: T };
 
-declare let GM;
-
-export function httpFetch(url, method = "GET", data?): Promise<IResponse> {
+export function httpFetch<T = any>(
+  url: string,
+  method: "GET" | "POST" = "GET",
+  body?: Record<string, unknown> | string,
+): Promise<Response<T>> {
   return new Promise((resolve, reject) => {
-    const request: any = {
+    const isJSON = typeof body !== "string";
+    GM.xmlHttpRequest({
       method,
       url,
-      headers: { Cookie: document.cookie },
-      onload: (resp) => {
-        if (resp.readyState !== 4) return;
-        if (resp.status >= 200 && resp.status < 300) {
-          resolve({ data: resp.responseText });
-        } else {
-          reject({ data: resp.responseText });
-        }
+      headers:
+        body !== undefined && isJSON
+          ? { "Content-Type": "application/json" }
+          : {},
+      data:
+        body === undefined ? undefined : isJSON ? JSON.stringify(body) : body,
+      onload: ({ readyState, status, responseText, responseHeaders }) => {
+        if (readyState !== 4) return;
+        const type = responseHeaders
+          ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+          ?.trim()
+          ?.toLowerCase();
+        const data = type?.includes("json")
+          ? JSON.parse(responseText)
+          : responseText;
+        if (status >= 200 && status < 300) resolve({ data });
+        else reject({ status, data });
       },
-    };
-    if (typeof data === "object") {
-      request.data = JSON.stringify(data);
-      request.headers = { "Content-Type": "application/json" };
-    }
-    if (typeof GM === "object") {
-      GM.xmlHttpRequest(request);
-    } else {
-      GM_xmlhttpRequest(request);
-    }
+      onerror: reject,
+    });
   });
 }

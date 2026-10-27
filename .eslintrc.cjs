@@ -10,9 +10,9 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['prettier'],
   rules: {
-   "@typescript-eslint/no-explicit-any": ["off"],
+    "@typescript-eslint/no-explicit-any": ["off"],
     "@typescript-eslint/no-this-alias": ["off"],
-   "prettier/prettier": ["error"]
+    "prettier/prettier": ["error"],
   },
   globals: {
     "GM": true,

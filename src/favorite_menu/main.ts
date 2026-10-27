@@ -3,8 +3,6 @@ import { attr } from "@common/dom/attr";
 import { cssClass } from "@common/dom/css-class";
 import { waitFor } from "@common/dom/wait-for";
 
-// --- Main
-
 const MENU_NAME = "Favorites";
 
 const MENU_LAYOUT = {
@@ -89,8 +87,8 @@ function main(verticalMenu: HTMLElement) {
 
   attr(add("span", caption), "class", "menu-1-arrow open");
 
-  const menu0 = add("div", fav_menu);
-  const menu_body = add("div", menu0);
+  const menu0 = add<HTMLDivElement>("div", fav_menu);
+  const menu_body = add<HTMLDivElement>("div", menu0);
   const menu_items = {};
   const open_links = {};
 
@@ -105,7 +103,9 @@ function main(verticalMenu: HTMLElement) {
       const tmp = open_menu.querySelectorAll("a");
 
       for (let j = 0, c2 = tmp.length; j < c2; j++) {
-        match_name = attr(tmp[j], "onclick").match(/'([a-z_ ]+)',''\);$/i);
+        match_name = (attr(tmp[j], "onclick") as string).match(
+          /'([a-z_ ]+)',''\);$/i,
+        );
         if (match_name) open_links[match_name[1]] = open_menu;
       }
     }
@@ -115,7 +115,9 @@ function main(verticalMenu: HTMLElement) {
 
   for (let i = 0, cnt = links.length; i < cnt; i++) {
     const link = links[i];
-    match_name = attr(link, "onclick").match(/'([a-z_ ]+)',''\);$/i);
+    match_name = (attr(link, "onclick") as string).match(
+      /'([a-z_ ]+)',''\);$/i,
+    );
     if (match_name) {
       menu_items[match_name[1]] = link.cloneNode(true);
     }
@@ -130,7 +132,7 @@ function main(verticalMenu: HTMLElement) {
       attr(link, { href: "#", class: "menu-2-caption" });
     }
 
-    attr(link, "onclick", null, true);
+    attr(link, "onclick", null);
 
     const menu_item = MENU_LAYOUT[key];
 
@@ -162,7 +164,7 @@ function main(verticalMenu: HTMLElement) {
         const sublink = menu_items[subkey];
 
         if (sublink) {
-          attr(sublink, "onclick", null, true);
+          attr(sublink, "onclick", null);
 
           const menu3 = add<HTMLDivElement>("div", submenu);
           const menu3_cap = add<HTMLAnchorElement>(sublink, menu3);
@@ -189,7 +191,7 @@ function main(verticalMenu: HTMLElement) {
       });
     }
 
-    const new_menu = add("div", menu_body);
+    const new_menu = add<HTMLDivElement>("div", menu_body);
     attr(new_menu, "class", "menu-2 open");
     add(link, new_menu);
     if (submenu) add(submenu, new_menu);

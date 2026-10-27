@@ -1,5 +1,5 @@
-import type { Hero } from "./hero";
 import { formatNumber } from "@common/text/format-number";
+import type { Hero } from "./hero";
 
 // prettier-ignore
 const table = (props: string, rows: string[]): string => `[table ${props}]${rows.join("")}[/table]`;
@@ -29,7 +29,7 @@ ${Object.values(hero.attributes).slice(0, 8).map(bbcode_attr).join("")}
 [td][color=mediumseagreen][size=12]HHP[/color][/td][td][size=12]${hero.attributes.hhp.value} [url=" "][${hero.attributes.hhp.effective_value}][/url][/size][/td]
 [/tr]
 [tr][td][color=dodgerblue][size=12]MP[/color][/td][td][size=12]${hero.attributes.mp.value} [url=" "][${hero.attributes.mp.effective_value}][/url][/size][/td]
-[td][color=dodgerblue][size=12]RMP[/color][/td][td][size=12]${hero.attributes.hhp.value} [url=" "][${hero.attributes.rmp.effective_value}][/url][/size][/td]
+[td][color=dodgerblue][size=12]RMP[/color][/td][td][size=12]${hero.attributes.rmp.value} [url=" "][${hero.attributes.rmp.effective_value}][/url][/size][/td]
 [/tr]
 [tr][td colspan=2][size=12]Actions[/size][/td][td colspan=2][size=12]${hero.attributes.act.value} [url=" "][${hero.attributes.act.effective_value}][/url][/size][/td][/tr]
 [tr][td colspan=2][size=12]Initiative[/size][/td][td colspan=2][size=12]${hero.attributes.ini.value} [url=" "][${hero.attributes.ini.effective_value}][/url][/size][/td][/tr]
@@ -44,7 +44,7 @@ const mod = (val) => val === 0 ? "0" : val > 0 ? `[color=mediumseagreen]+${val}[
 const bbcode_arm = (hero: Hero): string =>
   Object.entries(hero.armor)
     .map(([dmg_type, arm]) =>
-      Object.entries(arm)
+      Object.entries(arm as Record<string, [number, number, number]>)
         .filter(
           ([, val]) =>
             Math.abs(val[0]) > 0 ||
@@ -54,7 +54,8 @@ const bbcode_arm = (hero: Hero): string =>
         .map(
           ([atk_type, val]) =>
             `[tr][td][size=12]${dmg_type}[/size][/td][td align=center][size=12]${atk_type}[/size][/td]
-[td align=center][size=12]${mod(val[0])} / ${mod(val[1])} / ${mod(val[2])} [/size][/td][/tr]`)
+[td align=center][size=12]${mod(val[0])} / ${mod(val[1])} / ${mod(val[2])} [/size][/td][/tr]`,
+        )
         .join(""),
     )
     .join("");
@@ -86,9 +87,9 @@ const initiative = (hero: Hero) =>
 ${hero.skills
   .filter((x) => x.type === "initiative")
   .map((skill) => {
-    const m = skill.initiative_attr.match(/[a-z]{2}/gi),
-      attr1 = hero.attributes[m[0]],
-      attr2 = hero.attributes[m[1]];
+    const m = skill.initiative_attr.match(/[a-z]{2}/gi)!;
+    const attr1 = hero.attributes[m[0]];
+    const attr2 = hero.attributes[m[1]];
     return (
       // prettier-ignore
       '[tr][td][skill:"' + skill.name + '"' + (skill.color ? " color=" + skill.color : "") + " size=12][/td][td align=center]" +

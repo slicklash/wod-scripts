@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outFile": "../../build/favorite_menu.js"
+        "outFile": "../../build/favorite_menu.js",
+        "rootDir": ".."
     }
 }

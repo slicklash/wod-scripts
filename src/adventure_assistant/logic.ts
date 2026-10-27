@@ -1,7 +1,7 @@
-import { IAdventureContext, Quests } from "./context";
 import { Store } from "@common/persistence/store";
+import { AdventureContext, Quests } from "./context";
 
-export function initQuestLog(context: IAdventureContext) {
+export function initQuestLog(context: AdventureContext): void {
   if (!context || !context.isQuest) {
     return;
   }
@@ -13,8 +13,9 @@ export function initQuestLog(context: IAdventureContext) {
     return;
   }
 
-  window.addEventListener("adventure.choiceSelected", (e: CustomEvent) => {
-    choice = e.detail;
+  window.addEventListener("adventure.choiceSelected", (e: Event) => {
+    const customEvent = e as CustomEvent;
+    choice = customEvent.detail;
   });
 
   const form = (<any>document.forms).the_form;
@@ -28,43 +29,45 @@ export function initQuestLog(context: IAdventureContext) {
   }
 }
 
-interface IQuestLogData {
+// --- QuestLog ---
+
+type QuestLogData = {
   itemsPicked: string[];
   itemsFound: string[];
   tasksDone: string[];
-}
+};
 
-interface IPlaceInfoMap {
-  [key: string]: IPlaceOptions;
-}
+type PlaceInfoMap = {
+  [key: string]: PlaceOptions;
+};
 
-interface IPlaceOptions {
+type PlaceOptions = {
   pickSingle?: string[];
   pickSingleTransform?: (x: string) => string;
-  collect?: IActionEvent[];
-  use?: IActionEvent[];
-  do?: IActionEvent[];
+  collect?: ActionEvent[];
+  use?: ActionEvent[];
+  do?: ActionEvent[];
   reset?: string;
-}
+};
 
-interface IActionEvent {
+type ActionEvent = {
   match: string;
   found?: string[];
   picked?: string[];
   done?: string[];
-}
+};
 
-class QuestLog {
+export class QuestLog {
   isSupported: boolean = true;
 
-  private _id: string;
-  private _data: IQuestLogData;
-  private _info: IPlaceInfoMap;
-  private _placeOptions: IPlaceOptions;
+  private _id?: string;
+  private _data?: QuestLogData;
+  private _info?: PlaceInfoMap;
+  private _placeOptions?: PlaceOptions;
 
-  constructor(private _context: IAdventureContext) {
+  constructor(private _context: AdventureContext) {
     const { adventure, place } = _context;
-    const adventures = {};
+    const adventures: Record<string, () => PlaceInfoMap> = {};
 
     adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
     adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
@@ -76,6 +79,10 @@ class QuestLog {
     }
 
     this._info = adventures[adventure]();
+    if (!this._info) {
+      this.isSupported = false;
+      return;
+    }
     this._placeOptions = this._info[place];
 
     this._id = `${_context.world}_${_context.idHero}_${_context.adventure.replace(/ /g, "").toLowerCase()}`;
@@ -94,13 +101,12 @@ class QuestLog {
     });
   }
 
-  onChoice(choice: string) {
+  onChoice(choice: string): void {
     if (!this._placeOptions) {
       return;
     }
 
     this.pickItem(choice);
-
     this.save();
 
     /* tslint:disable */
@@ -108,24 +114,27 @@ class QuestLog {
     /* tslint:enable */
   }
 
-  pickItem(item: string) {
+  pickItem(item: string): void {
     const op = this._placeOptions;
+    if (!op) return;
 
     if (op.pickSingle) {
       const itm = (
         op.pickSingleTransform ? op.pickSingleTransform(item) : item
       ).trim();
       if (itm && op.pickSingle.indexOf(itm) > -1) {
+        if (!this._data) return;
         this._data.itemsPicked = this._data.itemsPicked.filter(
-          (x) => op.pickSingle.indexOf(x) < 0,
+          (x) => op.pickSingle && op.pickSingle.indexOf(x) < 0,
         );
         this._data.itemsPicked.push(itm);
       }
     }
   }
 
-  checkPlace() {
+  checkPlace(): void {
     const op = this._placeOptions;
+    if (!op) return;
     let isChanged = false;
     const text = this._context.text;
 
@@ -137,8 +146,11 @@ class QuestLog {
     if (op.collect) {
       op.collect.forEach((x) => {
         if (text.indexOf(x.match) > -1) {
-          x.found.forEach((itm) => {
-            if (this._data.itemsFound.indexOf(itm) < 0) {
+          x.found?.forEach((itm) => {
+            if (
+              this._data?.itemsFound &&
+              this._data.itemsFound.indexOf(itm) < 0
+            ) {
               this._data.itemsFound.push(itm);
               isChanged = true;
             }
@@ -150,13 +162,13 @@ class QuestLog {
     if (op.use) {
       op.use.forEach((x) => {
         if (text.indexOf(x.match) > -1) {
-          if (x.found)
+          if (x.found && this._data?.itemsFound)
             this._data.itemsFound = this._data.itemsFound.filter(
-              (itm) => x.found.indexOf(itm) < 0,
+              (itm) => x.found && x.found.indexOf(itm) < 0,
             );
-          if (x.picked)
+          if (x.picked && this._data?.itemsPicked)
             this._data.itemsPicked = this._data.itemsPicked.filter(
-              (itm) => x.picked.indexOf(itm) < 0,
+              (itm) => x.picked && x.picked.indexOf(itm) < 0,
             );
           isChanged = true;
         }
@@ -165,9 +177,9 @@ class QuestLog {
 
     if (op.do) {
       op.do.forEach((x) => {
-        if (text.indexOf(x.match) > -1) {
+        if (text.indexOf(x.match) > -1 && x.done) {
           x.done.forEach((task) => {
-            if (this._data.tasksDone.indexOf(task) < 0) {
+            if (this._data && this._data.tasksDone.indexOf(task) < 0) {
               this._data.tasksDone.push(task);
               isChanged = true;
             }
@@ -184,13 +196,14 @@ class QuestLog {
 
     if (!h1) return;
 
-    const toText = (title: string, items: any[]) => {
+    const toText = (title: string, items: unknown[]) => {
       if (!items || !items.length) return "";
       items.sort();
-      return title + "\n" + items.join("\n");
+      return title + "\n" + (items as string[]).join("\n");
     };
 
     const data = this._data;
+    if (!data) return;
     const text = [
       toText("backpack:", data.itemsPicked.concat(data.itemsFound)),
       toText("done:", data.tasksDone),
@@ -200,15 +213,20 @@ class QuestLog {
   }
 
   load(): Promise<void> {
-    const empty: IQuestLogData = {
+    const empty: QuestLogData = {
       itemsPicked: [],
       itemsFound: [],
       tasksDone: [],
     };
 
     return new Promise((resolve) => {
+      if (!this._id) {
+        this._data = empty;
+        resolve();
+        return;
+      }
       Store.get(this._id).then((value) => {
-        const loaded: IQuestLogData = value ? JSON.parse(value) : {};
+        const loaded: QuestLogData = value ? JSON.parse(value) : {};
         Object.keys(loaded).forEach((x) => {
           if (!empty[x]) delete loaded[x];
         });
@@ -219,19 +237,21 @@ class QuestLog {
   }
 
   save(): void {
+    if (!this._id || !this._data) return;
     Store.set(this._id, JSON.stringify(this._data));
   }
 
   reset(): void {
+    if (!this._id) return;
     this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
-    Store.set(this._id, undefined);
+    Store.set(this._id, "{}");
   }
 
-  getPassingTimeInfo(): IPlaceInfoMap {
+  getPassingTimeInfo(): PlaceInfoMap {
     return {};
   }
 
-  getRescueFatherWuelInfo(): IPlaceInfoMap {
+  getRescueFatherWuelInfo(): PlaceInfoMap {
     return {
       "*": {
         collect: [
@@ -256,7 +276,7 @@ class QuestLog {
     };
   }
 
-  getIngenuityTestInfo(): IPlaceInfoMap {
+  getIngenuityTestInfo(): PlaceInfoMap {
     return {
       "*": {
         collect: [

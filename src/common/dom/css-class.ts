@@ -1,10 +1,5 @@
-export function cssClass(elem, name: string, toggleOn?: boolean) {
-  const classNames = elem.className.split(" ");
-  const has = classNames.some((x) => x === name);
-  if (typeof toggleOn !== "boolean") return has;
-  if (has && toggleOn) return elem;
-  elem.className = toggleOn
-    ? elem.className + " " + name
-    : classNames.filter((x) => x !== name).join(" ");
+export function cssClass(elem: Element, name: string, toggleOn?: boolean) {
+  if (toggleOn === undefined) return elem.classList.contains(name);
+  elem.classList.toggle(name, toggleOn);
   return elem;
 }

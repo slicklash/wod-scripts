@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Itemizer
 // @description    Scripts improves items found page
-// @version        1.1.0
+// @version        1.1.1
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
 // @author         Never
 // @include        https://*.world-of-dungeons.*/wod/spiel/*dungeon/report.php*
@@ -28,11 +28,11 @@ const SKILL_REGEX = /skill\.php\?name=(.+)&/;
 const ITEM_REGEX = /item\.php\?name=(.+)&/;
 function main() {
     const heroTables = Array.from(document.querySelectorAll("table")).filter((table) => table.previousElementSibling?.tagName === "H2" && !table.className);
-    showSummary(parseHeros(heroTables));
+    showSummary(parseHeroes(heroTables));
     const roundTables = Array.from(document.querySelectorAll("table")).filter((table) => !table.id && !table.className && table.querySelector(".rep_initiative"));
     showLevel(parseRounds(roundTables));
 }
-function parseHeros(tables) {
+function parseHeroes(tables) {
     return tables.map((table) => {
         let goldFound = 0;
         const texts = Array.from(table.querySelectorAll("p"), (p) => {

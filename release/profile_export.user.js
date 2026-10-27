@@ -1,34 +1,34 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        2.0.1
+// @version        2.0.2
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
 // @grant          GM.xmlHttpRequest
-// @grant          GM_xmlhttpRequest
 // ==/UserScript==
 
 (function() {
 'use strict';
 function add(tag, parent, innerHTML) {
     const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    parent && parent.nodeType && parent.appendChild(elem);
-    innerHTML && (elem.innerHTML = innerHTML);
+    if (parent?.nodeType)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
     return elem;
 }
-function attr(elem, nameOrMap, value, remove) {
-    if (remove) {
-        elem.removeAttribute(nameOrMap);
-    }
-    else if (typeof nameOrMap === "object") {
-        Object.keys(nameOrMap).forEach((key) => { elem.setAttribute(key, nameOrMap[key]); });
-    }
-    else if (value) {
-        elem.setAttribute(nameOrMap, value);
+function attr(elem, nameOrMap, value) {
+    if (typeof nameOrMap === "string") {
+        if (value === undefined)
+            return elem.getAttribute(nameOrMap) ?? "";
+        if (value === null)
+            elem.removeAttribute(nameOrMap);
+        else
+            elem.setAttribute(nameOrMap, value);
     }
     else {
-        return elem.getAttribute(nameOrMap);
+        Object.entries(nameOrMap).forEach(([k, v]) => v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v));
     }
     return elem;
 }
@@ -43,234 +43,33 @@ function parseEffectiveValue(str) {
         return [0, 0];
     return b[3] ? [Number(b[1]), Number(b[3])] : [Number(b[1]), Number(b[1])];
 }
-const SEC_COSTS = [0, 40, 120, 400, 960, 1880, 3320, 5360, 8120, 11720, 16240, 21840, 28600, 36680, 46160, 57160, 69840, 84280, 100640, 119000, 139520, 162280, 187440, 215120, 245480, 278600, 314600, 353640, 395840, 441320, 490200, 542640, 598760, 658680, 722520, 79440, 862560, 939000, 1019920, 1105440, 195680];
-const EXC_COSTS = [0, 50, 150, 500, 1300, 2700, 4850, 7950, 12200, 17800, 24950, 33850, 44700, 57750, 73200, 91250, 112150, 136100, 163350, 194150, 228750, 267350, 320200, 357550, 409650, 466750, 529100, 596950, 670550, 750150, 836050, 928450, 1027650, 1133900, 1247450, 1368600, 1497600, 1634700, 1780200, 1934400, 2097500];
-const TAL_COSTS = [0, 1440, 3240, 5440, 8080, 11200, 14840, 19040, 23840, 29280, 35400, 42240, 49840, 58240, 67480, 77600, 88640, 100640, 113640, 127680, 142800, 159040, 176440, 195040, 214880, 236000, 258440, 282240, 307440, 334080, 362200, 391840, 423040, 455840, 490280, 526400, 564240, 603840, 645240, 688480, 733600];
-class HeroSkill {
-    constructor() {
-        this.name = "";
-        this.type = "";
-        this.rank = 0;
-        this.can_undo = false;
-        this.initial_rank = 0;
-        this.effective_rank = 0;
-        this.primary = false;
-        this.secondary = false;
-        this.exceptional = false;
-        this.talent = false;
-        this.in_round = true;
-        this.pre_round = false;
-        this.target = "";
-        this.max_affected = "";
-        this.one_pos = false;
-        this.mp_base = 0;
-        this.mp_cost = 0;
-        this.item = "";
-        this.skill_class = "";
-        this.initiative_attr = "";
-        this.attack_type = "";
-        this.attack_attr = "";
-        this.defence_attr = "";
-        this.effect_attr = "";
-        this.training_cost_ep = 0;
-        this.training_cost_gold = 0;
-        this.url = "";
-        this.color = "";
-        this.hero = null;
-        this.onDone = null;
-    }
-    roll() {
-        const res = {
-            attack: "",
-            defence: "",
-            effect: "",
-        };
-        return res;
-    }
-    fetchInfo(data) {
-        try {
-            const skill_info = add("div");
-            skill_info.innerHTML = data;
-            const table_rows = Array.from(skill_info
-                .querySelector("form")
-                .querySelectorAll(".content_table table tr"));
-            for (let i = 0, cnt = table_rows.length; i < cnt; i++) {
-                const property = textContent(table_rows[i].cells[0]).trim(), value = textContent(table_rows[i].cells[1])
-                    .replace(/(\s|&nbsp;)/g, " ")
-                    .trim();
-                switch (property) {
-                    case "type":
-                        this.type = value;
-                        break;
-                    case "may be used":
-                        this.in_round = value.indexOf("in round") > -1;
-                        this.pre_round = value.indexOf("in pre round") > -1;
-                        break;
-                    case "target":
-                        this.target = value;
-                        this.one_pos = value.indexOf("one position") > -1;
-                        break;
-                    case "Max. characters affected":
-                    case "Max. opponents affected":
-                        this.max_affected = value;
-                        break;
-                    case "Mana points cost":
-                        if (value !== "-") {
-                            const mp = value.match(/([0-9])+ \(([0-9]+)\)/);
-                            this.mp_base = Number(mp[2]);
-                            this.mp_cost = Math.floor(this.mp_base * (0.8 + 0.1 * this.effective_rank));
-                        }
-                        break;
-                    case "item":
-                        this.item = value;
-                        break;
-                    case "skill class":
-                        this.skill_class = value;
-                        break;
-                    case "attack type":
-                        this.attack_type = value;
-                        break;
-                    case "attack":
-                        this.attack_attr = value;
-                        break;
-                    case "damage":
-                        this.effect_attr = value;
-                        break;
-                    case "initiative":
-                        this.initiative_attr = value;
-                        break;
-                    case "defense":
-                        this.defence_attr = value;
-                        break;
-                    case "healing":
-                        this.effect_attr = value;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            if (this.max_affected.includes("% of your hero`s level")) {
-                const tmp = this.max_affected
-                    .replace("% of your hero`s level", "*" + this.hero.level + "/100")
-                    .replace(" ", "");
-                this.max_affected = Math.floor(eval(tmp)).toString();
-            }
-            else if (this.max_affected.includes("% of your skill rank")) {
-                const tmp = this.max_affected
-                    .replace("% of your skill rank", "*" + this.effective_rank + "/100")
-                    .replace(" ", "");
-                this.max_affected = Math.floor(eval(tmp)).toString();
-            }
-            switch (this.type) {
-                case "attack":
-                case "degradation":
-                    if (this.target.indexOf("one enemy") > -1)
-                        this.max_affected = "1";
-                    break;
-                case "improvement":
-                case "healing":
-                    if (this.target.indexOf("one team") > -1)
-                        this.max_affected = "1";
-                    break;
-                default:
-                    break;
-            }
-        }
-        catch (ex) {
-            console.error(ex);
-        }
-        if (typeof this.onDone === "function")
-            this.onDone(this);
-    }
-    parse(row_html) {
-        try {
-            const link = row_html.cells[1].querySelector("a"), rank_row = row_html.cells[2].querySelector("tr"), rank = rank_row
-                ? parseEffectiveValue(textContent(rank_row.cells[1]))
-                : [0, 0], title = unescape(link.href).match(/name=([a-z\- :()'!+]+)/i);
-            if (title !== null && rank[0] !== 0) {
-                this.name = title[1].replace(/\+/g, " ");
-                this.talent = this.name.indexOf("Talent:") > -1;
-                this.rank = rank[0];
-                this.effective_rank = rank[1];
-                this.url = link.href;
-                if (!this.can_undo && this.rank === 1) {
-                    this.initial_rank = 1;
-                }
-                if (!this.talent) {
-                    switch (attr(link, "class")) {
-                        case "skill_primary":
-                            this.primary = true;
-                            break;
-                        case "skill_secondary":
-                            this.secondary = true;
-                            this.color = "lightslategray";
-                            break;
-                        case "skill_foreign":
-                            this.exceptional = true;
-                            this.color = "#858585";
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                if (!(this.rank === 1 && this.initial_rank === 1))
-                    this.calculateCost();
-            }
-        }
-        catch (error) {
-            console.error(error);
-        }
-        return this;
-    }
-    calculateCost() {
-        let cost = 0;
-        if (this.primary) {
-            for (let i = this.rank; i > 1; i--)
-                cost += (Math.pow(i, 2) - i) * 20;
-            if (cost === 0)
-                cost = 40;
-        }
-        else if (this.secondary) {
-            cost = SEC_COSTS[this.rank] || 0;
-        }
-        else if (this.exceptional) {
-            cost = EXC_COSTS[this.rank] || 0;
-        }
-        else if (this.talent) {
-            cost = TAL_COSTS[this.rank] || 0;
-        }
-        this.training_cost_ep = cost;
-        this.training_cost_gold = cost * 0.9;
-        return this;
-    }
-}
-function httpFetch(url, method = "GET", data) {
+function httpFetch(url, method = "GET", body) {
     return new Promise((resolve, reject) => {
-        const request = {
+        const isJSON = typeof body !== "string";
+        GM.xmlHttpRequest({
             method,
             url,
-            headers: { Cookie: document.cookie },
-            onload: (resp) => {
-                if (resp.readyState !== 4)
+            headers: body !== undefined && isJSON
+                ? { "Content-Type": "application/json" }
+                : {},
+            data: body === undefined ? undefined : isJSON ? JSON.stringify(body) : body,
+            onload: ({ readyState, status, responseText, responseHeaders }) => {
+                if (readyState !== 4)
                     return;
-                if (resp.status >= 200 && resp.status < 300) {
-                    resolve({ data: resp.responseText });
-                }
-                else {
-                    reject({ data: resp.responseText });
-                }
+                const type = responseHeaders
+                    ?.match(/^content-type:\s*([^;\r\n]+)/im)?.[1]
+                    ?.trim()
+                    ?.toLowerCase();
+                const data = type?.includes("json")
+                    ? JSON.parse(responseText)
+                    : responseText;
+                if (status >= 200 && status < 300)
+                    resolve({ data });
+                else
+                    reject({ status, data });
             },
-        };
-        if (typeof data === "object") {
-            request.data = JSON.stringify(data);
-            request.headers = { "Content-Type": "application/json" };
-        }
-        if (typeof GM === "object") {
-            GM.xmlHttpRequest(request);
-        }
-        else {
-            GM_xmlhttpRequest(request);
-        }
+            onerror: reject,
+        });
     });
 }
 function formatNumber(number) {
@@ -293,7 +92,7 @@ ${Object.values(hero.attributes).slice(0, 8).map(bbcode_attr).join("")}
 [td][color=mediumseagreen][size=12]HHP[/color][/td][td][size=12]${hero.attributes.hhp.value} [url=" "][${hero.attributes.hhp.effective_value}][/url][/size][/td]
 [/tr]
 [tr][td][color=dodgerblue][size=12]MP[/color][/td][td][size=12]${hero.attributes.mp.value} [url=" "][${hero.attributes.mp.effective_value}][/url][/size][/td]
-[td][color=dodgerblue][size=12]RMP[/color][/td][td][size=12]${hero.attributes.hhp.value} [url=" "][${hero.attributes.rmp.effective_value}][/url][/size][/td]
+[td][color=dodgerblue][size=12]RMP[/color][/td][td][size=12]${hero.attributes.rmp.value} [url=" "][${hero.attributes.rmp.effective_value}][/url][/size][/td]
 [/tr]
 [tr][td colspan=2][size=12]Actions[/size][/td][td colspan=2][size=12]${hero.attributes.act.value} [url=" "][${hero.attributes.act.effective_value}][/url][/size][/td][/tr]
 [tr][td colspan=2][size=12]Initiative[/size][/td][td colspan=2][size=12]${hero.attributes.ini.value} [url=" "][${hero.attributes.ini.effective_value}][/url][/size][/td][/tr]
@@ -335,7 +134,9 @@ const initiative = (hero) => `[h1]Initiative[/h1][table border=1]
 ${hero.skills
     .filter((x) => x.type === "initiative")
     .map((skill) => {
-    const m = skill.initiative_attr.match(/[a-z]{2}/gi), attr1 = hero.attributes[m[0]], attr2 = hero.attributes[m[1]];
+    const m = skill.initiative_attr.match(/[a-z]{2}/gi);
+    const attr1 = hero.attributes[m[0]];
+    const attr2 = hero.attributes[m[1]];
     return ('[tr][td][skill:"' + skill.name + '"' + (skill.color ? " color=" + skill.color : "") + " size=12][/td][td align=center]" +
         skill.initiative_attr +
         "[/td][td align=center]" + (attr1.effective_value * 2 + attr2.effective_value + skill.effective_rank * 2 + hero.attributes.ini.effective_value) + "[/td][/tr]");
@@ -406,51 +207,50 @@ const RE_RACE = /(Borderlander|Dinturan|Gnome|Halfling|Kargashian|Kerasi|Mag Mor
 const RE_CLASS = /(Adventurer|Alchemist|Apprentice|Archer|Barbarian|Bard|Cloud Raider|Cloudraider|Conjuror|Draclin|Drifter|Engineer|Fighter|Gladiator|Hunter|Juggler|Knight|Lightbringer|Mage|Muse|Nieri|Paladin|Priest|Scholar|Shadow Seeker|Shaman|Star Kinder|Warlock|Warlord|Zealot) \(/;
 const ATTR_COSTS = [0, 0, 100, 500, 1300, 2800, 5100, 8500, 13200, 19400, 27400, 37400, 49700, 64500, 82100, 102800, 126800, 154400, 185900, 221600, 261800, 306800, 356800, 412200, 473300, 540400, 613800, 693800, 780800, 875000, 976800];
 class HeroAttribute {
+    name;
+    value = 0;
+    effective_value = 0;
+    training_cost = 0;
     constructor(name) {
         this.name = name;
-        this.value = 0;
-        this.effective_value = 0;
-        this.training_cost = 0;
     }
 }
 class Hero {
-    constructor() {
-        this.name = "";
-        this.level = 1;
-        this.race = "";
-        this.char_class = "";
-        this.subclass = "";
-        this.actions = 1;
-        this.initiative = "";
-        this.reset_points = 0;
-        this.fame = 0;
-        this.gender = "M";
-        this.title = "";
-        this.skills = [];
-        this.hasUpperCoins = false;
-        this.attributes = {
-            st: new HeroAttribute("Strength"),
-            co: new HeroAttribute("Constitution"),
-            in: new HeroAttribute("Intelligence"),
-            dx: new HeroAttribute("Dexterity"),
-            ch: new HeroAttribute("Charisma"),
-            ag: new HeroAttribute("Agility"),
-            pe: new HeroAttribute("Perception"),
-            wi: new HeroAttribute("Willpower"),
-            hp: new HeroAttribute("HP"),
-            hhp: new HeroAttribute("HHP"),
-            mp: new HeroAttribute("MP"),
-            rmp: new HeroAttribute("RMP"),
-            ini: new HeroAttribute("Initiative"),
-            act: new HeroAttribute("Actions"),
-        };
-        this.armor = {};
-        this.items = [];
-        this.modifiers = {};
-        this.bonus_damage = {};
-        this.bonus_attack = {};
-        this.bonus_defence = {};
-    }
+    name = "";
+    level = 1;
+    race = "";
+    char_class = "";
+    subclass = "";
+    actions = 1;
+    initiative = "";
+    reset_points = 0;
+    fame = 0;
+    gender = "M";
+    title = "";
+    skills = [];
+    hasUpperCoins = false;
+    attributes = {
+        st: new HeroAttribute("Strength"),
+        co: new HeroAttribute("Constitution"),
+        in: new HeroAttribute("Intelligence"),
+        dx: new HeroAttribute("Dexterity"),
+        ch: new HeroAttribute("Charisma"),
+        ag: new HeroAttribute("Agility"),
+        pe: new HeroAttribute("Perception"),
+        wi: new HeroAttribute("Willpower"),
+        hp: new HeroAttribute("HP"),
+        hhp: new HeroAttribute("HHP"),
+        mp: new HeroAttribute("MP"),
+        rmp: new HeroAttribute("RMP"),
+        ini: new HeroAttribute("Initiative"),
+        act: new HeroAttribute("Actions"),
+    };
+    armor = {};
+    items = [];
+    modifiers = {};
+    bonus_damage = {};
+    bonus_attack = {};
+    bonus_defence = {};
     get ep_used() {
         const skill_cost = this.skills.reduce((acc, s) => acc + s.training_cost_ep, 0);
         const attr_cost = Object.values(this.attributes).reduce((acc, a) => acc + a.training_cost, 0);
@@ -484,7 +284,7 @@ class Hero {
                     if (ch_class)
                         this.char_class = ch_class[1];
                     const val = row.cells[1].querySelector("tr");
-                    if (val.cells) {
+                    if (val && val.cells) {
                         const attr_name = property.toLowerCase().substring(0, 2).replace("de", "dx");
                         const attr = this.attributes[attr_name];
                         const efval = parseEffectiveValue(textContent(val.cells[1]));
@@ -558,14 +358,14 @@ class Hero {
         }
         catch (ex) {
             console.error(ex);
+            return Promise.reject(ex);
         }
     }
     parseTables(tables) {
         const names = ["armor", "damage", "attack bonuses", "defence bonuses"];
         const tbl = tables.reduce((acc, t) => {
-            var _a;
             for (const cell of [0, 2, 4]) {
-                const name = (_a = t.rows[0].cells[cell]) === null || _a === void 0 ? void 0 : _a.textContent;
+                const name = t.rows[0].cells[cell]?.textContent;
                 if (names.includes(name)) {
                     acc[name] = [
                         ...t.rows[1].cells[cell].querySelectorAll(".row0, .row1"),
@@ -617,8 +417,8 @@ class Hero {
         if (!rows)
             return;
         for (const row of rows) {
-            let [attack_type, value] = row;
-            attack_type = attack_type.replace("(z)", "").trim();
+            const attack_type = row[0].replace("(z)", "").trim();
+            const value = row[1];
             this.bonus_defence[attack_type] = value.trim();
         }
     }
@@ -647,13 +447,13 @@ class Hero {
                         continue;
                     const a = row.querySelector('a[class*="item"]');
                     const enchanting = [];
-                    let n = a === null || a === void 0 ? void 0 : a.nextElementSibling;
+                    let n = a?.nextElementSibling;
                     let m;
-                    while ((n === null || n === void 0 ? void 0 : n.tagName) === "IMG" && (m = n.src.match(/gem_(.+)\./))) {
+                    while (n?.tagName === "IMG" && (m = n.src.match(/gem_(.+)\./))) {
                         enchanting.push((n.src.includes("mgem") ? ":m" : ":g") + m[1] + ":");
                         n = n.nextElementSibling;
                     }
-                    let name = a.parentElement.textContent.trim().replace(/!$/, "");
+                    let name = a?.parentElement?.textContent.trim().replace(/!$/, "") || "";
                     const uses = name.match(re_uses);
                     if (uses) {
                         name = name.replace(re_uses, "").trim();
@@ -663,7 +463,7 @@ class Hero {
                         uses: uses ? " " + uses[0] : "",
                         slot: select.options[select.selectedIndex].text,
                         enchanting,
-                        isUnique: a.className.includes("item_unique"),
+                        isUnique: a?.className.includes("item_unique") === true,
                     };
                     items.push(item);
                     used.delete(item.slot);
@@ -694,16 +494,216 @@ class Hero {
         }
     }
 }
+const SEC_COSTS = [0, 40, 120, 400, 960, 1880, 3320, 5360, 8120, 11720, 16240, 21840, 28600, 36680, 46160, 57160, 69840, 84280, 100640, 119000, 139520, 162280, 187440, 215120, 245480, 278600, 314600, 353640, 395840, 441320, 490200, 542640, 598760, 658680, 722520, 790440, 862560, 939000, 1019920, 1105440, 195680];
+const EXC_COSTS = [0, 50, 150, 500, 1300, 2700, 4850, 7950, 12200, 17800, 24950, 33850, 44700, 57750, 73200, 91250, 112150, 136100, 163350, 194150, 228750, 267350, 320200, 357550, 409650, 466750, 529100, 596950, 670550, 750150, 836050, 928450, 1027650, 1133900, 1247450, 1368600, 1497600, 1634700, 1780200, 1934400, 2097500];
+const TAL_COSTS = [0, 1440, 3240, 5440, 8080, 11200, 14840, 19040, 23840, 29280, 35400, 42240, 49840, 58240, 67480, 77600, 88640, 100640, 113640, 127680, 142800, 159040, 176440, 195040, 214880, 236000, 258440, 282240, 307440, 334080, 362200, 391840, 423040, 455840, 490280, 526400, 564240, 603840, 645240, 688480, 733600];
+class HeroSkill {
+    name = "";
+    type = "";
+    rank = 0;
+    can_undo = false;
+    initial_rank = 0;
+    effective_rank = 0;
+    primary = false;
+    secondary = false;
+    exceptional = false;
+    talent = false;
+    in_round = true;
+    pre_round = false;
+    target = "";
+    max_affected = "";
+    one_pos = false;
+    mp_base = 0;
+    mp_cost = 0;
+    item = "";
+    skill_class = "";
+    initiative_attr = "";
+    attack_type = "";
+    attack_attr = "";
+    defence_attr = "";
+    effect_attr = "";
+    training_cost_ep = 0;
+    training_cost_gold = 0;
+    url = "";
+    color = "";
+    hero;
+    onDone;
+    roll() {
+        const res = {
+            attack: "",
+            defence: "",
+            effect: "",
+        };
+        return res;
+    }
+    fetchInfo(data) {
+        try {
+            const skill_info = add("div");
+            skill_info.innerHTML = data;
+            const table_rows = Array.from(skill_info
+                .querySelector("form")
+                .querySelectorAll(".content_table table tr"));
+            for (let i = 0, cnt = table_rows.length; i < cnt; i++) {
+                const property = textContent(table_rows[i].cells[0]).trim(), value = textContent(table_rows[i].cells[1])
+                    .replace(/(\s|&nbsp;)/g, " ")
+                    .trim();
+                switch (property) {
+                    case "type":
+                        this.type = value;
+                        break;
+                    case "may be used":
+                        this.in_round = value.indexOf("in round") > -1;
+                        this.pre_round = value.indexOf("in pre round") > -1;
+                        break;
+                    case "target":
+                        this.target = value;
+                        this.one_pos = value.indexOf("one position") > -1;
+                        break;
+                    case "Max. characters affected":
+                    case "Max. opponents affected":
+                        this.max_affected = value;
+                        break;
+                    case "Mana points cost":
+                        if (value !== "-") {
+                            const mp = value.match(/([0-9]+) \(([0-9]+)\)/);
+                            if (mp) {
+                                this.mp_base = Number(mp[2]);
+                                this.mp_cost = Math.floor(this.mp_base * (0.8 + 0.1 * this.effective_rank));
+                            }
+                        }
+                        break;
+                    case "item":
+                        this.item = value;
+                        break;
+                    case "skill class":
+                        this.skill_class = value;
+                        break;
+                    case "attack type":
+                        this.attack_type = value;
+                        break;
+                    case "attack":
+                        this.attack_attr = value;
+                        break;
+                    case "damage":
+                        this.effect_attr = value;
+                        break;
+                    case "initiative":
+                        this.initiative_attr = value;
+                        break;
+                    case "defense":
+                        this.defence_attr = value;
+                        break;
+                    case "healing":
+                        this.effect_attr = value;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if (this.max_affected.includes("% of your hero`s level")) {
+                const tmp = this.max_affected
+                    .replace("% of your hero`s level", "*" + this.hero.level + "/100")
+                    .replace(" ", "");
+                this.max_affected = Math.floor(eval(tmp)).toString();
+            }
+            else if (this.max_affected.includes("% of your skill rank")) {
+                const tmp = this.max_affected
+                    .replace("% of your skill rank", "*" + this.effective_rank + "/100")
+                    .replace(" ", "");
+                this.max_affected = Math.floor(eval(tmp)).toString();
+            }
+            switch (this.type) {
+                case "attack":
+                case "degradation":
+                    if (this.target.indexOf("one enemy") > -1)
+                        this.max_affected = "1";
+                    break;
+                case "improvement":
+                case "healing":
+                    if (this.target.indexOf("one team") > -1)
+                        this.max_affected = "1";
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch (ex) {
+            console.error(ex);
+        }
+        if (typeof this.onDone === "function")
+            this.onDone(this);
+    }
+    parse(row_html) {
+        try {
+            const link = row_html.cells[1]?.querySelector("a");
+            if (!link) {
+                console.warn("Unable to parse skill: missing link");
+                return this;
+            }
+            const rank_row = row_html.cells[2].querySelector("tr"), rank = rank_row
+                ? parseEffectiveValue(textContent(rank_row.cells[1]))
+                : [0, 0], title = unescape(link.href).match(/name=([a-z\- :()'!+]+)/i);
+            if (title !== null && rank[0] !== 0) {
+                this.name = title[1].replace(/\+/g, " ");
+                this.talent = this.name.indexOf("Talent:") > -1;
+                this.rank = rank[0];
+                this.effective_rank = rank[1];
+                this.url = link.href;
+                if (!this.can_undo && this.rank === 1) {
+                    this.initial_rank = 1;
+                }
+                if (!this.talent) {
+                    switch (attr(link, "class")) {
+                        case "skill_primary":
+                            this.primary = true;
+                            break;
+                        case "skill_secondary":
+                            this.secondary = true;
+                            this.color = "lightslategray";
+                            break;
+                        case "skill_foreign":
+                            this.exceptional = true;
+                            this.color = "#858585";
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (!(this.rank === 1 && this.initial_rank === 1))
+                    this.calculateCost();
+            }
+        }
+        catch (error) {
+            console.error(error);
+        }
+        return this;
+    }
+    calculateCost() {
+        let cost = 0;
+        if (this.primary) {
+            for (let i = this.rank; i > 1; i--)
+                cost += (Math.pow(i, 2) - i) * 20;
+            if (cost === 0)
+                cost = 40;
+        }
+        else if (this.secondary) {
+            cost = SEC_COSTS[this.rank] || 0;
+        }
+        else if (this.exceptional) {
+            cost = EXC_COSTS[this.rank] || 0;
+        }
+        else if (this.talent) {
+            cost = TAL_COSTS[this.rank] || 0;
+        }
+        this.training_cost_ep = cost;
+        this.training_cost_gold = cost * 0.9;
+        return this;
+    }
+}
 function cssClass(elem, name, toggleOn) {
-    const classNames = elem.className.split(" ");
-    const has = classNames.some((x) => x === name);
-    if (typeof toggleOn !== "boolean")
-        return has;
-    if (has && toggleOn)
-        return elem;
-    elem.className = toggleOn
-        ? elem.className + " " + name
-        : classNames.filter((x) => x !== name).join(" ");
+    if (toggleOn === undefined)
+        return elem.classList.contains(name);
+    elem.classList.toggle(name, toggleOn);
     return elem;
 }
 const frmSkills = document.querySelector("#main_content form");
@@ -712,7 +712,7 @@ const exportProfile = function () {
     attr(btnExport, "disabled", "true");
     cssClass(btnExport, "button clickable", false);
     cssClass(btnExport, "button_disabled", true);
-    attr(imgLoader, "style", null, true);
+    attr(imgLoader, "style", null);
     httpFetch(location.href.replace("skills.php", "attributes.php")).then((resp) => {
         const skillRows = Array.from(frmSkills.querySelectorAll(".row0")).concat(Array.from(frmSkills.querySelectorAll(".row1")));
         let pendingCount = 0;
@@ -726,15 +726,15 @@ const exportProfile = function () {
                     const h1 = frmSkills.querySelector("h1");
                     const d = new Date();
                     const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.1[/size]`;
-                    let txtExport = h1.parentElement.querySelector("#profile-export-result");
+                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.2[/size]`;
+                    let txtExport = h1?.parentElement.querySelector("#profile-export-result");
                     if (!txtExport) {
-                        txtExport = add("textarea", h1.parentNode);
+                        txtExport = add("textarea", h1?.parentNode);
                         attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
                     }
                     txtExport.innerHTML = bbcode;
                     attr(imgLoader, "style", "display: none");
-                    attr(btnExport, "disabled", "false", true);
+                    attr(btnExport, "disabled", null);
                     cssClass(btnExport, "button clickable", true);
                     cssClass(btnExport, "button_disabled", false);
                 });

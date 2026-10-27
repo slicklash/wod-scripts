@@ -7,6 +7,8 @@ import { HeroSkill } from "./hero-skill";
 
 /***
  * TODO:
+ *   - parse damage
+ *   - parse weaknesses & strengths
  *   - parse race
  *   - parse skill modifiers
  *   - parse equipment
@@ -15,19 +17,19 @@ import { HeroSkill } from "./hero-skill";
  */
 
 // prettier-ignore
-const frmSkills: HTMLFormElement = document.querySelector("#main_content form");
+const frmSkills: HTMLFormElement | null = document.querySelector("#main_content form");
 let btnExport, chkboxItems, imgLoader;
 
 const exportProfile = function () {
   attr(btnExport, "disabled", "true");
   cssClass(btnExport, "button clickable", false);
   cssClass(btnExport, "button_disabled", true);
-  attr(imgLoader, "style", null, true);
+  attr(imgLoader, "style", null);
 
   httpFetch(location.href.replace("skills.php", "attributes.php")).then(
     (resp) => {
       // prettier-ignore
-      const skillRows = Array.from(frmSkills.querySelectorAll(".row0")).concat(Array.from(frmSkills.querySelectorAll(".row1")));
+      const skillRows = Array.from(frmSkills!.querySelectorAll<HTMLTableRowElement>(".row0")).concat(Array.from(frmSkills!.querySelectorAll<HTMLTableRowElement>(".row1")));
       let pendingCount = 0;
       // prettier-ignore
       const hero = new Hero();
@@ -40,21 +42,21 @@ const exportProfile = function () {
           p.then(() => {
             hero.addUpperCoinsArmor();
 
-            const h1 = frmSkills.querySelector("h1");
+            const h1 = frmSkills!.querySelector("h1");
             const d = new Date();
             // prettier-ignore
             const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
             const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=@downloadURL]Profile Export[/url] @version[/size]`;
             // prettier-ignore
-            let txtExport = h1.parentElement.querySelector("#profile-export-result");
+            let txtExport = h1?.parentElement!.querySelector("#profile-export-result");
             if (!txtExport) {
-              txtExport = add("textarea", h1.parentNode);
+              txtExport = add<HTMLTextAreaElement>("textarea", h1?.parentNode);
               // prettier-ignore
               attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
             }
-            txtExport.innerHTML = bbcode;
+            txtExport!.innerHTML = bbcode;
             attr(imgLoader, "style", "display: none");
-            attr(btnExport, "disabled", "false", true);
+            attr(btnExport, "disabled", null);
             cssClass(btnExport, "button clickable", true);
             cssClass(btnExport, "button_disabled", false);
           });
@@ -100,13 +102,13 @@ if (
     attr(chkboxItems, { type: "checkbox", id: "export-items", style: "margin-left: 4px" });
     attr(label_items, { for: "export-items" });
     btnExport.addEventListener("click", exportProfile, false);
-    button.parentNode.insertBefore(label_items, button.nextSibling);
-    button.parentNode.insertBefore(chkboxItems, label_items);
-    button.parentNode.insertBefore(btnExport, chkboxItems);
+    button!.parentNode!.insertBefore(label_items, button.nextSibling);
+    button!.parentNode!.insertBefore(chkboxItems, label_items);
+    button!.parentNode!.insertBefore(btnExport, chkboxItems);
     // prettier-ignore
-    button.parentNode.insertBefore(add<HTMLBRElement>("br"), label_items.nextSibling);
+    button!.parentNode!.insertBefore(add<HTMLBRElement>("br"), label_items.nextSibling);
     // prettier-ignore
     imgLoader = attr(add("img", add("div")), { src: `${location.protocol}//${location.host}/wod/css/img/ajax-loader.gif`, style: "display: none", });
-    button.parentNode.insertBefore(imgLoader, button.parentNode.firstChild);
+    button!.parentNode!.insertBefore(imgLoader, button!.parentNode!.firstChild);
   }
 }

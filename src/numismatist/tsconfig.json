@@ -1,6 +1,7 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outFile": "../../build/numismatist.js"
+        "outFile": "../../build/numismatist.js",
+        "rootDir": ".."
     }
 }

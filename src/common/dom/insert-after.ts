@@ -1,7 +1,6 @@
-export function insertAfter(node, ...elems) {
+export function insertAfter(node: Node, ...elems: (Node | null | undefined)[]) {
   const parent = node.parentNode;
-  elems.forEach((elem) => {
-    parent.insertBefore(elem, node.nextSibling);
-    node = elem;
-  });
+  elems.forEach(
+    (el) => el && parent?.insertBefore((node = el), node.nextSibling),
+  );
 }

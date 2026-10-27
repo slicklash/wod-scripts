@@ -1,7 +1,8 @@
 import { add } from "@common/dom/add";
 import { textContent } from "@common/dom/text-content";
-import { parseEffectiveValue } from "@common/parsing/parse-effective-value";
 import { httpFetch } from "@common/net/http-fetch";
+import { parseEffectiveValue } from "@common/parsing/parse-effective-value";
+import { HeroSkill } from "./hero-skill";
 import { toBBCode } from "./profile-template";
 
 // prettier-ignore
@@ -40,7 +41,7 @@ export class Hero {
   fame = 0;
   gender = "M";
   title = "";
-  skills = [];
+  skills: HeroSkill[] = [];
   hasUpperCoins = false;
   attributes = {
     st: new HeroAttribute("Strength"),
@@ -82,10 +83,10 @@ export class Hero {
     return toBBCode(this);
   }
 
-  parse(attrPageHtml, withItems = false): Promise<any> {
+  parse(attrPageHtml, withItems = false): Promise<void> {
     try {
       const page = add<HTMLDivElement>("div", null, attrPageHtml);
-      const form = page.querySelector('form[name="the_form"]');
+      const form = page.querySelector('form[name="the_form"]')!;
       const tables = [...page.querySelectorAll('[name="the_form"] > table')];
 
       const title = form.querySelector("h1");
@@ -104,7 +105,7 @@ export class Hero {
           if (race) this.race = race[1];
           if (ch_class) this.char_class = ch_class[1];
           const val = row.cells[1].querySelector("tr");
-          if (val.cells) {
+          if (val && val.cells) {
             // prettier-ignore
             const attr_name = property.toLowerCase().substring(0, 2).replace("de", "dx");
             const attr = this.attributes[attr_name];
@@ -187,6 +188,7 @@ export class Hero {
       return Promise.resolve();
     } catch (ex) {
       console.error(ex);
+      return Promise.reject(ex);
     }
   }
 
@@ -247,8 +249,8 @@ export class Hero {
   parseDefenceBonus(rows?: string[][]) {
     if (!rows) return;
     for (const row of rows) {
-      let [attack_type, value] = row;
-      attack_type = attack_type.replace("(z)", "").trim();
+      const attack_type = row[0].replace("(z)", "").trim();
+      const value = row[1];
       this.bonus_defence[attack_type] = value.trim();
     }
   }
@@ -288,13 +290,13 @@ export class Hero {
       )
         .map((x) => x.nextElementSibling)
         .forEach((table) => {
-          for (const row of Array.from(table.querySelectorAll("tr"))) {
+          for (const row of Array.from(table!.querySelectorAll("tr"))) {
             const select = row.querySelector(
               'select[name*="EquipItem"]',
             ) as HTMLSelectElement;
             if (!select) continue;
             const a = row.querySelector('a[class*="item"]');
-            const enchanting = [];
+            const enchanting: string[] = [];
             let n = a?.nextElementSibling as HTMLImageElement;
             let m;
             while (n?.tagName === "IMG" && (m = n.src.match(/gem_(.+)\./))) {
@@ -303,7 +305,8 @@ export class Hero {
               );
               n = n.nextElementSibling as HTMLImageElement;
             }
-            let name = a.parentElement.textContent.trim().replace(/!$/, "");
+            let name =
+              a?.parentElement?.textContent.trim().replace(/!$/, "") || "";
             const uses = name.match(re_uses);
             if (uses) {
               name = name.replace(re_uses, "").trim();
@@ -313,7 +316,7 @@ export class Hero {
               uses: uses ? " " + uses[0] : "",
               slot: select.options[select.selectedIndex].text,
               enchanting,
-              isUnique: a.className.includes("item_unique"),
+              isUnique: a?.className.includes("item_unique") === true,
             };
             items.push(item);
             used.delete(item.slot);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.6.3
+// @version        1.6.4
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
@@ -57,7 +57,7 @@ class StorageItem {
     isUsable = true;
     uses = 1;
     isGroupItem = true;
-    _isConsumbale = false;
+    _isConsumable = false;
     numberCell;
     ctrlLocationSelect;
     ctrlLocationCheckbox;
@@ -65,7 +65,7 @@ class StorageItem {
     ctrlGroupCheckbox;
     price = 0;
     get isConsumable() {
-        if (this._isConsumbale)
+        if (this._isConsumable)
             return true;
         if (/^raw /.test(this.name))
             return true;
@@ -86,7 +86,7 @@ class StorageItem {
         return false;
     }
     set isConsumable(value) {
-        this._isConsumbale = value;
+        this._isConsumable = value;
     }
 }
 var SELECTION_OPTIONS = [
@@ -158,18 +158,17 @@ function applySplit(items, targets, filtered, splitFilterMatchers = []) {
         predicate: (item) => Boolean(item.ctrlLocationSelect && item.ctrlLocationCheckbox),
         resolveMoveTarget: (item) => item.isConsumable ? targets.GroupStorage : targets.TreasureVault,
     };
-    if (filtered)
-        applySplitFiltered(items, config, splitFilterMatchers);
-    else
-        applySplitAll(items, config);
-    for (const item of items) {
+    const moved = filtered
+        ? applySplitFiltered(items, config, splitFilterMatchers)
+        : applySplitAll(items, config);
+    for (const item of moved) {
         if (item.numberCell) {
             item.numberCell.style.backgroundColor = "rgba(0,255,0,0.2)";
         }
     }
 }
 function applySplitAll(items, config) {
-    _applyMoveAction(items, config);
+    return _applyMoveAction(items, config);
 }
 function applySplitFiltered(items, config, matchers) {
     const matchingConfig = {
@@ -180,7 +179,7 @@ function applySplitFiltered(items, config, matchers) {
             }),
         resolveMoveTarget: config.resolveMoveTarget,
     };
-    _applyMoveAction(items, matchingConfig);
+    return _applyMoveAction(items, matchingConfig);
 }
 function applyMoveToCellar(items) {
     const eligible = items.filter((item) => item.ctrlLocationSelect && item.ctrlLocationCheckbox);
@@ -273,13 +272,16 @@ function _applyMoveAction(items, config) {
         item.ctrlLocationCheckbox &&
         config.predicate(item));
     const hasSelected = matching.some((item) => item.ctrlLocationCheckbox.checked);
+    const moved = new Set();
     for (const item of matching) {
         const checkbox = item.ctrlLocationCheckbox;
         const select = item.ctrlLocationSelect;
         if (hasSelected && !checkbox.checked)
             continue;
         select.value = config.resolveMoveTarget(item);
+        moved.add(item);
     }
+    return moved;
 }
 function copyPriceToNextRow(items, input, nextRow, nextInput) {
     const checkbox = input.parentElement?.parentElement?.querySelector('input[type="checkbox"][name*="Sell"]');

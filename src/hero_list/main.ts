@@ -1,192 +1,189 @@
 import { add } from "@common/dom/add";
 import { attr } from "@common/dom/attr";
 import { textContent } from "@common/dom/text-content";
-import { insertAfter } from "@common/dom/insert-after";
 import { httpFetch } from "@common/net/http-fetch";
 import { Store } from "@common/persistence/store";
 
-interface IHeroInfo {
+type HeroInfo = {
   group?: string;
   row: HTMLTableRowElement;
   weight?: number;
+};
+
+// prettier-ignore
+const formatTime = (minutes: number) => [Math.trunc(minutes / 60), minutes % 60] .map((x) => String(x).padStart(2, "0")).join(":");
+// prettier-ignore
+const minutes = (time: string) => time.split(":").reduce((total, part) => (total > 0 ? total + Number(part) : Number(part) * 60), 0);
+
+function formatDungeonTitle(
+  dungeon: string,
+  time: string,
+  currentTime?: string,
+) {
+  const localTime = time.split("/")[0];
+  const wait = time.includes("tomorrow")
+    ? minutes(time.replace("tomorrow", "").trim()) + 1440
+    : minutes(time);
+  return currentTime
+    ? `${localTime} (in ${formatTime(wait - minutes(currentTime))}) - ${dungeon}`
+    : `${localTime} - ${dungeon}`;
 }
 
-const leadingZero = (x) => (x < 10 ? "0" + x : x.toString());
-const formatTime = (x) =>
-  `${leadingZero(Math.trunc(x / 60))}:${leadingZero(x % 60)}`;
-const minutes = (t) =>
-  t
-    .split(":")
-    .reduce((acc, x) => (acc > 0 ? acc + Number(x) : Number(x) * 60), 0);
-
-export function parseHeroTable(
+export async function parseHeroTable(
   [, ...rows]: HTMLTableRowElement[],
   currentTime?: string,
-): Promise<IHeroInfo[]> {
-  return new Promise((resolve) => {
-    const formatDungeonTitle = (dungeon, time) => {
-      const minutesToWait = time.includes("tomorrow")
-        ? minutes(time.replace("tomorrow", "").trim()) + 1440
-        : minutes(time);
-      const localTime = time.split("/")[0];
-      const title = currentTime
-        ? `${localTime} (in ${formatTime(minutesToWait - minutes(currentTime))}) - ${dungeon}`
-        : `${localTime} - ${dungeon}`;
-      return title;
-    };
+): Promise<HeroInfo[]> {
+  const heroes = await Promise.all(
+    rows.map(async (row): Promise<HeroInfo> => {
+      const cells = row.cells;
+      const hid = Number(
+        (cells[0].querySelector("input") as HTMLInputElement).value,
+      ).toString();
+      const level = Number(textContent(cells[2]));
+      const dungeonCell = cells[4];
+      const dungeon = getDungeonName(dungeonCell);
+      const time = textContent(dungeonCell).trim();
 
-    Promise.all(rows.map((x) => getHeroInfo(formatDungeonTitle, x))).then(
-      (result) => {
-        resolve(result.sort((a, b) => a.weight - b.weight));
-      },
-    );
-  });
-}
-
-function getHeroInfo(formatDungeonTitle, row): Promise<IHeroInfo> {
-  return new Promise((resolve) => {
-    const cells = row.cells;
-    const hid = Number((<any>cells[0].querySelector("input")).value).toString();
-    const level = Number(textContent(cells[2]));
-    const next = cells[4];
-    const dungeon = getDungeonName(<any>next);
-    const time = textContent(cells[4]).trim();
-
-    Store.get(hid).then((value) => {
-      let info: { weight?; group? };
+      let info: { weight?: number; group?: string } = {};
 
       try {
-        info = value ? JSON.parse(value) : {};
+        const value = await Store.get(hid);
+        if (value) info = JSON.parse(value);
       } catch {
         info = {};
       }
-      const weight = info.weight || (level === 0 ? 100 : level);
 
       if (dungeon) {
-        textContent(next, formatDungeonTitle(dungeon, time));
+        textContent(
+          dungeonCell,
+          formatDungeonTitle(dungeon, time, currentTime),
+        );
       }
 
-      const timeCell = add("td");
-      textContent(timeCell, time);
+      return {
+        row,
+        weight: Number(info.weight || (level === 0 ? 100 : level)),
+        group: info.group || "no group",
+      };
+    }),
+  );
 
-      resolve({ weight: Number(weight), row, group: info.group || "no group" });
-    });
-  });
+  return heroes.sort((a, b) => (a.weight || 0) - (b.weight || 0));
 }
 
 export function getDungeonName(td: HTMLTableCellElement): string {
-  let tooltip: string = attr(td, "onmouseover") || "";
-  const n = tooltip.lastIndexOf("left;'>");
-  if (n > -1) tooltip = tooltip.slice(n);
+  let tooltip = attr(td, "onmouseover") || "";
+  const index = tooltip.lastIndexOf("left;'>");
+
+  if (index > -1) tooltip = tooltip.slice(index);
+
   return tooltip
     .replace(/.+\(this,'(.+)'\);/, "$1")
     .replace(/.+>(.+)<\/th.+/i, "$1");
 }
 
-export function saveWeights(rows: HTMLTableRowElement[]) {
-  const promises = [];
+export async function saveWeights(rows: HTMLTableRowElement[]) {
+  await Promise.all(
+    rows.slice(1).map(async (row) => {
+      const cells = row.cells;
+      const hid = Number(
+        (cells[0].querySelector("input") as HTMLInputElement).value,
+      ).toString();
 
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const cells = row.cells;
-    const hid = Number((<any>cells[0].querySelector("input")).value).toString();
-    let weight = Number((<any>cells[6].querySelector("input")).value);
+      const input = cells[6].querySelector("input") as HTMLInputElement;
+      const weight = Number(input.value) || 0;
 
-    if (isNaN(weight)) weight = 0;
+      const { data } = (await httpFetch(
+        `/wod/spiel/hero/profile.php?id=${hid}`,
+      )) as { data: string };
 
-    const p = httpFetch("/wod/spiel/hero/profile.php?id=" + hid);
-    p.then((resp) => {
-      const data = resp.data;
-      const n = data.indexOf("group:");
-      const group = data
-        .slice(n, n + 200)
-        .split("<a")[1]
-        .split(/[><]/)[1];
-      return Store.set(hid, JSON.stringify({ weight, group }));
-    });
+      const index = data.indexOf("group:");
+      if (index > -1) {
+        const group = data
+          .slice(index, index + 200)
+          .split("<a")[1]
+          .split(/[><]/)[1];
 
-    promises.push(p);
+        await Store.set(hid, JSON.stringify({ weight, group }));
+      }
+    }),
+  );
+
+  const form = document.forms.namedItem("the_form");
+  form?.submit();
+}
+
+export function main(mainContent?: ParentNode) {
+  const content = mainContent ?? document.querySelector("#main_content");
+  const table = content?.querySelector<HTMLTableElement>("form table");
+  if (!table) return;
+
+  const rows = Array.from(table.querySelectorAll("tr"));
+  if (!rows.length) return;
+
+  if (!textContent(content?.querySelector("h1")).includes("Hero")) return;
+
+  const newTable = add<HTMLTableElement>("table");
+  const tbody = add<HTMLTableSectionElement>("tbody", newTable);
+  attr(newTable, "class", "content_table");
+
+  const header = rows[0];
+  const weightHeader = add<HTMLTableCellElement>("th");
+  const label = add<HTMLSpanElement>("span", weightHeader);
+  const saveButton = add<HTMLInputElement>("input", weightHeader);
+
+  textContent(label, "weight");
+  add("br", label);
+
+  attr(saveButton, {
+    type: "button",
+    value: "Update",
+    class: "button clickable",
+  });
+  saveButton.addEventListener("click", () => saveWeights(rows));
+
+  header.append(weightHeader);
+  tbody.append(header);
+
+  const groupHeader = add<HTMLTableCellElement>("th");
+  textContent(groupHeader, "group");
+  header.insertBefore(groupHeader, header.cells[4]);
+
+  const clock = document.querySelector("#clock");
+  const currentTime = clock?.textContent ?? undefined;
+
+  function addWeightInput(row: HTMLTableRowElement, weight: number) {
+    const cell = add<HTMLTableCellElement>("td", row);
+    const input = add<HTMLInputElement>("input", cell);
+
+    attr(input, { type: "text", style: "width: 30px", value: `${weight}` });
+    attr(cell, "align", "center");
   }
 
-  Promise.all(promises).then(() => {
-    const form = (<any>document.forms).the_form;
-    if (form) form.submit();
+  parseHeroTable(rows, currentTime).then((heroes) => {
+    heroes.forEach((hero, index) => {
+      const { row, group = "no group", weight = 0 } = hero;
+
+      addWeightInput(row, weight);
+      attr(row, "class", `row${index % 2}`);
+
+      const cell = add<HTMLTableCellElement>("td");
+      const link = add<HTMLAnchorElement>("a", cell);
+
+      attr(link, {
+        href: `/wod/spiel/dungeon/group.php?name=${encodeURIComponent(group)}`,
+        target: "_blank",
+      });
+      textContent(link, group);
+
+      row.insertBefore(cell, row.cells[4]);
+      tbody.append(row);
+    });
+
+    table.replaceWith(newTable);
   });
 }
 
-export function main(main_content?) {
-  const table = (
-    main_content || document.querySelector("#main_content")
-  ).querySelector("form table");
-  const rows: HTMLTableRowElement[] = table
-    ? <HTMLTableRowElement[]>Array.from(table.querySelectorAll("tr"))
-    : undefined;
-
-  if (rows) {
-    const newTable = add<HTMLElement>("table");
-    const newTbody = add<HTMLElement>("tbody", newTable);
-
-    attr(newTable, "class", "content_table");
-
-    const headerWeight = add<Element>("th");
-    const label = add<HTMLSpanElement>("span", headerWeight);
-    const buttonSave = add<HTMLInputElement>("input", headerWeight);
-
-    label.innerHTML = "weight<br/>";
-    attr(buttonSave, {
-      type: "button",
-      value: "Update",
-      class: "button clickable",
-    });
-    buttonSave.addEventListener(
-      "click",
-      () => {
-        saveWeights(rows);
-      },
-      false,
-    );
-    rows[0].appendChild(headerWeight);
-    newTbody.appendChild(rows[0]);
-
-    const groupName = add<HTMLElement>("th");
-    textContent(groupName, "group");
-    rows[0].insertBefore(groupName, rows[0].cells[4]);
-
-    const time = document.querySelector("#clock");
-    let group;
-
-    const makeInput = (row, value) => {
-      const colWeight = add("td", row);
-      const txt = add("input");
-
-      attr(txt, { type: "text", style: "width: 30px", value });
-      attr(colWeight, "align", "center");
-      add(txt, colWeight);
-    };
-
-    let color = 0;
-
-    parseHeroTable(rows, time ? time.textContent : undefined).then((heroes) => {
-      heroes.forEach((hero, i) => {
-        const row = hero.row;
-        makeInput(row, hero.weight);
-        attr(row, "class", "row" + (color++ % 2));
-
-        const c = add<HTMLElement>("td");
-        c.innerHTML = `<a href="/wod/spiel/dungeon/group.php?name=${hero.group}" target="_blank" />${hero.group}</a>`;
-        row.insertBefore(c, row.cells[4]);
-
-        if (i > 0 && group !== hero.group) {
-          group = hero.group;
-        }
-
-        add(hero.row, newTbody);
-      });
-
-      insertAfter(table, newTable);
-      table.parentNode.removeChild(table);
-    });
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => main());
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", () => main(), { once: true });
+else main();

@@ -2,9 +2,10 @@ import { add } from "@common/dom/add";
 import { attr } from "@common/dom/attr";
 import { textContent } from "@common/dom/text-content";
 import { parseEffectiveValue } from "@common/parsing/parse-effective-value";
+import { type Hero } from "./hero";
 
 // prettier-ignore
-const SEC_COSTS = [0, 40, 120, 400, 960, 1880, 3320, 5360, 8120, 11720, 16240, 21840, 28600, 36680, 46160, 57160, 69840, 84280, 100640, 119000, 139520, 162280, 187440, 215120, 245480, 278600, 314600, 353640, 395840, 441320, 490200, 542640, 598760, 658680, 722520, 79440, 862560, 939000, 1019920, 1105440, 195680];
+const SEC_COSTS = [0, 40, 120, 400, 960, 1880, 3320, 5360, 8120, 11720, 16240, 21840, 28600, 36680, 46160, 57160, 69840, 84280, 100640, 119000, 139520, 162280, 187440, 215120, 245480, 278600, 314600, 353640, 395840, 441320, 490200, 542640, 598760, 658680, 722520, 790440, 862560, 939000, 1019920, 1105440, 195680];
 // prettier-ignore
 const EXC_COSTS = [0, 50, 150, 500, 1300, 2700, 4850, 7950, 12200, 17800, 24950, 33850, 44700, 57750, 73200, 91250, 112150, 136100, 163350, 194150, 228750, 267350, 320200, 357550, 409650, 466750, 529100, 596950, 670550, 750150, 836050, 928450, 1027650, 1133900, 1247450, 1368600, 1497600, 1634700, 1780200, 1934400, 2097500];
 // prettier-ignore
@@ -39,8 +40,8 @@ export class HeroSkill {
   training_cost_gold = 0;
   url = "";
   color = "";
-  hero = null;
-  onDone = null;
+  hero?: Hero;
+  onDone?: (skill: HeroSkill) => void;
 
   roll() {
     const res = {
@@ -83,13 +84,13 @@ export class HeroSkill {
     */
   }
 
-  fetchInfo(data) {
+  fetchInfo(data: string) {
     try {
       const skill_info = add<HTMLElement>("div");
       skill_info.innerHTML = data;
       const table_rows = Array.from(
         skill_info
-          .querySelector("form")
+          .querySelector("form")!
           .querySelectorAll(".content_table table tr"),
       );
 
@@ -119,11 +120,13 @@ export class HeroSkill {
             break;
           case "Mana points cost":
             if (value !== "-") {
-              const mp = value.match(/([0-9])+ \(([0-9]+)\)/);
-              this.mp_base = Number(mp[2]);
-              this.mp_cost = Math.floor(
-                this.mp_base * (0.8 + 0.1 * this.effective_rank),
-              );
+              const mp = value.match(/([0-9]+) \(([0-9]+)\)/);
+              if (mp) {
+                this.mp_base = Number(mp[2]);
+                this.mp_cost = Math.floor(
+                  this.mp_base * (0.8 + 0.1 * this.effective_rank),
+                );
+              }
             }
             break;
           case "item":
@@ -157,7 +160,7 @@ export class HeroSkill {
 
       if (this.max_affected.includes("% of your hero`s level")) {
         const tmp = this.max_affected
-          .replace("% of your hero`s level", "*" + this.hero.level + "/100")
+          .replace("% of your hero`s level", "*" + this.hero!.level + "/100")
           .replace(" ", "");
         this.max_affected = Math.floor(eval(tmp)).toString();
       } else if (this.max_affected.includes("% of your skill rank")) {
@@ -186,10 +189,15 @@ export class HeroSkill {
     if (typeof this.onDone === "function") this.onDone(this);
   }
 
-  parse(row_html) {
+  parse(row_html: HTMLTableRowElement) {
     try {
-      const link = row_html.cells[1].querySelector("a"),
-        rank_row = row_html.cells[2].querySelector("tr"),
+      const link = row_html.cells[1]?.querySelector("a");
+      if (!link) {
+        console.warn("Unable to parse skill: missing link");
+        return this;
+      }
+
+      const rank_row = row_html.cells[2].querySelector("tr"),
         rank = rank_row
           ? parseEffectiveValue(textContent(rank_row.cells[1]))
           : [0, 0],
