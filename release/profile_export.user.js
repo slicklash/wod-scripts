@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Profile Export
 // @description    Script allows to export hero profile information to BBCode
-// @version        2.0.2
+// @version        2.0.3
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js
 // @author         Never
 // @include        http*://*.world-of-dungeons.net/wod/spiel/hero/skills.php*
@@ -710,7 +710,8 @@ const frmSkills = document.querySelector("#main_content form");
 let btnExport, chkboxItems, imgLoader;
 const exportProfile = function () {
     attr(btnExport, "disabled", "true");
-    cssClass(btnExport, "button clickable", false);
+    cssClass(btnExport, "button", true);
+    cssClass(btnExport, "clickable", false);
     cssClass(btnExport, "button_disabled", true);
     attr(imgLoader, "style", null);
     httpFetch(location.href.replace("skills.php", "attributes.php")).then((resp) => {
@@ -726,7 +727,7 @@ const exportProfile = function () {
                     const h1 = frmSkills.querySelector("h1");
                     const d = new Date();
                     const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.2[/size]`;
+                    const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=https://raw.github.com/slicklash/wod-scripts/master/release/profile_export.user.js]Profile Export[/url] 2.0.3[/size]`;
                     let txtExport = h1?.parentElement.querySelector("#profile-export-result");
                     if (!txtExport) {
                         txtExport = add("textarea", h1?.parentNode);
@@ -735,7 +736,7 @@ const exportProfile = function () {
                     txtExport.innerHTML = bbcode;
                     attr(imgLoader, "style", "display: none");
                     attr(btnExport, "disabled", null);
-                    cssClass(btnExport, "button clickable", true);
+                    cssClass(btnExport, "clickable", true);
                     cssClass(btnExport, "button_disabled", false);
                 });
             }

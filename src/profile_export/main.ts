@@ -22,7 +22,8 @@ let btnExport, chkboxItems, imgLoader;
 
 const exportProfile = function () {
   attr(btnExport, "disabled", "true");
-  cssClass(btnExport, "button clickable", false);
+  cssClass(btnExport, "button", true);
+  cssClass(btnExport, "clickable", false);
   cssClass(btnExport, "button_disabled", true);
   attr(imgLoader, "style", null);
 
@@ -57,7 +58,7 @@ const exportProfile = function () {
             txtExport!.innerHTML = bbcode;
             attr(imgLoader, "style", "display: none");
             attr(btnExport, "disabled", null);
-            cssClass(btnExport, "button clickable", true);
+            cssClass(btnExport, "clickable", true);
             cssClass(btnExport, "button_disabled", false);
           });
         }
