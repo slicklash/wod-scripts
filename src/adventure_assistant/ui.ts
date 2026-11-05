@@ -1,20 +1,9 @@
-import { AdventureContext } from "./context";
+import { textNormalized } from "@common/dom/text-normalized";
+import { AdventureContext, HighlightPlaceMap, Quests } from "./types";
 
-const QUEST_TITLES = ["Passingtime", "Rescuing Father Wuel", "Ingenuity Test"];
+const APPOINTMENT_TITLES = ["The pumpkin hero tavern", "The Adventurers' Guild", "The Sunday Grove", "Free warriors arena of Nebulat", "Old Training Grounds", "The Fortunes of Madame", "Haiku medal", "Trading Post", "Z Delete Passingtime in-progress flag", "Z Clear Forced Exit", "Z Set Forced Exit"];
 
-const APPOINTMENT_TITLES = [
-  "The pumpkin hero tavern",
-  "The Adventurers' Guild",
-  "The Sunday Grove",
-  "Free warriors arena of Nebulat",
-  "Old Training Grounds",
-  "The Fortunes of Madame",
-  "Haiku medal",
-  "Trading Post",
-  "Z Delete Passingtime in-progress flag",
-  "Z Clear Forced Exit",
-  "Z Set Forced Exit",
-];
+const QUEST_TITLES = Object.values(Quests);
 
 type TabKey = "appointments" | "crafting" | "quests";
 
@@ -33,19 +22,15 @@ export function initTabs(): void {
 
   const categorize = (title: string): TabKey | null => {
     if (QUEST_TITLES.some((name) => title.includes(name))) return "quests";
-    if (APPOINTMENT_TITLES.some((name) => title.includes(name)))
-      return "appointments";
+    if (APPOINTMENT_TITLES.some((name) => title.includes(name))) return "appointments";
     return null;
   };
 
-  const invertClass = (className: string) =>
-    className === "row0" ? "row1" : "row0";
+  const invertClass = (className: string) => (className === "row0" ? "row1" : "row0");
 
   const titleOf = (row: Element) => row.querySelector("h3")?.innerHTML ?? "";
 
-  const adventures = Array.from(
-    document.querySelectorAll<HTMLElement>(".row0, .row1"),
-  );
+  const adventures = Array.from(document.querySelectorAll<HTMLElement>(".row0, .row1"));
 
   adventures.sort((a, b) => {
     const titleA = titleOf(a);
@@ -79,8 +64,7 @@ export function initTabs(): void {
 
     const category = categorize(title);
     const currentClass = category === "appointments" ? appClass : craftClass;
-    const nextClass =
-      currentClass === className ? invertClass(currentClass) : className;
+    const nextClass = currentClass === className ? invertClass(currentClass) : className;
 
     if (category === "quests") {
       _quests.push(adventure);
@@ -99,11 +83,7 @@ export function initTabs(): void {
 
   const menu = document.createElement("ul");
   menu.innerHTML = '<li class="label">Adventures</li>';
-  menu.append(
-    makeTab("appointments", TAB_TITLES.appointments, true),
-    makeTab("crafting", TAB_TITLES.crafting, false),
-    makeTab("quests", TAB_TITLES.quests, false),
-  );
+  menu.append(makeTab("appointments", TAB_TITLES.appointments, true), makeTab("crafting", TAB_TITLES.crafting, false), makeTab("quests", TAB_TITLES.quests, false));
 
   const bar = document.createElement("div");
   bar.className = "bar";
@@ -134,9 +114,7 @@ function _hideDescription(row: Element): void {
   const td = row.querySelector("td")!;
   const header = td.children[0] as HTMLElement;
 
-  const descriptionNodes = Array.from(td.childNodes).filter(
-    (node) => node.nodeName !== "TABLE",
-  );
+  const descriptionNodes = Array.from(td.childNodes).filter((node) => node.nodeName !== "TABLE");
 
   const description = document.createElement("div");
   description.style.display = "none";
@@ -160,10 +138,7 @@ function _hideDescription(row: Element): void {
     const isHidden = Boolean(description.style.display);
 
     description.style.display = isHidden ? "" : "none";
-    icon.src = icon.src.replace(
-      isHidden ? "more" : "less",
-      isHidden ? "less" : "more",
-    );
+    icon.src = icon.src.replace(isHidden ? "more" : "less", isHidden ? "less" : "more");
   });
 }
 
@@ -188,19 +163,16 @@ function _selectTab(e: Event): void {
 
   if (!selectedTab) return;
 
-  const selectedTitle = target.textContent?.trim() ?? "";
-  _activeTab =
-    (Object.entries(TAB_TITLES).find(
-      ([, v]) => v === selectedTitle,
-    )?.[0] as TabKey) ?? "appointments";
+  const selectedTitle = textNormalized(target);
+  _activeTab = (Object.entries(TAB_TITLES).find(([, v]) => v === selectedTitle)?.[0] as TabKey) ?? "appointments";
 
+  const menuList = selectedTab.parentElement!;
+  Array.from(menuList.children).forEach((li) => {
+    if (li !== selectedTab && li.className !== "label") {
+      li.className = "not_selected";
+    }
+  });
   selectedTab.className = "selected";
-  if (selectedTab.nextElementSibling) {
-    selectedTab.nextElementSibling.className = "not_selected";
-  }
-  if (selectedTab.previousElementSibling) {
-    selectedTab.previousElementSibling.className = "not_selected";
-  }
 
   _showTab("appointments", _activeTab === "appointments");
   _showTab("crafting", _activeTab === "crafting");
@@ -210,12 +182,7 @@ function _selectTab(e: Event): void {
 let _activeTab: TabKey = "appointments";
 
 function _showTab(key: TabKey, visible: boolean): void {
-  const list =
-    key === "quests"
-      ? _quests
-      : key === "appointments"
-        ? _appointments
-        : _crafting;
+  const list = key === "quests" ? _quests : key === "appointments" ? _appointments : _crafting;
   list.forEach((row) => {
     row.style.display = visible ? "" : "none";
   });
@@ -224,17 +191,14 @@ function _showTab(key: TabKey, visible: boolean): void {
 const HOT_KEY_CHARS = "123456789qwertyuiop";
 
 export function initHotKeys(): void {
-  const buttons: HTMLElement[] = Array.from(
-    document.querySelectorAll('a, input[type="submit"]'),
-  );
+  const buttons: HTMLElement[] = Array.from(document.querySelectorAll('a, input[type="submit"]'));
   let buttonNext: HTMLElement | undefined;
   let buttonMore: HTMLElement | undefined;
 
   if (buttons.length) {
     buttons.forEach((button) => {
       const innerHTML = button.innerHTML;
-      const value =
-        button instanceof HTMLInputElement ? button.value : undefined;
+      const value = button instanceof HTMLInputElement ? button.value : undefined;
 
       if (innerHTML === "Next" || (value && value.trim() === "Ok")) {
         buttonNext = button;
@@ -252,9 +216,7 @@ export function initHotKeys(): void {
     }
   }
 
-  const choices: HTMLInputElement[] = Array.from(
-    document.querySelectorAll('input[type="radio"]'),
-  );
+  const choices: HTMLInputElement[] = Array.from(document.querySelectorAll('input[type="radio"]'));
   const choiceMap: Record<number, HTMLInputElement> = {};
 
   if (choices.length) {
@@ -269,17 +231,12 @@ export function initHotKeys(): void {
   }
 
   if (choices.length || buttonNext || buttonMore) {
-    const normalizeKey = (key: number) =>
-      key >= 96 && key <= 105 ? key - 48 : key;
+    const normalizeKey = (key: number) => (key >= 96 && key <= 105 ? key - 48 : key);
 
-    document.onkeyup = (e: KeyboardEvent) => {
+    document.addEventListener("keyup", (e: KeyboardEvent) => {
       const activeElem = document.activeElement;
 
-      if (
-        activeElem &&
-        activeElem.tagName.toLowerCase() === "input" &&
-        activeElem.getAttribute("type") === "text"
-      ) {
+      if (activeElem && activeElem.tagName.toLowerCase() === "input" && activeElem.getAttribute("type") === "text") {
         return;
       }
 
@@ -287,25 +244,21 @@ export function initHotKeys(): void {
 
       if (buttonMore && keyCode === 77 /* m */) {
         buttonMore.focus();
-      } else if (
-        buttonNext &&
-        (keyCode === 78 /* n */ || keyCode === 48) /* 0 */
-      ) {
+      } else if (buttonNext && (keyCode === 78 /* n */ || keyCode === 48) /* 0 */) {
         buttonNext.focus();
       } else if (Object.prototype.hasOwnProperty.call(choiceMap, keyCode)) {
         const choice = choiceMap[keyCode];
         choice.checked = true;
         choice.focus();
         _publishChoiceEvent(choice);
-        return false;
       }
-    };
+    });
   }
 }
 
 function _publishChoiceEvent(choice: HTMLInputElement): void {
   const event = new CustomEvent("adventure.choiceSelected", {
-    detail: choice.nextSibling?.textContent?.trim() ?? "",
+    detail: textNormalized(choice.nextSibling as Element | null),
   });
 
   window.dispatchEvent(event);
@@ -319,23 +272,17 @@ export function _addHotkeyFor(elem: Node | null, text: string): void {
   }
 }
 
-const HIGHLIGHT_TITLES = {
-  IngenuityTest: "Ingenuity Test",
-  Passingtime: "Passingtime",
-  RescuingFatherWuel: "Rescuing Father Wuel",
-};
-
 export function initHighlights(context: AdventureContext): void {
   if (!context || !context.isQuest) {
     return;
   }
 
   const { adventure, place } = context;
-  const adventures: Record<string, () => PlaceInfoMap> = {};
+  const adventures: Record<string, () => HighlightPlaceMap> = {};
 
-  adventures[HIGHLIGHT_TITLES.RescuingFatherWuel] = getWuelHighlights;
-  adventures[HIGHLIGHT_TITLES.Passingtime] = getPassingtimeHighlights;
-  adventures[HIGHLIGHT_TITLES.IngenuityTest] = getIngenuityTestHighlights;
+  adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
+  adventures[Quests.Passingtime] = getPassingtimeHighlights;
+  adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
 
   if (!(adventure in adventures)) {
     return;
@@ -343,42 +290,38 @@ export function initHighlights(context: AdventureContext): void {
 
   const highlights = adventures[adventure]()[place] || [];
 
-  const texts = context.texts.map((x) => x.innerHTML);
+  // Compute highlighted text (pure transformation)
+  let texts = [...context.texts];
 
   highlights.forEach((x) => {
     const start = x.indexOf("_");
     const end = x.indexOf("_", start + 1);
     const search = new RegExp(start > -1 ? x.replace(/_/g, "") : x, "g");
-    const highlight =
-      start > -1
-        ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}`
-        : `<span style="color:orchid">${x}</span>`;
+    const highlight = start > -1 ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}` : `<span style="color:orchid">${x}</span>`;
 
-    texts.forEach((y, i) => {
-      texts[i] = y.replace(search, highlight);
-    });
+    texts = texts.map((y) => y.replace(search, highlight));
   });
 
-  const re_html = /&lt;(.+)&gt;(.+)&lt;\/\1&gt;/g;
+  const re_html = /&lt;(font|b|i|u|span)&gt;(.+?)&lt;\/\1&gt;/g;
 
-  context.texts.forEach((x, i) => {
-    x.innerHTML = texts[i].replace(
-      re_html,
-      '<$1 style="color:mediumseagreen">$2</$1>',
-    );
+  // Apply to DOM
+  const domElements = Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION")) as HTMLElement[];
+
+  domElements.forEach((el, i) => {
+    if (texts[i] !== undefined) {
+      el.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
+    }
   });
 }
 
-type PlaceInfoMap = Record<string, string[]>;
-
-function getPassingtimeHighlights(): PlaceInfoMap {
+function getPassingtimeHighlights(): HighlightPlaceMap {
   return {
     "*": ["bejeweled necklace"],
     "Grandfather answers": ["stonemasonry", "carpenters", "cobblers", "bakers"],
   };
 }
 
-function getWuelHighlights(): PlaceInfoMap {
+function getWuelHighlights(): HighlightPlaceMap {
   return {
     "*": [
       "juicy fruits",
@@ -409,55 +352,17 @@ function getWuelHighlights(): PlaceInfoMap {
       "other _exotic items_",
     ],
     "Kotko: church": ["enchanted band"],
-    "Kotko: woman with red feather": [
-      "peanuts",
-      "eggplant",
-      "banana",
-      "sandwich",
-      "orange",
-      "fried chicken",
-    ],
+    "Kotko: woman with red feather": ["peanuts", "eggplant", "banana", "sandwich", "orange", "fried chicken"],
   };
 }
 
-function getIngenuityTestHighlights(): PlaceInfoMap {
+function getIngenuityTestHighlights(): HighlightPlaceMap {
   return {
-    "*": [
-      "bejeweled necklace",
-      "blue key",
-      "Large",
-      "Medium",
-      "Small",
-      "Tiny",
-      "pair of fairy wings",
-    ],
+    "*": ["bejeweled necklace", "blue key", "Large", "Medium", "Small", "Tiny", "pair of fairy wings"],
     "Freshwater Spring": ["under _the water_"],
-    "Middle of the River : Chatting": [
-      "red key",
-      "crescent",
-      "rectangle",
-      "circle",
-      "heart",
-      "diamond",
-      "plus-sign",
-      "oval",
-      "star",
-      "triangle",
-      "square",
-    ],
+    "Middle of the River : Chatting": ["red key", "crescent", "rectangle", "circle", "heart", "diamond", "plus-sign", "oval", "star", "triangle", "square"],
     "Rialb's Ghost": ["purple key"],
     "The Fairytale Princess": ["pink hair ribbons"],
-    "The Hut": [
-      "Turquoise",
-      "Yellow",
-      "Green",
-      "Red",
-      "Magenta",
-      "Black",
-      "Blue",
-      "Purple",
-      "Orange",
-      "White",
-    ],
+    "The Hut": ["Turquoise", "Yellow", "Green", "Red", "Magenta", "Black", "Blue", "Purple", "Orange", "White"],
   };
 }

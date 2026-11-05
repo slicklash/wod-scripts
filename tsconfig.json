@@ -3,18 +3,19 @@
     "module": "amd",
     "target": "ES2022",
     "skipLibCheck": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "ignoreDeprecations": "6.0",
     "removeComments": true,
     "sourceMap": false,
     "moduleResolution": "node",
     "baseUrl": ".",
+    "esModuleInterop": true,
     "paths": {
       "@common/*": ["src/common/*"],
       "@toymvc/*": ["src/common/toymvc/*"]
     },
     "types": [
-      "jest",
+      "vitest",
       "node",
       "tampermonkey"
     ]

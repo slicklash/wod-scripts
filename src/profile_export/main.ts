@@ -1,115 +1,56 @@
-import { add } from "@common/dom/add";
-import { attr } from "@common/dom/attr";
-import { cssClass } from "@common/dom/css-class";
 import { httpFetch } from "@common/net/http-fetch";
-import { Hero } from "./hero";
-import { HeroSkill } from "./hero-skill";
+import { batchMap } from "@common/util/batch-map";
+import { parseHeroProfileWithItems } from "./hero-builder";
+import { sortSkills } from "./hero-profile";
+import { applySkillInfo } from "./hero-skill";
+import { generateFullBBCode, parseSkillRows } from "./logic";
+import { createExportControls, displayResult, setIdleState, setLoadingState, type ExportControls } from "./ui";
 
-/***
- * TODO:
- *   - parse damage
- *   - parse weaknesses & strengths
- *   - parse race
- *   - parse skill modifiers
- *   - parse equipment
- *   - parse subclass
- *   - parse talents
- */
+export function main(): void {
+  const frmSkills = document.querySelector<HTMLFormElement>("#main_content form");
 
-// prettier-ignore
-const frmSkills: HTMLFormElement | null = document.querySelector("#main_content form");
-let btnExport, chkboxItems, imgLoader;
-
-const exportProfile = function () {
-  attr(btnExport, "disabled", "true");
-  cssClass(btnExport, "button", true);
-  cssClass(btnExport, "clickable", false);
-  cssClass(btnExport, "button_disabled", true);
-  attr(imgLoader, "style", null);
-
-  httpFetch(location.href.replace("skills.php", "attributes.php")).then(
-    (resp) => {
-      // prettier-ignore
-      const skillRows = Array.from(frmSkills!.querySelectorAll<HTMLTableRowElement>(".row0")).concat(Array.from(frmSkills!.querySelectorAll<HTMLTableRowElement>(".row1")));
-      let pendingCount = 0;
-      // prettier-ignore
-      const hero = new Hero();
-      // prettier-ignore
-      const p = hero.parse((resp && resp.data) || "", chkboxItems.checked);
-
-      const onSkillParseComplete = function () {
-        pendingCount--;
-        if (pendingCount <= 0) {
-          p.then(() => {
-            hero.addUpperCoinsArmor();
-
-            const h1 = frmSkills!.querySelector("h1");
-            const d = new Date();
-            // prettier-ignore
-            const stamp = [d.getDate(), d.getMonth() + 1, d.getFullYear() % 100].map((x) => ("" + x).padStart(2, "0")).join(".");
-            const bbcode = `${hero.generateBBCode().trim()}\n[size=9]\nGenerated: ${stamp} - [url=@downloadURL]Profile Export[/url] @version[/size]`;
-            // prettier-ignore
-            let txtExport = h1?.parentElement!.querySelector("#profile-export-result");
-            if (!txtExport) {
-              txtExport = add<HTMLTextAreaElement>("textarea", h1?.parentNode);
-              // prettier-ignore
-              attr(txtExport, { rows: "4", cols: "50", id: "profile-export-result" });
-            }
-            txtExport!.innerHTML = bbcode;
-            attr(imgLoader, "style", "display: none");
-            attr(btnExport, "disabled", null);
-            cssClass(btnExport, "clickable", true);
-            cssClass(btnExport, "button_disabled", false);
-          });
-        }
-      };
-
-      for (let i = 0; i < skillRows.length; i++) {
-        const skill = new HeroSkill();
-        // prettier-ignore
-        skill.can_undo = Boolean(skillRows[i].querySelector('input[name*="undo"]'));
-        skill.parse(skillRows[i]);
-        if (skill.rank > 0) {
-          pendingCount++;
-          httpFetch(skill.url).then((resp) => {
-            const skillHtml = (resp && resp.data) || "";
-            skill.hero = hero;
-            skill.onDone = onSkillParseComplete;
-            skill.fetchInfo.call(skill, skillHtml);
-          });
-          hero.skills.push(skill);
-        }
-      }
-    },
-  );
-};
-
-if (
-  frmSkills &&
-  frmSkills.action &&
-  frmSkills.action.match(/hero\/skills\.php/i)
-) {
-  // prettier-ignore
-  const button = (Array.from(frmSkills.querySelectorAll("tbody .button")) as HTMLButtonElement[]).find((b) => b.value === "Show Details");
-
-  if (button) {
-    btnExport = add<HTMLInputElement>("input");
-    chkboxItems = add<HTMLInputElement>("input");
-    const label_items = add<HTMLLabelElement>("label");
-    label_items.innerHTML = "Equipment";
-    // prettier-ignore
-    attr(btnExport, { type: "button", class: "button clickable", value: "Export", style: "margin-left: 4px" });
-    // prettier-ignore
-    attr(chkboxItems, { type: "checkbox", id: "export-items", style: "margin-left: 4px" });
-    attr(label_items, { for: "export-items" });
-    btnExport.addEventListener("click", exportProfile, false);
-    button!.parentNode!.insertBefore(label_items, button.nextSibling);
-    button!.parentNode!.insertBefore(chkboxItems, label_items);
-    button!.parentNode!.insertBefore(btnExport, chkboxItems);
-    // prettier-ignore
-    button!.parentNode!.insertBefore(add<HTMLBRElement>("br"), label_items.nextSibling);
-    // prettier-ignore
-    imgLoader = attr(add("img", add("div")), { src: `${location.protocol}//${location.host}/wod/css/img/ajax-loader.gif`, style: "display: none", });
-    button!.parentNode!.insertBefore(imgLoader, button!.parentNode!.firstChild);
+  if (!frmSkills || !frmSkills.action || !frmSkills.action.match(/hero\/skills\.php/i)) {
+    return;
   }
+
+  const referenceButton = Array.from(frmSkills.querySelectorAll("tbody .button")).find((b): b is HTMLButtonElement => b instanceof HTMLButtonElement && b.value === "Show Details");
+
+  if (!referenceButton) return;
+
+  const controls = createExportControls(referenceButton);
+  if (!controls) return;
+
+  controls.btnExport.addEventListener("click", () => exportProfile(controls, frmSkills));
 }
+
+async function exportProfile(controls: ExportControls, form: HTMLFormElement): Promise<void> {
+  setLoadingState(controls);
+
+  const { data = "" } = await httpFetch(location.href.replace("skills.php", "attributes.php"));
+  const skillRows = Array.from(form.querySelectorAll<HTMLTableRowElement>(".row0")).concat(Array.from(form.querySelectorAll<HTMLTableRowElement>(".row1")));
+
+  const skillsFromRows = parseSkillRows(skillRows);
+
+  const [hero, skills] = await Promise.all([
+    parseHeroProfileWithItems(data, location.href, controls.chkboxItems.checked),
+    batchMap(
+      skillsFromRows,
+      async (skill) => {
+        const { data: skillHtml } = await httpFetch(skill.url);
+        applySkillInfo(skill, skillHtml);
+        return skill;
+      },
+      { limit: 4, skipErrors: true },
+    ),
+  ]);
+
+  hero.skills = sortSkills(skills.filter((s) => s.rank > 0));
+
+  const bbcode = generateFullBBCode(hero);
+  const h1 = form.querySelector("h1");
+  displayResult(h1, bbcode);
+  setIdleState(controls);
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", main, { once: true });
+else main();

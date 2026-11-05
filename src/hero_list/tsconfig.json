@@ -1,7 +1,7 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "outFile": "../../build/hero_list.js",
-        "rootDir": ".."
-    }
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outFile": "../../build/hero_list.js",
+    "rootDir": ".."
+  }
 }

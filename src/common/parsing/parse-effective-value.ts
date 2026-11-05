@@ -1,5 +1,10 @@
+/**
+ * Parse an effective value string like "10[5]" or "10" into a tuple of numbers.
+ * The first number is the base value, and the second number is the effective value.
+ * If the effective value is not specified, it defaults to the base value.
+ */
 export function parseEffectiveValue(str: string): [number, number] {
-  const b = str.replace(/[a-z:,\s\n]+/gi, "").match(/([0-9]+)(\[([0-9-]+)\])?/);
-  if (b === null) return [0, 0];
-  return b[3] ? [Number(b[1]), Number(b[3])] : [Number(b[1]), Number(b[1])];
+  const m = str.replace(/[a-z:,\s]+/gi, "").match(/(\d+)(?:\[(-?\d+)\])?/);
+  if (!m) return [0, 0];
+  return [Number(m[1]), Number(m[2] ?? m[1])];
 }

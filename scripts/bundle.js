@@ -27,13 +27,12 @@ const stripAMD = (content) =>
       });
 
       return p
-        .replace(/exports\.(.+) = (\1|void 0);/gm, "")
-        .replace(/exports\.(.+) = /, "var $1 = ")
+        .replace(/exports\.(\w+)(?: = exports\.\w+)* = void 0;/gm, "")
+        .replace(/exports\.(\w+) = \1;/gm, "")
+        .replace(/exports\.(\w+) = (?!\1;)\s*/gm, "const $1 = ")
         .replace(/([^a-z_])exports\.([a-z0-9_$]+)([^a-z_])/gi, "$1$2$3")
-        .replace(
-          'Object.defineProperty(exports, "__esModule", { value: true });',
-          "",
-        )
+        .replace('Object.defineProperty(exports, "__esModule", { value: true });', "")
+        .replace(/Object\.defineProperty\(exports,\s*"[\w]+",\s*\{[^}]*function\s*\([^)]*\)\s*\{[^}]*\}\s*\}\);/gm, "")
         .split("\n")
         .map((x) => x.replace(/\s{4}/, ""))
         .filter((x) => x.trim())
@@ -44,18 +43,12 @@ const stripAMD = (content) =>
 
 function main(name = "storage_management") {
   console.log(name);
-  const header = fs.readFileSync(
-    path.join(__dirname, `../src/${name}/header.js`),
-    "utf-8",
-  );
-
-  let content = fs.readFileSync(
-    path.join(__dirname, `../build/${name}.js`),
-    "utf-8",
-  );
+  const header = fs.readFileSync(path.join(__dirname, `../src/${name}/header.js`), "utf-8");
+  let content = fs.readFileSync(path.join(__dirname, `../build/${name}.js`), "utf-8");
 
   const version = header.match(/@version\s+([\d.]+)/);
   if (version) content = content.replace("@version", version[1]);
+
   const url = header.match(/@downloadURL\s+([^\s\n]+)/);
   if (url) content = content.replace("@downloadURL", url[1]);
 

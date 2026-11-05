@@ -20,12 +20,9 @@ type Modifier = {
   damageBonus?: string;
   modifier?: string;
   skill?: string;
-}
+};
 
-export const parseModifiers = (elem: Element | string): Modifiers | undefined =>
-  new ModifiersParser().parse(
-    typeof elem === "string" ? parseHtml(elem) : elem,
-  );
+export const parseModifiers = (elem: Element | string): Modifiers | undefined => new ModifiersParser().parse(typeof elem === "string" ? parseHtml(elem) : elem);
 
 class ModifiersParser {
   modifiers: Modifiers = { owner: [], affected: [] };
@@ -37,14 +34,14 @@ class ModifiersParser {
 
     for (const child of Array.from(elem.childNodes)) {
       if (child.nodeName === "H2") {
-        const text = textContent(child);
+        const text = textContent(child as Element);
         if (text.indexOf("on the owner") > -1) {
           this.current = this.modifiers.owner;
         } else if (text.indexOf("on those affected")) {
           this.current = this.modifiers.affected;
         }
       } else if (child.nodeName === "H3") {
-        this.currentGroup = camelCase(textNormalized(child));
+        this.currentGroup = camelCase(textNormalized(child as Element));
       }
 
       if (this.current && this.currentGroup && child.nodeName === "TABLE") {
@@ -61,16 +58,14 @@ class ModifiersParser {
   }
 
   tryParse(table: HTMLTableElement) {
-    const fieldName = (x) => camelCase(textNormalized(x).replace("(r)", ""));
+    const fieldName = (x: Element) => camelCase(textNormalized(x).replace("(r)", ""));
 
     const fields = Array.from(table.querySelectorAll(".header th"), fieldName);
 
-    const rows: HTMLTableRowElement[] = <HTMLTableRowElement[]>(
-      Array.from(table.querySelectorAll(".row0, .row1"))
-    );
+    const rows: HTMLTableRowElement[] = <HTMLTableRowElement[]>Array.from(table.querySelectorAll(".row0, .row1"));
 
     for (const row of rows) {
-      const modifier = { group: this.currentGroup };
+      const modifier: Record<string, string> = { group: this.currentGroup ?? "" };
 
       fields.forEach((x, i) => {
         const value = textNormalized(row.cells[i]);

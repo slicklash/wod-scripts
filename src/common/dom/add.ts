@@ -1,6 +1,6 @@
-export function add<T>(tag, parent?, innerHTML?): T {
-  const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-  if (parent?.nodeType) parent.appendChild(elem);
-  if (innerHTML) elem.innerHTML = innerHTML;
+export function add<T extends Element = Element>(tagName: string, parent?: ParentNode | null, innerHTML?: string): T {
+  const elem = document.createElement(tagName) as unknown as T;
+  if (parent) parent.appendChild(elem);
+  if (innerHTML) ((elem as unknown) as HTMLElement).innerHTML = innerHTML;
   return elem;
 }

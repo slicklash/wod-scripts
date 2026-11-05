@@ -1,7 +1,7 @@
-import { describe, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { parseModifiers } from "./parse-modifiers";
 
-describe("common / functions / parsing / parseItemDetails", () => {
+describe("parseModifiers", () => {
   it("parse", () => {
     const modifiers = parseModifiers(`<body>
 <div id="link">

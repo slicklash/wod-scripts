@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name           Hero List
-// @description    Scripts adds functionality to order your heroes
-// @version        1.3.1
+// @description    Script adds functionality to order your heroes
+// @version        2.0.0
 // @author         Never
-// @include        https://*.world-of-dungeons.*/wod/spiel/settings/heroes.php*
-// @run-at         document-start
+// @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/hero_list.user.js
+// @updateURL      https://raw.github.com/slicklash/wod-scripts/master/release/hero_list.user.js
+// @match          https://*.world-of-dungeons.net/wod/spiel/settings/heroes.php*
+// @run-at         document-end
 // @grant          GM.getValue
 // @grant          GM.setValue
 // @grant          GM.xmlHttpRequest

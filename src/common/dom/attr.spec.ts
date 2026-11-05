@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { attr } from "./attr";
 
-describe("common / functions / dom / attr", () => {
+describe("attr", () => {
   it("should set single attribute and return same element", () => {
     const el = document.createElement("div");
     const r = attr(el, "id", "test");
@@ -17,6 +18,12 @@ describe("common / functions / dom / attr", () => {
     const val = attr(el, "id");
 
     expect(val).toBe("test");
+  });
+
+  it("should return null when attribute does not exist", () => {
+    const el = document.createElement("div");
+    const val = attr(el, "id");
+    expect(val).toBeNull();
   });
 
   it("should set multiple attributes", () => {

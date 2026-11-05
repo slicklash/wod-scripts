@@ -1,21 +1,20 @@
-import { StorageItem } from './storage-item';
+import { describe, expect, it } from "vitest";
+import { createStorageItem, isConsumable } from "./storage-item";
 
-describe('isConsumable', () => {
+describe("isConsumable", () => {
+  const special = ["raw leather", "acorn seed", "reagent:x", "lesser emblem of x", "glass wand"];
 
-  const special = ['raw leather', 'acorn seed', 'reagent:x', 'lesser emblem of x', 'glass wand'];
-
-  special.forEach(x => {
+  special.forEach((x) => {
     it(`should return true for ${x}`, () => {
-      const item = new StorageItem();
+      const item = createStorageItem();
       item.name = x;
-      expect(item.isConsumable).toEqual(true);
+      expect(isConsumable(item)).toEqual(true);
     });
   });
 
-  it('should return false', () => {
-     const item = new StorageItem();
-     item.name = 'torch';
-     expect(item.isConsumable).toEqual(false);
+  it("should return false", () => {
+    const item = createStorageItem();
+    item.name = "torch";
+    expect(isConsumable(item)).toEqual(false);
   });
-
 });

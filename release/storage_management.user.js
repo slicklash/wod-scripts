@@ -1,19 +1,27 @@
 // ==UserScript==
 // @name           Storage Management
 // @description    Adds additional functionality for storage management
-// @version        1.6.4
+// @version        2.0.0
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
+// @updateURL      https://raw.github.com/slicklash/wod-scripts/master/release/storage_management.user.js
 // @author         Never
-// @include        http*://*.world-of-dungeons.*/wod/spiel/hero/items.php*
-// @include        http*://*.world-of-dungeons.*/wod/spiel/trade/trade.php*
-// @run-at         document-end
+// @match          https://*.world-of-dungeons.net/wod/spiel/hero/items.php*
+// @match          https://*.world-of-dungeons.net/wod/spiel/trade/trade.php*
+// @run-at         document-start
 // @grant          GM.getValue
 // @grant          GM.setValue
 // ==/UserScript==
 
 (function() {
 'use strict';
-var SPECIAL_CONSUMABLES = [
+function textNormalized(x, options) {
+    const text = typeof x === "string" ? x : (x?.textContent ?? "");
+    return (text ?? "")
+        .replace(/&nbsp;/g, "\u00A0")
+        .replace(/[\s\u00A0]+/g, options?.collapse === false ? "" : " ")
+        .trim();
+}
+const SPECIAL_CONSUMABLES = [
     "aloe plant",
     "bat toy",
     "carded cotton",
@@ -52,70 +60,62 @@ var SPECIAL_CONSUMABLES = [
     "wooden log",
     "wooden pole",
 ];
-class StorageItem {
-    name = "";
-    isUsable = true;
-    uses = 1;
-    isGroupItem = true;
-    _isConsumable = false;
-    numberCell;
-    ctrlLocationSelect;
-    ctrlLocationCheckbox;
-    ctrlSellCheckbox;
-    ctrlGroupCheckbox;
-    price = 0;
-    get isConsumable() {
-        if (this._isConsumable)
-            return true;
-        if (/^raw /.test(this.name))
-            return true;
-        if (/ seed$/.test(this.name))
-            return true;
-        if (/^reagent:/.test(this.name))
-            return true;
-        if (/^Shard.+of/.test(this.name))
-            return true;
-        if (/^Charm.+of/.test(this.name))
-            return true;
-        if (/^Rune.+of/.test(this.name))
-            return true;
-        if (/^(lesser|greater) emblem of/i.test(this.name))
-            return true;
-        if (SPECIAL_CONSUMABLES.some((x) => x === this.name))
-            return true;
-        return false;
-    }
-    set isConsumable(value) {
-        this._isConsumable = value;
-    }
+function createStorageItem() {
+    return {
+        name: "",
+        isUsable: true,
+        isGroupItem: true,
+        isConsumable: false,
+        uses: 1,
+        numberCell: undefined,
+        ctrlLocationSelect: undefined,
+        ctrlLocationCheckbox: undefined,
+        ctrlSellCheckbox: undefined,
+        ctrlGroupCheckbox: undefined,
+        price: 0,
+    };
 }
-var SELECTION_OPTIONS = [
-    { key: 'none', title: 'none', pick: false, predicate: () => true },
-    { key: '---', title: 'All' },
-    { key: 'all', title: 'all', pick: true, predicate: () => true, count: 0, countSell: 0 },
-    { key: 'all_use', title: 'usable', pick: true, predicate: x => x.isUsable, count: 0, countSell: 0 },
-    { key: 'all_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable, count: 0, countSell: 0 },
-    { key: 'all_group', title: 'group', pick: true, predicate: x => x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
-    { key: 'all_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
-    { key: '---', title: 'Consumables' },
-    { key: 'con', title: 'all', pick: true, predicate: x => x.isConsumable, count: 0, countSell: 0 },
-    { key: 'con_use', title: 'usable', pick: true, predicate: x => x.isUsable && x.isConsumable, count: 0, countSell: 0 },
-    { key: 'con_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && x.isConsumable, count: 0, countSell: 0 },
-    { key: 'con_group', title: 'group', pick: true, predicate: x => x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
-    { key: 'con_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
-    { key: '---', title: 'Items' },
-    { key: 'itm', title: 'all', pick: true, predicate: x => !x.isConsumable, count: 0, countSell: 0 },
-    { key: 'itm_use', title: 'usable', pick: true, predicate: x => x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
-    { key: 'itm_no_use', title: 'unusable', pick: true, predicate: x => !x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
-    { key: 'itm_group', title: 'group', pick: true, predicate: x => x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
-    { key: 'itm_non_group', title: 'non-group', pick: true, predicate: x => !x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+function isConsumable(item) {
+    if (/^raw /.test(item.name))
+        return true;
+    if (/ seed$/.test(item.name))
+        return true;
+    if (/^reagent:/.test(item.name))
+        return true;
+    if (/^Shard.+of/.test(item.name))
+        return true;
+    if (/^Charm.+of/.test(item.name))
+        return true;
+    if (/^Rune.+of/.test(item.name))
+        return true;
+    if (/^(lesser|greater) emblem of/i.test(item.name))
+        return true;
+    if (SPECIAL_CONSUMABLES.some((x) => x === item.name))
+        return true;
+    return false;
+}
+const SELECTION_OPTIONS = [
+    { key: "none", title: "none", pick: false, predicate: () => true },
+    { key: "---", title: "All" },
+    { key: "all", title: "all", pick: true, predicate: () => true, count: 0, countSell: 0 },
+    { key: "all_use", title: "usable", pick: true, predicate: (x) => x.isUsable, count: 0, countSell: 0 },
+    { key: "all_no_use", title: "unusable", pick: true, predicate: (x) => !x.isUsable, count: 0, countSell: 0 },
+    { key: "all_group", title: "group", pick: true, predicate: (x) => x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
+    { key: "all_non_group", title: "non-group", pick: true, predicate: (x) => !x.isGroupItem, notForSell: true, count: 0, countSell: 0 },
+    { key: "---", title: "Consumables" },
+    { key: "con", title: "all", pick: true, predicate: (x) => x.isConsumable, count: 0, countSell: 0 },
+    { key: "con_use", title: "usable", pick: true, predicate: (x) => x.isUsable && x.isConsumable, count: 0, countSell: 0 },
+    { key: "con_no_use", title: "unusable", pick: true, predicate: (x) => !x.isUsable && x.isConsumable, count: 0, countSell: 0 },
+    { key: "con_group", title: "group", pick: true, predicate: (x) => x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: "con_non_group", title: "non-group", pick: true, predicate: (x) => !x.isGroupItem && x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: "---", title: "Items" },
+    { key: "itm", title: "all", pick: true, predicate: (x) => !x.isConsumable, count: 0, countSell: 0 },
+    { key: "itm_use", title: "usable", pick: true, predicate: (x) => x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
+    { key: "itm_no_use", title: "unusable", pick: true, predicate: (x) => !x.isUsable && !x.isConsumable, count: 0, countSell: 0 },
+    { key: "itm_group", title: "group", pick: true, predicate: (x) => x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
+    { key: "itm_non_group", title: "non-group", pick: true, predicate: (x) => !x.isGroupItem && !x.isConsumable, notForSell: true, count: 0, countSell: 0 },
 ];
-var MoveTarget = {
-    Cellar: "go_keller",
-    TreasureVault: "go_group",
-    GroupStorage: "go_group_2",
-    None: "",
-};
+const MoveTarget = { Cellar: "go_keller", TreasureVault: "go_group", GroupStorage: "go_group_2", None: "" };
 function resolveMoveTargets() {
     const url = window.location.href;
     const isGroupStorage = url.includes("groupcellar_2");
@@ -127,13 +127,11 @@ function resolveMoveTargets() {
 }
 function toSplitMatchers(value) {
     return value
-        .split(/[,;|]/)
+        .split(/[;,|]/)
         .map((part) => part.trim())
         .filter(Boolean)
         .map((part) => {
-        const escaped = part
-            .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-            .replace(/\*/g, ".*");
+        const escaped = part.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
         return new RegExp(`^${escaped}$`, "i");
     });
 }
@@ -146,40 +144,21 @@ function computeSellInfo(items) {
             total += item.price;
         }
     }
-    const html = count > 0
-        ? `&nbsp;${count} (${total} <img alt="" border="0" src="/wod/css/skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)`
-        : "";
+    const html = count > 0 ? `&nbsp;${count} (${total} <img alt="" border="0" src="/wod/css/skins/skin-2/images/icons/lang/en/gold.gif" title="gold">)` : "";
     return { count, total, html };
 }
-function applySplit(items, targets, filtered, splitFilterMatchers = []) {
-    if (!items.length)
-        return;
-    const config = {
-        predicate: (item) => Boolean(item.ctrlLocationSelect && item.ctrlLocationCheckbox),
-        resolveMoveTarget: (item) => item.isConsumable ? targets.GroupStorage : targets.TreasureVault,
-    };
-    const moved = filtered
-        ? applySplitFiltered(items, config, splitFilterMatchers)
-        : applySplitAll(items, config);
-    for (const item of moved) {
-        if (item.numberCell) {
+function applySplit(items, targets, filtered, matchers = []) {
+    const eligible = items.filter((item) => item.ctrlLocationSelect && item.ctrlLocationCheckbox);
+    const hasSelected = eligible.some((item) => item.ctrlLocationCheckbox?.checked);
+    for (const item of eligible) {
+        if (hasSelected && !item.ctrlLocationCheckbox.checked)
+            continue;
+        if (filtered && !matchers.some((m) => m.test(item.name)))
+            continue;
+        item.ctrlLocationSelect.value = item.isConsumable ? targets.GroupStorage : targets.TreasureVault;
+        if (item.numberCell)
             item.numberCell.style.backgroundColor = "rgba(0,255,0,0.2)";
-        }
     }
-}
-function applySplitAll(items, config) {
-    return _applyMoveAction(items, config);
-}
-function applySplitFiltered(items, config, matchers) {
-    const matchingConfig = {
-        predicate: (item) => config.predicate(item) &&
-            matchers.some((matcher) => {
-                matcher.lastIndex = 0;
-                return matcher.test(item.name);
-            }),
-        resolveMoveTarget: config.resolveMoveTarget,
-    };
-    return _applyMoveAction(items, matchingConfig);
 }
 function applyMoveToCellar(items) {
     const eligible = items.filter((item) => item.ctrlLocationSelect && item.ctrlLocationCheckbox);
@@ -191,12 +170,11 @@ function applyMoveToCellar(items) {
     }
 }
 function applyEquip(items) {
-    for (const item of items) {
-        if (!item.isUsable ||
-            !item.ctrlLocationSelect ||
-            !item.ctrlLocationCheckbox) {
+    const eligible = items.filter((item) => item.isUsable && item.ctrlLocationSelect && item.ctrlLocationCheckbox);
+    const hasSelected = eligible.some((item) => item.ctrlLocationCheckbox?.checked);
+    for (const item of eligible) {
+        if (hasSelected && !item.ctrlLocationCheckbox.checked)
             continue;
-        }
         const firstOption = item.ctrlLocationSelect.options[0];
         if (firstOption)
             item.ctrlLocationSelect.value = firstOption.value;
@@ -225,25 +203,19 @@ function findItemByCheckbox(items, checkbox, prop) {
 }
 function attachSyncPriceButtons(prices, byName, re) {
     for (const input of prices) {
-        const parent = input.parentElement;
-        const row = parent?.parentElement;
-        if (!parent || !row)
-            continue;
-        const textCell = row.children[1];
+        const row = input.parentElement?.parentElement;
+        const textCell = row?.children[1];
         const prevSibling = input.previousElementSibling;
-        if (!textCell?.textContent || !prevSibling?.textContent) {
-            continue;
-        }
-        const text = textCell.textContent.trim();
-        const fpPrice = Number(prevSibling.textContent.trim());
+        const text = textCell ? textNormalized(textCell) : "";
+        const fpPrice = Number(prevSibling ? textNormalized(prevSibling) : "");
         const match = text.match(re);
         if (!match || !Number.isInteger(fpPrice))
             continue;
-        const name = match[1];
-        const uses = Number(match[2]);
+        const [, name, usesStr] = match;
+        const uses = Number(usesStr);
         if (!Number.isFinite(uses) || uses <= 0)
             continue;
-        const group = byName[name] || (byName[name] = []);
+        const group = (byName[name] ||= []);
         group.push({ uses, input, fpPrice });
         const syncButton = document.createElement("input");
         syncButton.type = "button";
@@ -257,31 +229,13 @@ function attachSyncPriceButtons(prices, byName, re) {
                 return;
             const singlePrice = value / uses;
             for (const entry of group) {
-                if (entry.input === input)
-                    continue;
-                if (entry.fpPrice < entry.uses * singlePrice * 0.9) {
+                if (entry.input !== input && entry.fpPrice < entry.uses * singlePrice * 0.9) {
                     entry.input.value = Math.round(entry.uses * singlePrice).toString();
                 }
             }
         });
         input.parentNode?.appendChild(syncButton);
     }
-}
-function _applyMoveAction(items, config) {
-    const matching = items.filter((item) => item.ctrlLocationSelect &&
-        item.ctrlLocationCheckbox &&
-        config.predicate(item));
-    const hasSelected = matching.some((item) => item.ctrlLocationCheckbox.checked);
-    const moved = new Set();
-    for (const item of matching) {
-        const checkbox = item.ctrlLocationCheckbox;
-        const select = item.ctrlLocationSelect;
-        if (hasSelected && !checkbox.checked)
-            continue;
-        select.value = config.resolveMoveTarget(item);
-        moved.add(item);
-    }
-    return moved;
 }
 function copyPriceToNextRow(items, input, nextRow, nextInput) {
     const checkbox = input.parentElement?.parentElement?.querySelector('input[type="checkbox"][name*="Sell"]');
@@ -293,41 +247,32 @@ function copyPriceToNextRow(items, input, nextRow, nextInput) {
     if (!item || !nextItem)
         return;
     const price = Number(input.value);
-    const adjustedPrice = nextItem.isConsumable
-        ? Math.ceil((price / item.uses) * nextItem.uses)
-        : price;
-    nextInput.value = String(adjustedPrice);
+    nextInput.value = String(nextItem.isConsumable ? Math.ceil((price / item.uses) * nextItem.uses) : price);
 }
-function waitFor(selectorOrElement, eventName) {
+function waitFor(selector) {
     return new Promise((resolve) => {
-        if (typeof selectorOrElement === "string") {
-            const fn = () => {
-                const elem = document.querySelector(selectorOrElement);
-                if (elem || document.readyState === "complete") {
-                    resolve(elem);
-                    return;
-                }
-                setTimeout(fn, 250);
-            };
-            fn();
-        }
-        else {
-            if (eventName)
-                selectorOrElement.addEventListener(eventName, resolve);
-        }
+        const start = Date.now();
+        const check = () => {
+            const elem = document.querySelector(selector);
+            if (elem || document.readyState === "complete" || Date.now() - start > 30_000)
+                resolve(elem);
+            else
+                setTimeout(check, 250);
+        };
+        check();
     });
 }
 function attr(elem, nameOrMap, value) {
     if (typeof nameOrMap === "string") {
         if (value === undefined)
-            return elem.getAttribute(nameOrMap) ?? "";
+            return elem.getAttribute(nameOrMap);
         if (value === null)
             elem.removeAttribute(nameOrMap);
         else
             elem.setAttribute(nameOrMap, value);
     }
     else {
-        Object.entries(nameOrMap).forEach(([k, v]) => v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v));
+        Object.entries(nameOrMap).forEach(([k, v]) => (v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v)));
     }
     return elem;
 }
@@ -336,11 +281,7 @@ function textContent(elem, value) {
         return "";
     return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
-const SORT_BUTTONS = [
-    'input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]',
-    'input[type="submit"][name^="ITEMS_KELLER_DO_SORT"][class*="table_h"]',
-    'input[type="submit"][name^="ITEMS_GROUPCELLAR_DO_SORT"][class*="table_h"]',
-];
+const SORT_BUTTONS = ['input[type="submit"][name^="ITEMS_LAGER_DO_SORT"][class*="table_h"]', 'input[type="submit"][name^="ITEMS_KELLER_DO_SORT"][class*="table_h"]', 'input[type="submit"][name^="ITEMS_GROUPCELLAR_DO_SORT"][class*="table_h"]'];
 function parseItems(mainContent) {
     for (const selector of SORT_BUTTONS) {
         const button = mainContent.querySelector(selector);
@@ -354,26 +295,26 @@ function parseItems(mainContent) {
                 continue;
             const link = cells[1].querySelector("a");
             const name = textContent(link).replace(/!$/, "");
-            const uses = textContent(cells[1]).replace(name, "").trim();
-            const tooltip = link ? attr(link, "onmouseover") : "";
-            const classes = link ? attr(link, "class") : "";
+            const uses = textNormalized(cells[1]).replace(name, "");
+            const tooltip = link ? attr(link, "onmouseover") ?? "" : "";
+            const classes = link ? attr(link, "class") ?? "" : "";
             const locationCell = cells[2];
             const sellCell = cells[3];
             const fallbackSellCell = cells[4];
             const locationSelect = locationCell?.querySelector("select") ?? undefined;
             const locationCheckbox = locationCell?.querySelector('input[type="checkbox"][name^="doEquip"]') ?? undefined;
             let sellCheckbox = sellCell?.querySelector('input[type="checkbox"][name^="Sell"]') ?? undefined;
-            let price = sellCell ? Number(sellCell.textContent?.trim()) : 0;
+            let price = sellCell ? Number(textNormalized(sellCell)) : 0;
             if (!sellCheckbox && fallbackSellCell) {
                 sellCheckbox = fallbackSellCell.querySelector('input[type="checkbox"]') ?? undefined;
-                price = Number(fallbackSellCell.textContent?.trim());
+                price = Number(textNormalized(fallbackSellCell));
             }
-            const item = new StorageItem();
+            const item = createStorageItem();
             item.name = name;
-            item.isConsumable = /\(([0-9]+)\/[0-9]+\)/.test(uses);
+            item.isConsumable = isConsumable(item) || /\(([0-9]+)\/[0-9]+\)/.test(uses);
             const match = uses.match(/\(([0-9]+)\/[0-9]+\)/);
             if (match)
-                item.uses = match[1];
+                item.uses = Number(match[1]);
             item.isUsable = !classes.includes("item_unusable");
             item.isGroupItem = tooltip.includes("group item");
             item.numberCell = cells[0];
@@ -396,12 +337,21 @@ function parseItems(mainContent) {
     }
     return { items: [], table: null };
 }
-var Store = {
+const Store = {
     get(key, defaultValue) {
-        return GM.getValue(key, defaultValue);
+        return GM.getValue(key, "").then((raw) => {
+            if (!raw)
+                return defaultValue;
+            try {
+                return JSON.parse(raw);
+            }
+            catch {
+                return defaultValue;
+            }
+        });
     },
     set(key, value) {
-        return GM.setValue(key, value);
+        return GM.setValue(key, JSON.stringify(value));
     },
 };
 function debounce(fn, delay) {
@@ -411,23 +361,20 @@ function debounce(fn, delay) {
         timeout = setTimeout(() => fn.apply(this, args), delay);
     };
 }
-function add(tag, parent, innerHTML) {
-    const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    if (parent?.nodeType)
+function add(tagName, parent, innerHTML) {
+    const elem = document.createElement(tagName);
+    if (parent)
         parent.appendChild(elem);
     if (innerHTML)
         elem.innerHTML = innerHTML;
     return elem;
 }
 function insertAfter(node, ...elems) {
-    const parent = node.parentNode;
-    elems.forEach((el) => el && parent?.insertBefore((node = el), node.nextSibling));
+    const p = node.parentNode;
+    elems.forEach((el) => el && p?.insertBefore((node = el), node.nextSibling));
 }
 function createControls(commitButtons, callbacks, splitFilter) {
-    const controlSets = [];
-    commitButtons.forEach((commit, i) => {
-        const labelMove = createLabel("Select");
-        const labelSell = createLabel("Sell");
+    return commitButtons.map((commit, i) => {
         const buttonSplitAll = createButton("Split All", callbacks.handleSplitAll);
         const buttonSplitFilter = createButton("Split Filter", callbacks.handleSplitFilter);
         const buttonMoveToCellar = createButton("Cellar", callbacks.handleMoveToCellar);
@@ -435,32 +382,23 @@ function createControls(commitButtons, callbacks, splitFilter) {
         const selectLocation = createSelect(140, callbacks.handleLocationChanged);
         const selectSell = createSelect(120, callbacks.handleSellChanged);
         const labelSellInfo = add("span");
-        const filterInput = i === 0 ? attr(add("input"), { type: "text", style: "margin-top: 5px; width: 100%", size: "20", value: splitFilter }) : undefined;
-        const set = {
-            buttonSplitAll,
-            buttonSplitFilter,
-            buttonMoveToCellar,
-            buttonEquip,
-            selectLocation,
-            selectSell,
-            labelSellInfo,
-            inputFilter: filterInput,
-        };
-        controlSets.push(set);
-        insertAfter(commit, labelMove, selectLocation, buttonSplitAll, buttonSplitFilter, buttonMoveToCellar, buttonEquip, labelSell, selectSell, labelSellInfo, add("br"), filterInput);
+        const inputFilter = i === 0 ? attr(add("input"), { type: "text", style: "margin-top: 5px; width: 100%", size: "20", value: splitFilter }) : undefined;
+        insertAfter(commit, createLabel("Select"), selectLocation, buttonSplitAll, buttonSplitFilter, buttonMoveToCellar, buttonEquip, createLabel("Sell"), selectSell, labelSellInfo, add("br"), inputFilter);
+        return { buttonSplitAll, buttonSplitFilter, buttonMoveToCellar, buttonEquip, selectLocation, selectSell, labelSellInfo, inputFilter };
     });
-    return controlSets;
 }
 function populateSelect(select, options, sellable) {
-    let optionGroup;
+    let group;
     for (const option of options) {
         if (option.key === "---") {
-            optionGroup = add("optgroup");
-            attr(optionGroup, "label", option.title);
-            select.appendChild(optionGroup);
+            group = add("optgroup");
+            attr(group, "label", option.title);
+            select.appendChild(group);
             continue;
         }
-        addOptionToSelect(select, option, sellable, optionGroup);
+        const el = attr(add("option"), "value", option.key);
+        el.innerHTML = option.key === "none" ? "none" : sellable ? `${option.title} (${option.countSell})` : `${option.title} (${option.count})`;
+        (group || select).appendChild(el);
     }
 }
 function toggleControlsEnabled(controlSets, enabled) {
@@ -474,9 +412,8 @@ function toggleControlsEnabled(controlSets, enabled) {
     }
 }
 function updateSellInfo(controlSets, html) {
-    for (const set of controlSets) {
+    for (const set of controlSets)
         set.labelSellInfo.innerHTML = html;
-    }
 }
 function createLabel(text) {
     const label = add("span");
@@ -503,95 +440,61 @@ function createSelect(width, onSelect) {
     select.addEventListener("change", onSelect, false);
     return select;
 }
-function addOptionToSelect(select, option, sellable, optionGroup) {
-    const element = attr(add("option"), "value", option.key);
-    element.innerHTML =
-        option.key === "none"
-            ? "none"
-            : sellable
-                ? `${option.title} (${option.countSell})`
-                : `${option.title} (${option.count})`;
-    if (optionGroup)
-        optionGroup.appendChild(element);
-    else
-        select.appendChild(element);
-}
 const COMMIT_SELECTOR = `#main_content input[type="submit"][name="ok"][value*="${_t("Commit")}"]`;
 const SPLIT_FILTER_KEY = "split-filter";
 const DEFAULT_SPLIT_FILTER = "*leather*of*, Ancient seals*";
 const PRICE_MATCHER = /(.+) \((\d+)\/\d+\)/;
-async function main() {
-    const view = await waitFor('input[type="hidden"][name="view"]');
+async function main(view) {
     if (!view || view.value === "gear")
         return;
     let items = [];
     let table = null;
     let uiControlSets = [];
-    const splitFilter = (await Store.get(SPLIT_FILTER_KEY)) || DEFAULT_SPLIT_FILTER;
+    const splitFilter = await Store.get(SPLIT_FILTER_KEY, DEFAULT_SPLIT_FILTER);
     let splitFilterMatchers = toSplitMatchers(splitFilter);
-    const sellOptions = SELECTION_OPTIONS.filter(({ notForSell }) => !notForSell);
     function onSelectChanged(event) {
-        const select = event.target;
-        const option = SELECTION_OPTIONS.find(({ key }) => key === select.value);
+        const option = SELECTION_OPTIONS.find(({ key }) => key === event.target.value);
         syncOptionCheckboxes(items, option, "ctrlLocationCheckbox");
     }
     function onSellChanged(event) {
-        const select = event.target;
-        const option = SELECTION_OPTIONS.find(({ key }) => key === select.value);
+        const option = SELECTION_OPTIONS.find(({ key }) => key === event.target.value);
         syncOptionCheckboxes(items, option, "ctrlSellCheckbox");
         updateSellInfo(uiControlSets, computeSellInfo(items).html);
     }
-    function handleTableKeyUp(event) {
+    function onTableKeyUp(event) {
         const input = event.target;
-        if (!(input instanceof HTMLInputElement) ||
-            input.type !== "text" ||
-            !["ArrowUp", "ArrowDown"].includes(event.key)) {
+        if (input.type !== "text" || !["ArrowUp", "ArrowDown"].includes(event.key))
             return;
-        }
         const row = input.parentElement?.parentElement;
         if (!row)
             return;
-        const nextRow = event.key === "ArrowUp"
-            ? row.previousElementSibling
-            : row.nextElementSibling;
+        const nextRow = event.key === "ArrowUp" ? row.previousElementSibling : row.nextElementSibling;
         if (!nextRow)
             return;
         const isPrice = input.name.includes("preis");
-        const field = isPrice ? "preis" : "comment";
-        const nextInput = nextRow.querySelector(`input[type="text"][name*="${field}"]`);
+        const nextInput = nextRow.querySelector(`input[type="text"][name*="${isPrice ? "preis" : "comment"}"]`);
         if (!nextInput)
             return;
-        if (event.ctrlKey) {
-            if (isPrice && input.value) {
-                copyPriceToNextRow(items, input, nextRow, nextInput);
-            }
-            else {
-                nextInput.value = input.value;
-            }
+        if (event.ctrlKey && isPrice && input.value) {
+            copyPriceToNextRow(items, input, nextRow, nextInput);
+        }
+        else if (event.ctrlKey) {
+            nextInput.value = input.value;
         }
         nextInput.focus();
     }
-    function handleTableClick(event) {
+    function onTableClick(event) {
         const input = event.target;
-        if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+        if (!(input instanceof HTMLInputElement) || input.type !== "checkbox" || !event.shiftKey)
             return;
-        }
-        if (!event.shiftKey)
-            return;
-        const prop = input.name.startsWith("Sell")
-            ? "ctrlSellCheckbox"
-            : input.name.startsWith("doEquip")
-                ? "ctrlLocationCheckbox"
-                : input.name.startsWith("SetGrpItem")
-                    ? "ctrlGroupCheckbox"
-                    : null;
+        const prop = input.name.startsWith("Sell") ? "ctrlSellCheckbox" : input.name.startsWith("doEquip") ? "ctrlLocationCheckbox" : input.name.startsWith("SetGrpItem") ? "ctrlGroupCheckbox" : null;
         if (!prop)
             return;
         const item = findItemByCheckbox(items, input, prop);
         if (item)
             selectOrDeselectSame(items, item, input.checked, prop);
     }
-    function createUiControls() {
+    function createUi() {
         const buttons = document.querySelectorAll(COMMIT_SELECTOR);
         if (!buttons.length)
             return;
@@ -606,15 +509,14 @@ async function main() {
         };
         uiControlSets = createControls([...buttons], callbacks, splitFilter);
         const filterInput = uiControlSets[0]?.inputFilter;
-        if (!filterInput)
-            return;
-        filterInput.addEventListener("keyup", debounce((event) => {
-            const value = event.target.value;
-            splitFilterMatchers = toSplitMatchers(value);
-            void Store.set(SPLIT_FILTER_KEY, value);
-        }, 500));
+        if (filterInput) {
+            filterInput.addEventListener("keyup", debounce((event) => {
+                splitFilterMatchers = toSplitMatchers(event.target.value);
+                void Store.set(SPLIT_FILTER_KEY, event.target.value);
+            }, 1000));
+        }
     }
-    function parseItemsAndAttachEvents() {
+    function parseAndSetup() {
         const content = document.querySelector("#main_content");
         if (!content)
             return;
@@ -622,23 +524,19 @@ async function main() {
         toggleControlsEnabled(uiControlSets, true);
         for (const controls of uiControlSets) {
             populateSelect(controls.selectLocation, SELECTION_OPTIONS);
-            populateSelect(controls.selectSell, sellOptions, true);
+            populateSelect(controls.selectSell, SELECTION_OPTIONS.filter(({ notForSell }) => !notForSell), true);
         }
-        if (!table)
-            return;
-        table.addEventListener("keyup", handleTableKeyUp);
-        table.addEventListener("click", handleTableClick);
+        table?.addEventListener("keyup", onTableKeyUp);
+        table?.addEventListener("click", onTableClick);
         const prices = document.querySelectorAll('input[name*="preis_andere"]');
         attachSyncPriceButtons([...prices], {}, PRICE_MATCHER);
     }
-    createUiControls();
-    parseItemsAndAttachEvents();
+    createUi();
+    parseAndSetup();
 }
 function _t(text) {
-    if (location.href.includes(".net"))
-        return text;
-    return text === "Commit" ? "nderungen" : text;
+    return location.href.includes(".net") ? text : text === "Commit" ? "nderungen" : text;
 }
-void main();
+waitFor('input[type="hidden"][name="view"]').then((view) => main(view));
 
 })();

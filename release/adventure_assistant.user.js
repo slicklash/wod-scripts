@@ -1,56 +1,104 @@
 // ==UserScript==
 // @name           Adventure Assistant
 // @description    Script allows to do adventures using keyboard, groups adventures into tabs
-// @version        1.3.2
+// @version        2.0.0
 // @author         Never
-// @include        http*://*.world-of-dungeons.net/wod/spiel/event/play.php*
-// @include        http*://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
-// @run-at         document-start
+// @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/adventure_assistant.user.js
+// @updateURL      https://raw.github.com/slicklash/wod-scripts/master/release/adventure_assistant.user.js
+// @match          https://*.world-of-dungeons.net/wod/spiel/event/play.php*
+// @match          https://*.world-of-dungeons.net/wod/spiel/event/eventlist.php*
+// @run-at         document-end
 // @grant          GM.getValue
 // @grant          GM.setValue
 // ==/UserScript==
 
 (function() {
 'use strict';
-var Quests = {
+const Quests = {
     IngenuityTest: "Ingenuity Test",
     Passingtime: "Passingtime",
     RescuingFatherWuel: "Rescuing Father Wuel",
 };
-let _context;
-function getContext() {
-    if (!_context) {
-        const h1 = document.querySelector("h1");
-        const title = h1 ? h1.textContent : "";
-        if (!title || title.indexOf("adventure") !== 0)
-            return;
-        const texts = Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION"));
-        texts.forEach((x) => {
-            x.innerHTML = x.innerHTML
-                .replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">')
-                .replace(/&lt;\/font&gt;/g, "</font>")
-                .replace(/<br>\s+<br>/g, "<br>");
-        });
-        _context = {
-            adventure: title.replace("adventure ", ""),
-            idHero: (document.querySelector('[href*="session_hero_id"]')).href.match(/session_hero_id=([\d]+)/)[1],
-            place: (document.querySelector("#smarttabs__level_inner h3 > a") || {
-                textContent: "*",
-            }).textContent.trim(),
-            text: texts.map((x) => x.innerHTML.trim()).join(" "),
-            texts,
-            world: document.location.hostname.split(".")[0],
-        };
-        _context.isQuest = Object.keys(Quests).some((x) => _context.adventure.indexOf(Quests[x]) > -1);
-    }
-    return _context;
+function assembleContext({ title, idHero, place, texts, world }) {
+    if (!title || !title.includes("adventure"))
+        throw new Error(`Page title must contain "adventure", got: "${title}"`);
+    if (!idHero)
+        throw new Error('Could not find hero ID from link matching "session_hero_id"');
+    const trimmed = texts.map((x) => x.trim());
+    const text = trimmed.join(" ");
+    const adventure = title.replace("adventure ", "");
+    const isQuest = Object.keys(Quests).some((key) => adventure.indexOf(Quests[key]) > -1);
+    return Object.freeze({
+        idHero,
+        world,
+        adventure,
+        place: place || "*",
+        texts: trimmed,
+        text,
+        isQuest,
+    });
 }
-var Store = {
+function buildAdventureContext() {
+    const title = extractTitle();
+    const idHero = extractHeroId();
+    const place = extractPlace();
+    const texts = extractTexts();
+    const world = getWorld();
+    return assembleContext({ title, idHero, place, texts, world });
+}
+function getWorld() {
+    try {
+        return document.location.hostname.split(".")[0];
+    }
+    catch {
+        return "unknown";
+    }
+}
+function extractTitle() {
+    const h1 = document.querySelector("h1");
+    return h1 ? h1.textContent || "" : "";
+}
+function extractHeroId() {
+    const heroLink = document.querySelector('[href*="session_hero_id"]');
+    if (!heroLink)
+        return "";
+    const match = heroLink.href.match(/session_hero_id=([\d]+)/);
+    return match ? match[1] : "";
+}
+function extractPlace() {
+    const el = document.querySelector("#smarttabs__level_inner h3 > a");
+    if (!el)
+        return "*";
+    const textNodes = Array.from(el.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent || "");
+    return textNodes.join("").trim() || "*";
+}
+function extractTexts() {
+    const elements = document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION");
+    return Array.from(elements).map((el) => {
+        let html = el.innerHTML;
+        html = html.replace(/&lt;font\s+color\s*=\s*["'](.+)["']&gt;/g, '<font color="$1">');
+        html = html.replace(/&lt;\/font&gt;/g, "</font>");
+        html = html.replace(/<br>\s+<br>/g, "<br>");
+        return html;
+    });
+}
+const Store = {
     get(key, defaultValue) {
-        return GM.getValue(key, defaultValue);
+        return GM.getValue(key, "").then((raw) => {
+            if (!raw)
+                return defaultValue;
+            try {
+                return JSON.parse(raw);
+            }
+            catch {
+                return defaultValue;
+            }
+        });
     },
     set(key, value) {
-        return GM.setValue(key, value);
+        return GM.setValue(key, JSON.stringify(value));
     },
 };
 function initQuestLog(context) {
@@ -88,7 +136,7 @@ class QuestLog {
         const adventures = {};
         adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
         adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
-        adventures[Quests.Passingtime] = this.getPassingTimeInfo;
+        adventures[Quests.Passingtime] = this.getPassingtimeInfo;
         if (!(adventure in adventures)) {
             this.isSupported = false;
             return;
@@ -100,14 +148,14 @@ class QuestLog {
         }
         this._placeOptions = this._info[place];
         this._id = `${_context.world}_${_context.idHero}_${_context.adventure.replace(/ /g, "").toLowerCase()}`;
-        this.load().then(() => {
-            if (this._placeOptions) {
-                this.checkPlace();
-            }
-            console.log("questlog:", this._data);
-            console.log("context:", _context.place, _context.texts);
-            this.display();
-        });
+        this.init();
+    }
+    async init() {
+        await this.load();
+        if (this._placeOptions) {
+            this.checkPlace();
+        }
+        this.display();
     }
     onChoice(choice) {
         if (!this._placeOptions) {
@@ -115,7 +163,6 @@ class QuestLog {
         }
         this.pickItem(choice);
         this.save();
-        console.log("on submit", choice, this._data);
     }
     pickItem(item) {
         const op = this._placeOptions;
@@ -145,8 +192,7 @@ class QuestLog {
             op.collect.forEach((x) => {
                 if (text.indexOf(x.match) > -1) {
                     x.found?.forEach((itm) => {
-                        if (this._data?.itemsFound &&
-                            this._data.itemsFound.indexOf(itm) < 0) {
+                        if (this._data?.itemsFound && this._data.itemsFound.indexOf(itm) < 0) {
                             this._data.itemsFound.push(itm);
                             isChanged = true;
                         }
@@ -193,47 +239,39 @@ class QuestLog {
         const data = this._data;
         if (!data)
             return;
-        const text = [
-            toText("backpack:", data.itemsPicked.concat(data.itemsFound)),
-            toText("done:", data.tasksDone),
-        ].join("\n\n");
+        const text = [toText("backpack:", data.itemsPicked.concat(data.itemsFound)), toText("done:", data.tasksDone)].join("\n\n");
         h1.setAttribute("title", text);
     }
-    load() {
+    async load() {
         const empty = {
             itemsPicked: [],
             itemsFound: [],
             tasksDone: [],
         };
-        return new Promise((resolve) => {
-            if (!this._id) {
-                this._data = empty;
-                resolve();
-                return;
-            }
-            Store.get(this._id).then((value) => {
-                const loaded = value ? JSON.parse(value) : {};
-                Object.keys(loaded).forEach((x) => {
-                    if (!empty[x])
-                        delete loaded[x];
-                });
-                this._data = Object.assign(empty, loaded);
-                resolve();
-            });
+        if (!this._id) {
+            this._data = empty;
+            return;
+        }
+        const loaded = await Store.get(this._id, { itemsPicked: [], itemsFound: [], tasksDone: [] });
+        Object.keys(loaded).forEach((key) => {
+            const k = key;
+            if (!(k in empty))
+                delete loaded[k];
         });
+        this._data = Object.assign(empty, loaded);
     }
     save() {
         if (!this._id || !this._data)
             return;
-        Store.set(this._id, JSON.stringify(this._data));
+        Store.set(this._id, this._data);
     }
     reset() {
         if (!this._id)
             return;
         this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
-        Store.set(this._id, "{}");
+        Store.set(this._id, this._data);
     }
-    getPassingTimeInfo() {
+    getPassingtimeInfo() {
         return {};
     }
     getRescueFatherWuelInfo() {
@@ -307,26 +345,14 @@ class QuestLog {
                 pickSingle: ["iridescent rock", "bunch of driftwood", "large carapace"],
             },
             "Middle of the River : Pick ...": {
-                pickSingle: [
-                    "leaf lettuce",
-                    "pumpkin",
-                    "bananas",
-                    "deck of playing cards",
-                    "carrots",
-                    "rainbow trout",
-                    "corn",
-                    "limburger cheese",
-                    "suspenders",
-                ],
-                pickSingleTransform: (x) => x.indexOf("Buy ") === 0 ? x.replace("Buy ", "") : "",
+                pickSingle: ["leaf lettuce", "pumpkin", "bananas", "deck of playing cards", "carrots", "rainbow trout", "corn", "limburger cheese", "suspenders"],
+                pickSingleTransform: (x) => (x.indexOf("Buy ") === 0 ? x.replace("Buy ", "") : ""),
             },
             "Middle of the River : Chatting": {
                 collect: [{ match: "red key", found: ["red key"] }],
             },
             "Rocky Shore, at a River": {
-                collect: [
-                    { match: "decent rowboat here", found: ["rowboat with oars"] },
-                ],
+                collect: [{ match: "decent rowboat here", found: ["rowboat with oars"] }],
             },
             "Waves Beach : Pick ...": {
                 pickSingle: ["bunch of tiny shells", "bulbaroose shell", "conch shell"],
@@ -357,20 +383,15 @@ class QuestLog {
         };
     }
 }
-const QUEST_TITLES = ["Passingtime", "Rescuing Father Wuel", "Ingenuity Test"];
-const APPOINTMENT_TITLES = [
-    "The pumpkin hero tavern",
-    "The Adventurers' Guild",
-    "The Sunday Grove",
-    "Free warriors arena of Nebulat",
-    "Old Training Grounds",
-    "The Fortunes of Madame",
-    "Haiku medal",
-    "Trading Post",
-    "Z Delete Passingtime in-progress flag",
-    "Z Clear Forced Exit",
-    "Z Set Forced Exit",
-];
+function textNormalized(x, options) {
+    const text = typeof x === "string" ? x : (x?.textContent ?? "");
+    return (text ?? "")
+        .replace(/&nbsp;/g, "\u00A0")
+        .replace(/[\s\u00A0]+/g, options?.collapse === false ? "" : " ")
+        .trim();
+}
+const APPOINTMENT_TITLES = ["The pumpkin hero tavern", "The Adventurers' Guild", "The Sunday Grove", "Free warriors arena of Nebulat", "Old Training Grounds", "The Fortunes of Madame", "Haiku medal", "Trading Post", "Z Delete Passingtime in-progress flag", "Z Clear Forced Exit", "Z Set Forced Exit"];
+const QUEST_TITLES = Object.values(Quests);
 let _quests = [];
 let _appointments = [];
 let _crafting = [];
@@ -389,7 +410,7 @@ function initTabs() {
             return "appointments";
         return null;
     };
-    const invertClass = (className) => className === "row0" ? "row1" : "row0";
+    const invertClass = (className) => (className === "row0" ? "row1" : "row0");
     const titleOf = (row) => row.querySelector("h3")?.innerHTML ?? "";
     const adventures = Array.from(document.querySelectorAll(".row0, .row1"));
     adventures.sort((a, b) => {
@@ -495,27 +516,22 @@ function _selectTab(e) {
     const selectedTab = target.parentElement;
     if (!selectedTab)
         return;
-    const selectedTitle = target.textContent?.trim() ?? "";
-    _activeTab =
-        Object.entries(TAB_TITLES).find(([, v]) => v === selectedTitle)?.[0] ?? "appointments";
+    const selectedTitle = textNormalized(target);
+    _activeTab = Object.entries(TAB_TITLES).find(([, v]) => v === selectedTitle)?.[0] ?? "appointments";
+    const menuList = selectedTab.parentElement;
+    Array.from(menuList.children).forEach((li) => {
+        if (li !== selectedTab && li.className !== "label") {
+            li.className = "not_selected";
+        }
+    });
     selectedTab.className = "selected";
-    if (selectedTab.nextElementSibling) {
-        selectedTab.nextElementSibling.className = "not_selected";
-    }
-    if (selectedTab.previousElementSibling) {
-        selectedTab.previousElementSibling.className = "not_selected";
-    }
     _showTab("appointments", _activeTab === "appointments");
     _showTab("crafting", _activeTab === "crafting");
     _showTab("quests", _activeTab === "quests");
 }
 let _activeTab = "appointments";
 function _showTab(key, visible) {
-    const list = key === "quests"
-        ? _quests
-        : key === "appointments"
-            ? _appointments
-            : _crafting;
+    const list = key === "quests" ? _quests : key === "appointments" ? _appointments : _crafting;
     list.forEach((row) => {
         row.style.display = visible ? "" : "none";
     });
@@ -558,20 +574,17 @@ function initHotKeys() {
         });
     }
     if (choices.length || buttonNext || buttonMore) {
-        const normalizeKey = (key) => key >= 96 && key <= 105 ? key - 48 : key;
-        document.onkeyup = (e) => {
+        const normalizeKey = (key) => (key >= 96 && key <= 105 ? key - 48 : key);
+        document.addEventListener("keyup", (e) => {
             const activeElem = document.activeElement;
-            if (activeElem &&
-                activeElem.tagName.toLowerCase() === "input" &&
-                activeElem.getAttribute("type") === "text") {
+            if (activeElem && activeElem.tagName.toLowerCase() === "input" && activeElem.getAttribute("type") === "text") {
                 return;
             }
             const keyCode = normalizeKey(e.which);
             if (buttonMore && keyCode === 77) {
                 buttonMore.focus();
             }
-            else if (buttonNext &&
-                (keyCode === 78 || keyCode === 48)) {
+            else if (buttonNext && (keyCode === 78 || keyCode === 48)) {
                 buttonNext.focus();
             }
             else if (Object.prototype.hasOwnProperty.call(choiceMap, keyCode)) {
@@ -579,14 +592,13 @@ function initHotKeys() {
                 choice.checked = true;
                 choice.focus();
                 _publishChoiceEvent(choice);
-                return false;
             }
-        };
+        });
     }
 }
 function _publishChoiceEvent(choice) {
     const event = new CustomEvent("adventure.choiceSelected", {
-        detail: choice.nextSibling?.textContent?.trim() ?? "",
+        detail: textNormalized(choice.nextSibling),
     });
     window.dispatchEvent(event);
 }
@@ -597,39 +609,33 @@ function _addHotkeyFor(elem, text) {
         elem.appendChild(span);
     }
 }
-const HIGHLIGHT_TITLES = {
-    IngenuityTest: "Ingenuity Test",
-    Passingtime: "Passingtime",
-    RescuingFatherWuel: "Rescuing Father Wuel",
-};
 function initHighlights(context) {
     if (!context || !context.isQuest) {
         return;
     }
     const { adventure, place } = context;
     const adventures = {};
-    adventures[HIGHLIGHT_TITLES.RescuingFatherWuel] = getWuelHighlights;
-    adventures[HIGHLIGHT_TITLES.Passingtime] = getPassingtimeHighlights;
-    adventures[HIGHLIGHT_TITLES.IngenuityTest] = getIngenuityTestHighlights;
+    adventures[Quests.RescuingFatherWuel] = getWuelHighlights;
+    adventures[Quests.Passingtime] = getPassingtimeHighlights;
+    adventures[Quests.IngenuityTest] = getIngenuityTestHighlights;
     if (!(adventure in adventures)) {
         return;
     }
     const highlights = adventures[adventure]()[place] || [];
-    const texts = context.texts.map((x) => x.innerHTML);
+    let texts = [...context.texts];
     highlights.forEach((x) => {
         const start = x.indexOf("_");
         const end = x.indexOf("_", start + 1);
         const search = new RegExp(start > -1 ? x.replace(/_/g, "") : x, "g");
-        const highlight = start > -1
-            ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}`
-            : `<span style="color:orchid">${x}</span>`;
-        texts.forEach((y, i) => {
-            texts[i] = y.replace(search, highlight);
-        });
+        const highlight = start > -1 ? `${x.substring(0, start)}<span style="color:orchid">${x.substring(start + 1, end)}</span>${x.substring(end + 1)}` : `<span style="color:orchid">${x}</span>`;
+        texts = texts.map((y) => y.replace(search, highlight));
     });
-    const re_html = /&lt;(.+)&gt;(.+)&lt;\/\1&gt;/g;
-    context.texts.forEach((x, i) => {
-        x.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
+    const re_html = /&lt;(font|b|i|u|span)&gt;(.+?)&lt;\/\1&gt;/g;
+    const domElements = Array.from(document.querySelectorAll("form > p, .REP_LVL_DESCRIPTION"));
+    domElements.forEach((el, i) => {
+        if (texts[i] !== undefined) {
+            el.innerHTML = texts[i].replace(re_html, '<$1 style="color:mediumseagreen">$2</$1>');
+        }
     });
 }
 function getPassingtimeHighlights() {
@@ -669,65 +675,30 @@ function getWuelHighlights() {
             "other _exotic items_",
         ],
         "Kotko: church": ["enchanted band"],
-        "Kotko: woman with red feather": [
-            "peanuts",
-            "eggplant",
-            "banana",
-            "sandwich",
-            "orange",
-            "fried chicken",
-        ],
+        "Kotko: woman with red feather": ["peanuts", "eggplant", "banana", "sandwich", "orange", "fried chicken"],
     };
 }
 function getIngenuityTestHighlights() {
     return {
-        "*": [
-            "bejeweled necklace",
-            "blue key",
-            "Large",
-            "Medium",
-            "Small",
-            "Tiny",
-            "pair of fairy wings",
-        ],
+        "*": ["bejeweled necklace", "blue key", "Large", "Medium", "Small", "Tiny", "pair of fairy wings"],
         "Freshwater Spring": ["under _the water_"],
-        "Middle of the River : Chatting": [
-            "red key",
-            "crescent",
-            "rectangle",
-            "circle",
-            "heart",
-            "diamond",
-            "plus-sign",
-            "oval",
-            "star",
-            "triangle",
-            "square",
-        ],
+        "Middle of the River : Chatting": ["red key", "crescent", "rectangle", "circle", "heart", "diamond", "plus-sign", "oval", "star", "triangle", "square"],
         "Rialb's Ghost": ["purple key"],
         "The Fairytale Princess": ["pink hair ribbons"],
-        "The Hut": [
-            "Turquoise",
-            "Yellow",
-            "Green",
-            "Red",
-            "Magenta",
-            "Black",
-            "Blue",
-            "Purple",
-            "Orange",
-            "White",
-        ],
+        "The Hut": ["Turquoise", "Yellow", "Green", "Red", "Magenta", "Black", "Blue", "Purple", "Orange", "White"],
     };
 }
 function main() {
     initTabs();
-    const context = getContext();
-    if (!context)
-        return;
-    initHighlights(context);
-    initHotKeys();
-    initQuestLog(context);
+    try {
+        const context = buildAdventureContext();
+        initHighlights(context);
+        initHotKeys();
+        initQuestLog(context);
+    }
+    catch (e) {
+        console.error("Failed to build adventure context", e);
+    }
 }
 if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", main, { once: true });

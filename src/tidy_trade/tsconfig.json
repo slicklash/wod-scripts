@@ -1,7 +1,7 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "outFile": "../../build/tidy_trade.js",
-        "rootDir": ".."
-    }
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outFile": "../../build/tidy_trade.js",
+    "rootDir": ".."
+  }
 }

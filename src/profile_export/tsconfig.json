@@ -1,7 +1,7 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "outFile": "../../build/profile_export.js",
-        "rootDir": ".."
-    }
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outFile": "../../build/profile_export.js",
+    "rootDir": ".."
+  }
 }

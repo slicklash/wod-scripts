@@ -1,5 +1,5 @@
 import { Store } from "@common/persistence/store";
-import { AdventureContext, Quests } from "./context";
+import { AdventureContext, QuestPlaceOptions, QuestPlaceOptionsMap, Quests } from "./types";
 
 export function initQuestLog(context: AdventureContext): void {
   if (!context || !context.isQuest) {
@@ -29,32 +29,10 @@ export function initQuestLog(context: AdventureContext): void {
   }
 }
 
-// --- QuestLog ---
-
 type QuestLogData = {
   itemsPicked: string[];
   itemsFound: string[];
   tasksDone: string[];
-};
-
-type PlaceInfoMap = {
-  [key: string]: PlaceOptions;
-};
-
-type PlaceOptions = {
-  pickSingle?: string[];
-  pickSingleTransform?: (x: string) => string;
-  collect?: ActionEvent[];
-  use?: ActionEvent[];
-  do?: ActionEvent[];
-  reset?: string;
-};
-
-type ActionEvent = {
-  match: string;
-  found?: string[];
-  picked?: string[];
-  done?: string[];
 };
 
 export class QuestLog {
@@ -62,16 +40,16 @@ export class QuestLog {
 
   private _id?: string;
   private _data?: QuestLogData;
-  private _info?: PlaceInfoMap;
-  private _placeOptions?: PlaceOptions;
+  private _info?: QuestPlaceOptionsMap;
+  private _placeOptions?: QuestPlaceOptions;
 
   constructor(private _context: AdventureContext) {
     const { adventure, place } = _context;
-    const adventures: Record<string, () => PlaceInfoMap> = {};
+    const adventures: Record<string, () => QuestPlaceOptionsMap> = {};
 
     adventures[Quests.IngenuityTest] = this.getIngenuityTestInfo;
     adventures[Quests.RescuingFatherWuel] = this.getRescueFatherWuelInfo;
-    adventures[Quests.Passingtime] = this.getPassingTimeInfo;
+    adventures[Quests.Passingtime] = this.getPassingtimeInfo;
 
     if (!(adventure in adventures)) {
       this.isSupported = false;
@@ -87,18 +65,15 @@ export class QuestLog {
 
     this._id = `${_context.world}_${_context.idHero}_${_context.adventure.replace(/ /g, "").toLowerCase()}`;
 
-    this.load().then(() => {
-      if (this._placeOptions) {
-        this.checkPlace();
-      }
+    this.init();
+  }
 
-      /* tslint:disable */
-      console.log("questlog:", this._data);
-      console.log("context:", _context.place, _context.texts);
-      /* tslint:enable */
-
-      this.display();
-    });
+  private async init(): Promise<void> {
+    await this.load();
+    if (this._placeOptions) {
+      this.checkPlace();
+    }
+    this.display();
   }
 
   onChoice(choice: string): void {
@@ -108,10 +83,6 @@ export class QuestLog {
 
     this.pickItem(choice);
     this.save();
-
-    /* tslint:disable */
-    console.log("on submit", choice, this._data);
-    /* tslint:enable */
   }
 
   pickItem(item: string): void {
@@ -119,14 +90,10 @@ export class QuestLog {
     if (!op) return;
 
     if (op.pickSingle) {
-      const itm = (
-        op.pickSingleTransform ? op.pickSingleTransform(item) : item
-      ).trim();
+      const itm = (op.pickSingleTransform ? op.pickSingleTransform(item) : item).trim();
       if (itm && op.pickSingle.indexOf(itm) > -1) {
         if (!this._data) return;
-        this._data.itemsPicked = this._data.itemsPicked.filter(
-          (x) => op.pickSingle && op.pickSingle.indexOf(x) < 0,
-        );
+        this._data.itemsPicked = this._data.itemsPicked.filter((x) => op.pickSingle && op.pickSingle.indexOf(x) < 0);
         this._data.itemsPicked.push(itm);
       }
     }
@@ -147,10 +114,7 @@ export class QuestLog {
       op.collect.forEach((x) => {
         if (text.indexOf(x.match) > -1) {
           x.found?.forEach((itm) => {
-            if (
-              this._data?.itemsFound &&
-              this._data.itemsFound.indexOf(itm) < 0
-            ) {
+            if (this._data?.itemsFound && this._data.itemsFound.indexOf(itm) < 0) {
               this._data.itemsFound.push(itm);
               isChanged = true;
             }
@@ -162,14 +126,8 @@ export class QuestLog {
     if (op.use) {
       op.use.forEach((x) => {
         if (text.indexOf(x.match) > -1) {
-          if (x.found && this._data?.itemsFound)
-            this._data.itemsFound = this._data.itemsFound.filter(
-              (itm) => x.found && x.found.indexOf(itm) < 0,
-            );
-          if (x.picked && this._data?.itemsPicked)
-            this._data.itemsPicked = this._data.itemsPicked.filter(
-              (itm) => x.picked && x.picked.indexOf(itm) < 0,
-            );
+          if (x.found && this._data?.itemsFound) this._data.itemsFound = this._data.itemsFound.filter((itm) => x.found && x.found.indexOf(itm) < 0);
+          if (x.picked && this._data?.itemsPicked) this._data.itemsPicked = this._data.itemsPicked.filter((itm) => x.picked && x.picked.indexOf(itm) < 0);
           isChanged = true;
         }
       });
@@ -204,54 +162,47 @@ export class QuestLog {
 
     const data = this._data;
     if (!data) return;
-    const text = [
-      toText("backpack:", data.itemsPicked.concat(data.itemsFound)),
-      toText("done:", data.tasksDone),
-    ].join("\n\n");
+    const text = [toText("backpack:", data.itemsPicked.concat(data.itemsFound)), toText("done:", data.tasksDone)].join("\n\n");
 
     h1.setAttribute("title", text);
   }
 
-  load(): Promise<void> {
+  async load(): Promise<void> {
     const empty: QuestLogData = {
       itemsPicked: [],
       itemsFound: [],
       tasksDone: [],
     };
 
-    return new Promise((resolve) => {
-      if (!this._id) {
-        this._data = empty;
-        resolve();
-        return;
-      }
-      Store.get(this._id).then((value) => {
-        const loaded: QuestLogData = value ? JSON.parse(value) : {};
-        Object.keys(loaded).forEach((x) => {
-          if (!empty[x]) delete loaded[x];
-        });
-        this._data = Object.assign(empty, loaded);
-        resolve();
-      });
+    if (!this._id) {
+      this._data = empty;
+      return;
+    }
+
+    const loaded: QuestLogData = await Store.get(this._id, { itemsPicked: [], itemsFound: [], tasksDone: [] });
+    Object.keys(loaded).forEach((key) => {
+      const k = key as keyof QuestLogData;
+      if (!(k in empty)) delete loaded[k];
     });
+    this._data = Object.assign(empty, loaded);
   }
 
   save(): void {
     if (!this._id || !this._data) return;
-    Store.set(this._id, JSON.stringify(this._data));
+    Store.set(this._id, this._data);
   }
 
   reset(): void {
     if (!this._id) return;
     this._data = { itemsPicked: [], itemsFound: [], tasksDone: [] };
-    Store.set(this._id, "{}");
+    Store.set(this._id, this._data);
   }
 
-  getPassingTimeInfo(): PlaceInfoMap {
+  getPassingtimeInfo(): QuestPlaceOptionsMap {
     return {};
   }
 
-  getRescueFatherWuelInfo(): PlaceInfoMap {
+  getRescueFatherWuelInfo(): QuestPlaceOptionsMap {
     return {
       "*": {
         collect: [
@@ -276,7 +227,7 @@ export class QuestLog {
     };
   }
 
-  getIngenuityTestInfo(): PlaceInfoMap {
+  getIngenuityTestInfo(): QuestPlaceOptionsMap {
     return {
       "*": {
         collect: [
@@ -323,27 +274,14 @@ export class QuestLog {
         pickSingle: ["iridescent rock", "bunch of driftwood", "large carapace"],
       },
       "Middle of the River : Pick ...": {
-        pickSingle: [
-          "leaf lettuce",
-          "pumpkin",
-          "bananas",
-          "deck of playing cards",
-          "carrots",
-          "rainbow trout",
-          "corn",
-          "limburger cheese",
-          "suspenders",
-        ],
-        pickSingleTransform: (x) =>
-          x.indexOf("Buy ") === 0 ? x.replace("Buy ", "") : "",
+        pickSingle: ["leaf lettuce", "pumpkin", "bananas", "deck of playing cards", "carrots", "rainbow trout", "corn", "limburger cheese", "suspenders"],
+        pickSingleTransform: (x) => (x.indexOf("Buy ") === 0 ? x.replace("Buy ", "") : ""),
       },
       "Middle of the River : Chatting": {
         collect: [{ match: "red key", found: ["red key"] }],
       },
       "Rocky Shore, at a River": {
-        collect: [
-          { match: "decent rowboat here", found: ["rowboat with oars"] },
-        ],
+        collect: [{ match: "decent rowboat here", found: ["rowboat with oars"] }],
       },
       "Waves Beach : Pick ...": {
         pickSingle: ["bunch of tiny shells", "bulbaroose shell", "conch shell"],

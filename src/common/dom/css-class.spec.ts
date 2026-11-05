@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { cssClass } from "./css-class";
 
-describe("common / functions / dom / cssClass", () => {
+describe("cssClass", () => {
   it("should return false if element has no class", () => {
     const el = document.createElement("div");
     el.className = "testClass";

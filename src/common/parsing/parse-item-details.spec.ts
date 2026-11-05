@@ -1,7 +1,7 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { parseItemDetails } from "./parse-item-details";
 
-describe("common / functions / parsing / parseItemDetails", () => {
+describe("parseItemDetails", () => {
   it("should parse", () => {
     const item = parseItemDetails(
       "dagger",
@@ -86,21 +86,7 @@ describe("common / functions / parsing / parseItemDetails", () => {
       name: "dagger",
       heroClasses: {
         include: undefined,
-        exclude: [
-          "Cloudraider",
-          "Conjuror",
-          "Draclin",
-          "Drifter",
-          "Engineer",
-          "Knight",
-          "Lightbringer",
-          "Mage",
-          "Paladin",
-          "Priest",
-          "Scholar",
-          "Shaman",
-          "Warlock",
-        ],
+        exclude: ["Cloudraider", "Conjuror", "Draclin", "Drifter", "Engineer", "Knight", "Lightbringer", "Mage", "Paladin", "Priest", "Scholar", "Shaman", "Warlock"],
       },
       races: undefined,
       requirements: undefined,
@@ -112,16 +98,7 @@ describe("common / functions / parsing / parseItemDetails", () => {
       needs: "-",
       location: "pocket",
       itemClasses: ["throwing weapons"],
-      skills: [
-        "Use throwing weapons",
-        "Precision Throwing",
-        "Glancing Ricochet",
-        "Killing Ricochet",
-        "Use two throwing weapons",
-        "Flutterer",
-        "Into the black",
-        "Juggling throwing weapons",
-      ],
+      skills: ["Use throwing weapons", "Precision Throwing", "Glancing Ricochet", "Killing Ricochet", "Use two throwing weapons", "Flutterer", "Into the black", "Juggling throwing weapons"],
       remarks: "",
       set: "",
     });

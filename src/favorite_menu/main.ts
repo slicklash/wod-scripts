@@ -1,206 +1,130 @@
+import { MENU_LAYOUT, MENU_NAME } from "./menu";
 import { add } from "@common/dom/add";
 import { attr } from "@common/dom/attr";
 import { cssClass } from "@common/dom/css-class";
 import { waitFor } from "@common/dom/wait-for";
 
-const MENU_NAME = "Favorites";
-
-const MENU_LAYOUT = {
-  my_heroes: [
-    "My Heroes",
-    {
-      hero_attributes: "Attributes",
-      hero_skills: "Skills",
-      hero_gear: "Equipment",
-      hero_storage: "Storage",
-      hero_cellar: "Cellar",
-      hero_skillconf: "Settings",
-      arena: "Arena",
-      hero_profiles: "Profile",
-      hero_events: "Adventures",
-    },
-  ],
-  group: [
-    "My Group",
-    {
-      dungeon: "Dungeon",
-      reports: "Reports",
-      hero_group_cellar: "GS",
-      hero_group_treasure: "TV",
-      group_cashbox: "Funds",
-    },
-  ],
-  trade_exchange: [
-    "Trade",
-    {
-      trade_market: "Marketplace",
-      trade_auction: "Auctions",
-      trade_bids: "Offers",
-    },
-  ],
-  recruite_ranking: [
-    "Leaderboard",
-    {
-      duells_ranking_groups: "Groups",
-      duells_ranking_clans: "Clans",
-    },
-  ],
-};
+const REGEX_LINK = /'([a-z_ ]+)',''\);$/i;
 
 function main(verticalMenu: HTMLElement) {
-  if (!verticalMenu) return;
+  const skin = document.querySelector<HTMLLinkElement>('link[href*="skin"]')?.href.match(/skin[0-9-]+/i)?.[0] ?? "";
 
-  const match_skin = (<any>(
-    document.querySelector('link[href*="skin"]')
-  )).href.match(/skin[0-9-]+/i);
-  const skin = match_skin ? match_skin[0] : "";
-  const font_render_url = `${window.location.protocol}//fonts.wod-game.de/java_font_renderer/render?skin=${skin}`;
-  const fav_menu = add<HTMLDivElement>("div");
-  const caption = add<HTMLAnchorElement>("a", fav_menu);
-  const supports_img = skin !== "skin-1";
+  const fontUrl = `${location.protocol}//fonts.wod-game.de/java_font_renderer/render?skin=${skin}`;
 
-  attr(fav_menu, { class: "menu-1", id: "menu_my_menu" });
+  const favMenu = add<HTMLDivElement>("div");
+  const caption = add<HTMLAnchorElement>("a", favMenu);
+
+  attr(favMenu, { class: "menu-1", id: "menu_my_menu" });
   attr(caption, {
     class: "menu-1-caption alink selected",
     onclick: "return menuOnClick(this,'','','');",
   });
 
-  if (supports_img) {
-    attr(add("img", caption), {
-      class: "font_menu-1",
-      alt: MENU_NAME,
-      src: font_render_url + "&profil=font_menu-1&text=" + MENU_NAME,
-    });
-    attr(add("img", caption), {
-      class: "font_menu-1-hovered",
-      alt: MENU_NAME,
-      src: font_render_url + "&profil=font_menu-1-hovered&text=" + MENU_NAME,
-    });
-    attr(add("img", caption), {
-      class: "font_menu-1-selected",
-      alt: MENU_NAME,
-      src: font_render_url + "&profil=font_menu-1-selected&text=" + MENU_NAME,
-    });
-  } else {
+  if (skin === "skin-1") {
     caption.textContent = MENU_NAME;
+  } else {
+    for (const profile of ["", "-hovered", "-selected"]) {
+      const name = `font_menu-1${profile}`;
+
+      attr(add("img", caption), {
+        class: name,
+        alt: MENU_NAME,
+        src: `${fontUrl}&profil=${name}&text=${MENU_NAME}`,
+      });
+    }
   }
 
   attr(add("span", caption), "class", "menu-1-arrow open");
 
-  const menu0 = add<HTMLDivElement>("div", fav_menu);
-  const menu_body = add<HTMLDivElement>("div", menu0);
-  const menu_items = {};
-  const open_links = {};
+  const menuBody = add<HTMLDivElement>("div", add<HTMLDivElement>("div", favMenu));
 
-  attr(menu0, { class: "menu-1-body", style: "display: block" });
-  attr(menu_body, "class", "menu-2");
-
-  let match_name;
-  const menu1 = Array.from(verticalMenu.querySelectorAll(".menu-1"));
-
-  menu1.forEach((open_menu) => {
-    if (cssClass(open_menu, "open")) {
-      const tmp = open_menu.querySelectorAll("a");
-
-      for (let j = 0, c2 = tmp.length; j < c2; j++) {
-        match_name = (attr(tmp[j], "onclick") as string).match(
-          /'([a-z_ ]+)',''\);$/i,
-        );
-        if (match_name) open_links[match_name[1]] = open_menu;
-      }
-    }
+  attr(menuBody.parentElement!, {
+    class: "menu-1-body",
+    style: "display: block",
   });
+  attr(menuBody, "class", "menu-2");
 
-  const links = verticalMenu.querySelectorAll(".menu-2 a");
+  const items: Record<string, HTMLAnchorElement> = {};
+  const openMenus: Record<string, Element> = {};
 
-  for (let i = 0, cnt = links.length; i < cnt; i++) {
-    const link = links[i];
-    match_name = (attr(link, "onclick") as string).match(
-      /'([a-z_ ]+)',''\);$/i,
-    );
-    if (match_name) {
-      menu_items[match_name[1]] = link.cloneNode(true);
+  const getName = (link: Element) => (attr(link, "onclick") as string | null)?.match(REGEX_LINK)?.[1];
+
+  const closeMenu = (name: string) => {
+    const menu = openMenus[name];
+    if (!menu) return;
+
+    cssClass(menu, "open", false);
+
+    const arrow = menu.querySelector(".menu-1-arrow");
+    if (arrow) {
+      cssClass(arrow, "open", false);
+      cssClass(arrow, "closed", true);
+    }
+  };
+
+  for (const menu of verticalMenu.querySelectorAll(".menu-1.open")) {
+    for (const link of menu.querySelectorAll("a")) {
+      const name = getName(link);
+      if (name) openMenus[name] = menu;
     }
   }
 
-  Object.keys(MENU_LAYOUT).forEach((key) => {
-    let link = menu_items[key];
-    let submenu;
+  for (const link of verticalMenu.querySelectorAll(".menu-2 a")) {
+    const name = getName(link);
+    if (name) items[name] = link.cloneNode(true) as HTMLAnchorElement;
+  }
 
-    if (!link) {
-      link = add("a");
+  for (const [key, [label, children]] of Object.entries(MENU_LAYOUT)) {
+    const link = items[key] ?? add<HTMLAnchorElement>("a");
+
+    if (!items[key]) {
       attr(link, { href: "#", class: "menu-2-caption" });
     }
 
     attr(link, "onclick", null);
+    link.textContent = label;
 
-    const menu_item = MENU_LAYOUT[key];
+    let submenu: HTMLDivElement | undefined;
 
-    if (typeof menu_item === "string") {
-      link.innerHTML = menu_item;
-
-      const open_menu = open_links[key];
-
-      if (open_menu) {
-        const arrow = open_menu.querySelector(".menu-1-arrow");
-
-        cssClass(open_menu, "open", false);
-
-        if (arrow) {
-          cssClass(arrow, "open", false);
-          cssClass(arrow, "closed", true);
-        }
-      }
-    } else {
-      link.textContent = menu_item[0];
-
-      const submenu_items = menu_item[1];
-
-      submenu = add("div");
-
-      attr(submenu, { class: "menu-2-body", style: "padding-top: 0px" });
-
-      Object.keys(submenu_items).forEach((subkey) => {
-        const sublink = menu_items[subkey];
-
-        if (sublink) {
-          attr(sublink, "onclick", null);
-
-          const menu3 = add<HTMLDivElement>("div", submenu);
-          const menu3_cap = add<HTMLAnchorElement>(sublink, menu3);
-
-          attr(menu3, "class", "menu-3");
-          cssClass(menu3_cap, "menu-2-caption", false);
-          cssClass(menu3_cap, "menu-3-caption", true);
-
-          menu3_cap.innerHTML = submenu_items[subkey];
-
-          const open_menu = open_links[subkey];
-
-          if (open_menu) {
-            const arrow = open_menu.querySelector(".menu-1-arrow");
-
-            cssClass(open_menu, "open", false);
-
-            if (arrow) {
-              cssClass(arrow, "open", false);
-              cssClass(arrow, "closed", true);
-            }
-          }
-        }
+    if (children) {
+      submenu = add<HTMLDivElement>("div");
+      attr(submenu, {
+        class: "menu-2-body",
+        style: "padding-top: 0px",
       });
+
+      for (const [name, text] of Object.entries(children)) {
+        const sublink = items[name];
+        if (!sublink) continue;
+
+        attr(sublink, "onclick", null);
+
+        const menu3 = add<HTMLDivElement>("div", submenu);
+        attr(menu3, "class", "menu-3");
+
+        cssClass(sublink, "menu-2-caption", false);
+        cssClass(sublink, "menu-3-caption", true);
+
+        sublink.textContent = text;
+        menu3.appendChild(sublink);
+
+        closeMenu(name);
+      }
     }
 
-    const new_menu = add<HTMLDivElement>("div", menu_body);
-    attr(new_menu, "class", "menu-2 open");
-    add(link, new_menu);
-    if (submenu) add(submenu, new_menu);
-  });
+    closeMenu(key);
 
-  const menu_between = add<HTMLDivElement>("div");
-  attr(menu_between, "class", "menu-between");
-  verticalMenu.insertBefore(menu_between, verticalMenu.firstChild);
-  verticalMenu.insertBefore(fav_menu, verticalMenu.firstChild);
+    const menu = add<HTMLDivElement>("div", menuBody);
+    attr(menu, "class", "menu-2 open");
+
+    menu.appendChild(link);
+    if (submenu) menu.appendChild(submenu);
+  }
+
+  const separator = add<HTMLDivElement>("div");
+  attr(separator, "class", "menu-between");
+
+  verticalMenu.prepend(separator, favMenu);
 }
 
-waitFor(".menu-vertical .menu-0-body").then(main);
+waitFor(".menu-vertical .menu-0-body").then((elem) => main(elem as HTMLElement));

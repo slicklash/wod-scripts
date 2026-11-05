@@ -1,11 +1,11 @@
 import { SPECIAL_CONSUMABLES } from "./special-consumables";
 
-export class StorageItem {
-  name = "";
-  isUsable = true;
-  uses: number = 1;
-  isGroupItem = true;
-  _isConsumable = false;
+export type StorageItem = {
+  name: string;
+  isUsable: boolean;
+  isGroupItem: boolean;
+  isConsumable: boolean;
+  uses: number;
 
   numberCell?: HTMLTableCellElement;
 
@@ -14,22 +14,42 @@ export class StorageItem {
   ctrlSellCheckbox?: HTMLInputElement;
   ctrlGroupCheckbox?: HTMLInputElement;
 
-  price: number = 0;
+  price: number;
+};
 
-  get isConsumable(): boolean {
-    if (this._isConsumable) return true;
-    if (/^raw /.test(this.name)) return true;
-    if (/ seed$/.test(this.name)) return true;
-    if (/^reagent:/.test(this.name)) return true;
-    if (/^Shard.+of/.test(this.name)) return true;
-    if (/^Charm.+of/.test(this.name)) return true;
-    if (/^Rune.+of/.test(this.name)) return true;
-    if (/^(lesser|greater) emblem of/i.test(this.name)) return true;
-    if (SPECIAL_CONSUMABLES.some((x) => x === this.name)) return true;
-    return false;
-  }
+/**
+ * Create a StorageItem with default values.
+ */
+export function createStorageItem(): StorageItem {
+  return {
+    name: "",
+    isUsable: true,
+    isGroupItem: true,
+    isConsumable: false,
+    uses: 1,
 
-  set isConsumable(value) {
-    this._isConsumable = value;
-  }
+    numberCell: undefined,
+
+    ctrlLocationSelect: undefined,
+    ctrlLocationCheckbox: undefined,
+    ctrlSellCheckbox: undefined,
+    ctrlGroupCheckbox: undefined,
+
+    price: 0,
+  };
+}
+
+/**
+ * Check if an item is consumable based on its name.
+ */
+export function isConsumable(item: StorageItem): boolean {
+  if (/^raw /.test(item.name)) return true;
+  if (/ seed$/.test(item.name)) return true;
+  if (/^reagent:/.test(item.name)) return true;
+  if (/^Shard.+of/.test(item.name)) return true;
+  if (/^Charm.+of/.test(item.name)) return true;
+  if (/^Rune.+of/.test(item.name)) return true;
+  if (/^(lesser|greater) emblem of/i.test(item.name)) return true;
+  if (SPECIAL_CONSUMABLES.some((x) => x === item.name)) return true;
+  return false;
 }

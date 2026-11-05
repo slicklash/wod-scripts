@@ -1,6 +1,7 @@
+import { describe, expect, it } from "vitest";
 import { textContent } from "./text-content";
 
-describe("common / functions / dom / textContent", () => {
+describe("textContent", () => {
   it("should read element text", () => {
     const div = document.createElement("div");
     div.textContent = "test";

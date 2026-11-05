@@ -1,54 +1,64 @@
 // ==UserScript==
 // @name           Itemizer
 // @description    Scripts improves items found page
-// @version        1.1.1
+// @version        2.0.0
 // @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
+// @updateURL      https://raw.github.com/slicklash/wod-scripts/master/release/itemizer.user.js
 // @author         Never
-// @include        https://*.world-of-dungeons.*/wod/spiel/*dungeon/report.php*
-// @run-at         document-start
+// @match          https://*.world-of-dungeons.net/wod/spiel/*dungeon/report.php*
+// @run-at         document-end
 // ==/UserScript==
 
 (function() {
 'use strict';
-function add(tag, parent, innerHTML) {
-    const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    if (parent?.nodeType)
-        parent.appendChild(elem);
-    if (innerHTML)
-        elem.innerHTML = innerHTML;
-    return elem;
-}
 function textContent(elem, value) {
     if (!elem)
         return "";
     return typeof value === "undefined" ? elem.textContent : (elem.textContent = value);
 }
-const USES_REGEX = /(.+)uses (.+) on/;
-const SKILL_REGEX = /skill\.php\?name=(.+)&/;
-const ITEM_REGEX = /item\.php\?name=(.+)&/;
-function main() {
-    const heroTables = Array.from(document.querySelectorAll("table")).filter((table) => table.previousElementSibling?.tagName === "H2" && !table.className);
-    showSummary(parseHeroes(heroTables));
-    const roundTables = Array.from(document.querySelectorAll("table")).filter((table) => !table.id && !table.className && table.querySelector(".rep_initiative"));
-    showLevel(parseRounds(roundTables));
+function textNormalized(x, options) {
+    const text = typeof x === "string" ? x : (x?.textContent ?? "");
+    return (text ?? "")
+        .replace(/&nbsp;/g, "\u00A0")
+        .replace(/[\s\u00A0]+/g, options?.collapse === false ? "" : " ")
+        .trim();
+}
+const REGEX_USES = /(.+)uses (.+) on/;
+const REGEX_ITEM = /item\.php\?name=(.+)&/;
+const REGEX_SKILL = /skill\.php\?name=(.+)&/;
+function parseGold(paragraphs) {
+    for (const p of paragraphs) {
+        const img = p.querySelector("img[src*='gold.gif']");
+        if (img) {
+            const text = textContent(img.previousSibling ?? null);
+            return Number(text.split(" ").pop()) || 0;
+        }
+    }
+    return 0;
+}
+function parseUses(cell) {
+    const raw = textNormalized(cell).match(/-?\d+/g)?.map(Number) ?? [];
+    return {
+        raw,
+        used: raw.length > 2 && raw[0] < raw[1] ? raw[2] : 0,
+        remaining: raw[0] ?? 1,
+    };
+}
+function formatUsed(item) {
+    return item.remaining < Math.abs(item.used) ? `<span style="color:tomato">${item.used}</span>` : String(item.used);
 }
 function parseHeroes(tables) {
     return tables.map((table) => {
-        let goldFound = 0;
-        const texts = Array.from(table.querySelectorAll("p"), (p) => {
-            const img = p.querySelector("img");
-            if (img?.src.includes("gold.gif")) {
-                goldFound = Number(textContent(img.previousSibling).split(" ").pop());
-            }
-            return textContent(p);
-        });
+        const paragraphs = table.querySelectorAll("p");
+        const goldFound = parseGold(paragraphs);
+        const texts = Array.from(paragraphs, (p) => textContent(p));
         const isKnockedOut = texts.some((text) => text.includes("was knocked"));
         const [ownTable, foundTable] = table.querySelectorAll("table");
-        const heroName = table.previousElementSibling?.textContent ?? "";
-        const ownItems = parseItems(heroName, ownTable);
-        const foundItems = parseItems(heroName, foundTable);
+        const name = table.previousElementSibling?.textContent ?? "";
+        const ownItems = parseItems(name, ownTable);
+        const foundItems = parseItems(name, foundTable);
         return {
-            name: heroName,
+            name,
             itemsUsed: groupUsed(ownItems).filter((item) => item.used !== 0),
             itemsLost: isKnockedOut ? foundItems : [],
             itemsFound: isKnockedOut ? [] : foundItems,
@@ -61,76 +71,63 @@ function parseHeroes(tables) {
 function parseItems(heroName, table) {
     if (!table)
         return [];
-    const items = [];
-    for (const row of Array.from(table.querySelectorAll("tr")).slice(1)) {
+    return Array.from(table.querySelectorAll("tr"))
+        .slice(1)
+        .flatMap((row) => {
         const cells = row.querySelectorAll("td");
         if (cells.length < 3)
-            continue;
+            return [];
         const item = cells[1];
         const html = item.innerHTML;
-        const damaged = cells[3]?.textContent?.trim().match(/-\d+/);
-        const uses = cells[4]?.textContent?.trim().match(/-?\d+/g)?.map(Number);
-        const used = uses && uses.length > 2 && uses[0] < uses[1] ? uses[2] : 0;
-        const remaining = uses?.[0] ?? 1;
+        const { raw: uses, used, remaining } = parseUses(cells[4]);
         const result = {
             heroName,
-            name: textContent(item).trim(),
+            name: textNormalized(item),
             html,
             isUnique: html.includes("item_unique"),
-            isConsumable: Boolean(uses && uses.length > 1),
+            isConsumable: Boolean(uses.length > 1),
             used,
             uses,
             usedHtml: String(used),
             remaining,
             count: 1,
-            damaged: damaged ? Number(damaged[0]) : 0,
+            damaged: Number(textNormalized(cells[3]).match(/-\d+/)?.[0] ?? 0),
         };
-        result.calc = () => {
-            result.usedHtml =
-                result.remaining < Math.abs(result.used)
-                    ? `<span style="color:tomato">${result.used}</span>`
-                    : String(result.used);
-        };
-        items.push(result);
-    }
-    return items;
+        result.usedHtml = formatUsed(result);
+        return [result];
+    });
 }
 function parseRounds(tables) {
-    const seenHeroes = new Set();
+    const heroOrder = new Map();
     const items = [];
     for (const table of tables) {
-        const heading = table.parentElement?.children[0]?.textContent ?? "";
-        const room = heading.match(/room (\d+)/)?.[1];
+        const room = Number(table.parentElement?.children[0]?.textContent.match(/room (\d+)/)?.[1]) || undefined;
         for (const td of table.querySelectorAll("tr td:nth-child(2)")) {
-            const text = (td.textContent ?? "").replace(/\n/g, " ");
-            const heroMatch = text.match(USES_REGEX);
-            if (!heroMatch)
-                continue;
-            const itemMatch = td.innerHTML.match(ITEM_REGEX);
-            const skillMatch = td.innerHTML.match(SKILL_REGEX);
-            if (!itemMatch || !skillMatch)
-                continue;
+            const text = textNormalized(td).replace(/\n/g, " ");
+            const hero = text.match(REGEX_USES)?.[1].trim();
+            const html = td.innerHTML;
+            const item = html.match(REGEX_ITEM)?.[1];
+            const skill = html.match(REGEX_SKILL)?.[1];
             const skillLink = td.querySelector('[href*="skill"]');
-            if (!skillLink)
+            if (!hero || !item || !skill || !skillLink)
                 continue;
-            const heroName = heroMatch[1].trim();
-            seenHeroes.add(heroName);
+            if (!heroOrder.has(hero))
+                heroOrder.set(hero, heroOrder.size);
             items.push({
-                heroName,
-                name: itemMatch[1],
+                heroName: hero,
+                name: item,
                 count: 1,
                 html: Array.from(td.querySelectorAll('[href*="item"]'), (link) => link.outerHTML).join(", "),
-                skill: skillMatch[1],
+                skill,
                 skillHtml: skillLink.outerHTML,
                 mpHtml: td.querySelector(".rep_mana_cost")?.outerHTML ?? "",
-                room: room ? Number(room) : undefined,
+                room,
                 used: 0,
                 remaining: 0,
                 usedHtml: "",
             });
         }
     }
-    const heroOrder = new Map([...seenHeroes].map((name, index) => [name, index]));
     return items.sort((a, b) => heroOrder.get(a.heroName) - heroOrder.get(b.heroName));
 }
 function groupUsed(items) {
@@ -140,90 +137,95 @@ function groupUsed(items) {
         if (existing) {
             existing.used += item.used;
             existing.remaining += item.remaining;
-            existing.calc?.();
+            existing.usedHtml = formatUsed(existing);
         }
         else {
-            item.calc?.();
+            item.usedHtml = formatUsed(item);
             grouped.set(item.name, item);
         }
     }
     return [...grouped.values()];
 }
-const tr = (cells) => `<tr>${cells.map((html) => `<td style="vertical-align:top">${html}</td>`).join("")}</tr>`;
-function showSummary(heroes) {
-    if (!heroes.length)
-        return;
-    const collect = (key) => heroes.flatMap((hero) => hero[key]);
-    const used = collect("itemsUsed");
-    const damaged = collect("itemsDamaged");
-    const found = collect("itemsFound");
-    const lost = collect("itemsLost");
-    const uses = (item) => item.uses?.length ? ` (${item.uses[0]}/${item.uses[1]})` : "";
-    add("table", document.querySelector('[name="the_form"] h2'), tr([
-        table("Consumables used", ["html", "usedHtml", "heroName"], used),
-        table("Items damaged", ["html", "damaged", "heroName"], damaged),
-    ]) +
-        tr([
-            table("Items found", [(item) => item.html + uses(item), "heroName"], found),
-            table("Items lost", [(item) => item.html + uses(item)], lost),
-        ]));
-}
-function showLevel(items) {
-    if (!items.length)
-        return;
-    add("table", document.querySelector(".rep_round_headline")?.previousElementSibling, tr([
-        table("Items used", [
-            "heroName",
-            (item) => `${item.skillHtml}${item.count > 1 ? ` x ${item.count}` : ""}`,
-            "mpHtml",
-            "html",
-        ], compress(items)),
-    ]));
-}
-function table(title, columns, items) {
-    const format = (column, item) => typeof column === "function" ? column(item) : (item[column] ?? "");
-    const sorted = [...items].sort((a, b) => {
-        const roomDiff = (a.room ?? 0) - (b.room ?? 0);
-        if (roomDiff)
-            return roomDiff;
-        const uniqueDiff = Number(b.isUnique) - Number(a.isUnique);
-        if (uniqueDiff)
-            return uniqueDiff;
-        const consumableDiff = Number(a.isConsumable) - Number(b.isConsumable);
-        if (consumableDiff)
-            return consumableDiff;
-        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-    });
-    const rows = sorted.map((item, index) => {
-        const cells = columns
-            .map((column) => `<td style="text-align:left">${format(column, item)}</td>`)
-            .join("");
-        const row = `<tr class="row${index % 2}">${cells}</tr>`;
-        const previous = sorted[index - 1];
-        return index === 0 && item.room != null
-            ? `<tr><td colspan="${columns.length}">Room ${item.room}</td></tr>${row}`
-            : index > 0 && previous.room !== item.room
-                ? `<tr><td colspan="${columns.length}">Room ${item.room ?? ""}</td></tr>${row}`
-                : row;
-    });
-    return `<h2>${title} (${items.length})</h2><table class="content_table" style="font-size:14px;font-weight:normal">${rows.join("")}</table>`;
-}
 function compress(items) {
     const result = [];
-    let previousKey = "";
-    let previousItem;
     for (const item of items) {
-        const key = `${item.room},${item.heroName},${item.skill},${item.name}`;
-        if (key === previousKey && previousItem) {
-            previousItem.count++;
+        const previous = result[result.length - 1];
+        if (previous && `${previous.room},${previous.heroName},${previous.skill},${previous.name}` === `${item.room},${item.heroName},${item.skill},${item.name}`) {
+            previous.count++;
         }
         else {
             result.push(item);
-            previousItem = item;
-            previousKey = key;
         }
     }
     return result;
+}
+function buildTable(title, columns, items) {
+    const sorted = [...items].sort((a, b) => {
+        if ((a.room ?? 0) !== (b.room ?? 0))
+            return (a.room ?? 0) - (b.room ?? 0);
+        if (Number(b.isUnique) !== Number(a.isUnique))
+            return Number(b.isUnique) - Number(a.isUnique);
+        if (Number(a.isConsumable) !== Number(b.isConsumable))
+            return Number(a.isConsumable) - Number(b.isConsumable);
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+    const rows = sorted.map((item, index) => {
+        const cells = columns.map((column) => `<td style="text-align:left">${typeof column === "function" ? column(item) : (item[column] ?? "")}</td>`).join("");
+        const row = `<tr class="row${index % 2}">${cells}</tr>`;
+        if (index === 0 && item.room != null) {
+            return `<tr><td colspan="${columns.length}">Room ${item.room}</td></tr>${row}`;
+        }
+        if (index > 0 && sorted[index - 1].room !== item.room) {
+            return `<tr><td colspan="${columns.length}">Room ${item.room ?? ""}</td></tr>${row}`;
+        }
+        return row;
+    });
+    return `<h2>${title} (${items.length})</h2><table class="content_table" style="font-size:14px;font-weight:normal">${rows.join("")}</table>`;
+}
+function tr(cells) {
+    return `<tr>${cells.map((html) => `<td style="vertical-align:top">${html}</td>`).join("")}</tr>`;
+}
+function renderSummary(heroes) {
+    if (!heroes.length)
+        return "";
+    const collect = (key) => heroes.flatMap((hero) => hero[key]);
+    const uses = (item) => (item.uses?.length ? ` (${item.uses[0]}/${item.uses[1]})` : "");
+    const consumablesUsed = buildTable("Consumables used", ["html", "usedHtml", "heroName"], collect("itemsUsed"));
+    const itemsDamaged = buildTable("Items damaged", ["html", "damaged", "heroName"], collect("itemsDamaged"));
+    const itemsFound = buildTable("Items found", [(item) => item.html + uses(item), "heroName"], collect("itemsFound"));
+    const itemsLost = buildTable("Items lost", [(item) => item.html + uses(item)], collect("itemsLost"));
+    return tr([consumablesUsed, itemsDamaged]) + tr([itemsFound, itemsLost]);
+}
+function renderLevel(items) {
+    if (!items.length)
+        return "";
+    const columns = ["heroName", (item) => `${item.skillHtml}${item.count > 1 ? ` x ${item.count}` : ""}`, "mpHtml", "html"];
+    return tr([buildTable("Items used", columns, compress(items))]);
+}
+function add(tagName, parent, innerHTML) {
+    const elem = document.createElement(tagName);
+    if (parent)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
+    return elem;
+}
+function main() {
+    const tables = Array.from(document.querySelectorAll("table"));
+    const heroTables = tables.filter((t) => t.previousElementSibling?.tagName === "H2" && !t.className);
+    const summaryHtml = renderSummary(parseHeroes(heroTables));
+    if (summaryHtml) {
+        const target = document.querySelector('[name="the_form"] h2');
+        if (target)
+            add("table", target, summaryHtml);
+    }
+    const roundTables = tables.filter((t) => !t.id && !t.className && t.querySelector(".rep_initiative"));
+    const levelHtml = renderLevel(parseRounds(roundTables));
+    if (levelHtml) {
+        const target = document.querySelector(".rep_round_headline")?.previousElementSibling;
+        if (target)
+            add("table", target, levelHtml);
+    }
 }
 if (document.readyState === "loading")
     document.addEventListener("DOMContentLoaded", main, { once: true });

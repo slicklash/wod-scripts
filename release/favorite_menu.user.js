@@ -1,62 +1,17 @@
 // ==UserScript==
 // @name           Favorite Menu
 // @description    Script allows to alter main menu by injecting customizable entries
-// @version        1.0.6
+// @version        2.0.0
 // @author         Never
-// @include        https://*.world-of-dungeons.*
+// @downloadURL    https://raw.github.com/slicklash/wod-scripts/master/release/favorite_menu.user.js
+// @updateURL      https://raw.github.com/slicklash/wod-scripts/master/release/favorite_menu.user.js
+// @match          https://*.world-of-dungeons.net/*
 // @run-at         document-start
 // @grant          none
 // ==/UserScript==
 
 (function() {
 'use strict';
-function add(tag, parent, innerHTML) {
-    const elem = typeof tag === "string" ? document.createElement(tag) : tag;
-    if (parent?.nodeType)
-        parent.appendChild(elem);
-    if (innerHTML)
-        elem.innerHTML = innerHTML;
-    return elem;
-}
-function attr(elem, nameOrMap, value) {
-    if (typeof nameOrMap === "string") {
-        if (value === undefined)
-            return elem.getAttribute(nameOrMap) ?? "";
-        if (value === null)
-            elem.removeAttribute(nameOrMap);
-        else
-            elem.setAttribute(nameOrMap, value);
-    }
-    else {
-        Object.entries(nameOrMap).forEach(([k, v]) => v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v));
-    }
-    return elem;
-}
-function cssClass(elem, name, toggleOn) {
-    if (toggleOn === undefined)
-        return elem.classList.contains(name);
-    elem.classList.toggle(name, toggleOn);
-    return elem;
-}
-function waitFor(selectorOrElement, eventName) {
-    return new Promise((resolve) => {
-        if (typeof selectorOrElement === "string") {
-            const fn = () => {
-                const elem = document.querySelector(selectorOrElement);
-                if (elem || document.readyState === "complete") {
-                    resolve(elem);
-                    return;
-                }
-                setTimeout(fn, 250);
-            };
-            fn();
-        }
-        else {
-            if (eventName)
-                selectorOrElement.addEventListener(eventName, resolve);
-        }
-    });
-}
 const MENU_NAME = "Favorites";
 const MENU_LAYOUT = {
     my_heroes: [
@@ -99,126 +54,143 @@ const MENU_LAYOUT = {
         },
     ],
 };
+function add(tagName, parent, innerHTML) {
+    const elem = document.createElement(tagName);
+    if (parent)
+        parent.appendChild(elem);
+    if (innerHTML)
+        elem.innerHTML = innerHTML;
+    return elem;
+}
+function attr(elem, nameOrMap, value) {
+    if (typeof nameOrMap === "string") {
+        if (value === undefined)
+            return elem.getAttribute(nameOrMap);
+        if (value === null)
+            elem.removeAttribute(nameOrMap);
+        else
+            elem.setAttribute(nameOrMap, value);
+    }
+    else {
+        Object.entries(nameOrMap).forEach(([k, v]) => (v === null ? elem.removeAttribute(k) : elem.setAttribute(k, v)));
+    }
+    return elem;
+}
+function cssClass(elem, name, toggle) {
+    if (toggle === undefined)
+        return elem.classList.contains(name);
+    elem.classList.toggle(name, toggle);
+    return elem;
+}
+function waitFor(selector) {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        const check = () => {
+            const elem = document.querySelector(selector);
+            if (elem || document.readyState === "complete" || Date.now() - start > 30_000)
+                resolve(elem);
+            else
+                setTimeout(check, 250);
+        };
+        check();
+    });
+}
+const REGEX_LINK = /'([a-z_ ]+)',''\);$/i;
 function main(verticalMenu) {
-    if (!verticalMenu)
-        return;
-    const match_skin = (document.querySelector('link[href*="skin"]')).href.match(/skin[0-9-]+/i);
-    const skin = match_skin ? match_skin[0] : "";
-    const font_render_url = `${window.location.protocol}//fonts.wod-game.de/java_font_renderer/render?skin=${skin}`;
-    const fav_menu = add("div");
-    const caption = add("a", fav_menu);
-    const supports_img = skin !== "skin-1";
-    attr(fav_menu, { class: "menu-1", id: "menu_my_menu" });
+    const skin = document.querySelector('link[href*="skin"]')?.href.match(/skin[0-9-]+/i)?.[0] ?? "";
+    const fontUrl = `${location.protocol}//fonts.wod-game.de/java_font_renderer/render?skin=${skin}`;
+    const favMenu = add("div");
+    const caption = add("a", favMenu);
+    attr(favMenu, { class: "menu-1", id: "menu_my_menu" });
     attr(caption, {
         class: "menu-1-caption alink selected",
         onclick: "return menuOnClick(this,'','','');",
     });
-    if (supports_img) {
-        attr(add("img", caption), {
-            class: "font_menu-1",
-            alt: MENU_NAME,
-            src: font_render_url + "&profil=font_menu-1&text=" + MENU_NAME,
-        });
-        attr(add("img", caption), {
-            class: "font_menu-1-hovered",
-            alt: MENU_NAME,
-            src: font_render_url + "&profil=font_menu-1-hovered&text=" + MENU_NAME,
-        });
-        attr(add("img", caption), {
-            class: "font_menu-1-selected",
-            alt: MENU_NAME,
-            src: font_render_url + "&profil=font_menu-1-selected&text=" + MENU_NAME,
-        });
-    }
-    else {
+    if (skin === "skin-1") {
         caption.textContent = MENU_NAME;
     }
-    attr(add("span", caption), "class", "menu-1-arrow open");
-    const menu0 = add("div", fav_menu);
-    const menu_body = add("div", menu0);
-    const menu_items = {};
-    const open_links = {};
-    attr(menu0, { class: "menu-1-body", style: "display: block" });
-    attr(menu_body, "class", "menu-2");
-    let match_name;
-    const menu1 = Array.from(verticalMenu.querySelectorAll(".menu-1"));
-    menu1.forEach((open_menu) => {
-        if (cssClass(open_menu, "open")) {
-            const tmp = open_menu.querySelectorAll("a");
-            for (let j = 0, c2 = tmp.length; j < c2; j++) {
-                match_name = attr(tmp[j], "onclick").match(/'([a-z_ ]+)',''\);$/i);
-                if (match_name)
-                    open_links[match_name[1]] = open_menu;
-            }
-        }
-    });
-    const links = verticalMenu.querySelectorAll(".menu-2 a");
-    for (let i = 0, cnt = links.length; i < cnt; i++) {
-        const link = links[i];
-        match_name = attr(link, "onclick").match(/'([a-z_ ]+)',''\);$/i);
-        if (match_name) {
-            menu_items[match_name[1]] = link.cloneNode(true);
+    else {
+        for (const profile of ["", "-hovered", "-selected"]) {
+            const name = `font_menu-1${profile}`;
+            attr(add("img", caption), {
+                class: name,
+                alt: MENU_NAME,
+                src: `${fontUrl}&profil=${name}&text=${MENU_NAME}`,
+            });
         }
     }
-    Object.keys(MENU_LAYOUT).forEach((key) => {
-        let link = menu_items[key];
-        let submenu;
-        if (!link) {
-            link = add("a");
+    attr(add("span", caption), "class", "menu-1-arrow open");
+    const menuBody = add("div", add("div", favMenu));
+    attr(menuBody.parentElement, {
+        class: "menu-1-body",
+        style: "display: block",
+    });
+    attr(menuBody, "class", "menu-2");
+    const items = {};
+    const openMenus = {};
+    const getName = (link) => attr(link, "onclick")?.match(REGEX_LINK)?.[1];
+    const closeMenu = (name) => {
+        const menu = openMenus[name];
+        if (!menu)
+            return;
+        cssClass(menu, "open", false);
+        const arrow = menu.querySelector(".menu-1-arrow");
+        if (arrow) {
+            cssClass(arrow, "open", false);
+            cssClass(arrow, "closed", true);
+        }
+    };
+    for (const menu of verticalMenu.querySelectorAll(".menu-1.open")) {
+        for (const link of menu.querySelectorAll("a")) {
+            const name = getName(link);
+            if (name)
+                openMenus[name] = menu;
+        }
+    }
+    for (const link of verticalMenu.querySelectorAll(".menu-2 a")) {
+        const name = getName(link);
+        if (name)
+            items[name] = link.cloneNode(true);
+    }
+    for (const [key, [label, children]] of Object.entries(MENU_LAYOUT)) {
+        const link = items[key] ?? add("a");
+        if (!items[key]) {
             attr(link, { href: "#", class: "menu-2-caption" });
         }
         attr(link, "onclick", null);
-        const menu_item = MENU_LAYOUT[key];
-        if (typeof menu_item === "string") {
-            link.innerHTML = menu_item;
-            const open_menu = open_links[key];
-            if (open_menu) {
-                const arrow = open_menu.querySelector(".menu-1-arrow");
-                cssClass(open_menu, "open", false);
-                if (arrow) {
-                    cssClass(arrow, "open", false);
-                    cssClass(arrow, "closed", true);
-                }
+        link.textContent = label;
+        let submenu;
+        if (children) {
+            submenu = add("div");
+            attr(submenu, {
+                class: "menu-2-body",
+                style: "padding-top: 0px",
+            });
+            for (const [name, text] of Object.entries(children)) {
+                const sublink = items[name];
+                if (!sublink)
+                    continue;
+                attr(sublink, "onclick", null);
+                const menu3 = add("div", submenu);
+                attr(menu3, "class", "menu-3");
+                cssClass(sublink, "menu-2-caption", false);
+                cssClass(sublink, "menu-3-caption", true);
+                sublink.textContent = text;
+                menu3.appendChild(sublink);
+                closeMenu(name);
             }
         }
-        else {
-            link.textContent = menu_item[0];
-            const submenu_items = menu_item[1];
-            submenu = add("div");
-            attr(submenu, { class: "menu-2-body", style: "padding-top: 0px" });
-            Object.keys(submenu_items).forEach((subkey) => {
-                const sublink = menu_items[subkey];
-                if (sublink) {
-                    attr(sublink, "onclick", null);
-                    const menu3 = add("div", submenu);
-                    const menu3_cap = add(sublink, menu3);
-                    attr(menu3, "class", "menu-3");
-                    cssClass(menu3_cap, "menu-2-caption", false);
-                    cssClass(menu3_cap, "menu-3-caption", true);
-                    menu3_cap.innerHTML = submenu_items[subkey];
-                    const open_menu = open_links[subkey];
-                    if (open_menu) {
-                        const arrow = open_menu.querySelector(".menu-1-arrow");
-                        cssClass(open_menu, "open", false);
-                        if (arrow) {
-                            cssClass(arrow, "open", false);
-                            cssClass(arrow, "closed", true);
-                        }
-                    }
-                }
-            });
-        }
-        const new_menu = add("div", menu_body);
-        attr(new_menu, "class", "menu-2 open");
-        add(link, new_menu);
+        closeMenu(key);
+        const menu = add("div", menuBody);
+        attr(menu, "class", "menu-2 open");
+        menu.appendChild(link);
         if (submenu)
-            add(submenu, new_menu);
-    });
-    const menu_between = add("div");
-    attr(menu_between, "class", "menu-between");
-    verticalMenu.insertBefore(menu_between, verticalMenu.firstChild);
-    verticalMenu.insertBefore(fav_menu, verticalMenu.firstChild);
+            menu.appendChild(submenu);
+    }
+    const separator = add("div");
+    attr(separator, "class", "menu-between");
+    verticalMenu.prepend(separator, favMenu);
 }
-waitFor(".menu-vertical .menu-0-body").then(main);
+waitFor(".menu-vertical .menu-0-body").then((elem) => main(elem));
 
 })();

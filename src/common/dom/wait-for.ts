@@ -1,20 +1,11 @@
-export function waitFor(
-  selectorOrElement: string | Element | Document,
-  eventName?: string,
-): Promise<any> {
+export function waitFor(selector: string): Promise<Element | null> {
   return new Promise((resolve) => {
-    if (typeof selectorOrElement === "string") {
-      const fn = () => {
-        const elem = document.querySelector(selectorOrElement);
-        if (elem || document.readyState === "complete") {
-          resolve(elem);
-          return;
-        }
-        setTimeout(fn, 250);
-      };
-      fn();
-    } else {
-      if (eventName) selectorOrElement.addEventListener(eventName, resolve);
-    }
+    const start = Date.now();
+    const check = () => {
+      const elem = document.querySelector(selector);
+      if (elem || document.readyState === "complete" || Date.now() - start > 30_000) resolve(elem);
+      else setTimeout(check, 250);
+    };
+    check();
   });
 }

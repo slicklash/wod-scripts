@@ -1,9 +1,10 @@
+import { describe, expect, it } from "vitest";
 import { getItemInfo, main } from "./main";
 import { parseHtml } from "@common/dom/parse-html";
 
 describe("tidy_trade", () => {
   it("should parse item info", () => {
-    const table = parseHtml(`
+    const table = parseHtml<HTMLTableElement>(`
             <table>
                 <tbody>
                     <tr>
@@ -58,7 +59,7 @@ describe("tidy_trade", () => {
   });
 
   it("should find tables", () => {
-    const main_content = parseHtml(`
+    const main_content = parseHtml<HTMLDivElement>(`
             <div id="main_content">
                <h1>Trade with</h1>
                <table></table>
